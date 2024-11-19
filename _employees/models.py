@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 
 class Department(models.Model):
     name = models.CharField(max_length=255)
@@ -21,7 +21,7 @@ class Employee(models.Model):
         ('terminated', 'Terminated'),
     ]
 
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='employee_profile')
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='employee_profile')
     department = models.ForeignKey(Department, on_delete=models.CASCADE)
     employee_type = models.CharField(
         max_length=20, choices=EMPLOYEE_TYPE_CHOICES
