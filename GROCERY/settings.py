@@ -1,22 +1,19 @@
 from pathlib import Path
 import os
 import dj_database_url
-from env import *
 from decouple import config
 import socket
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-#WARNING: the secret key is imported from env.py!
+# Secret Key
+SECRET_KEY = config('SECRET_KEY')
 
-hostname = socket.gethostname()
-if hostname in ["localhost", "127.0.0.1"]:
-    DEBUG = True
-else:
-    DEBUG = False
+# Debug Mode
+DEBUG = config('DEBUG', default=False, cast=bool)
 
-
-ALLOWED_HOSTS = ['.herokuapp.com', 'localhost', '127.0.0.1']
+# Allowed Hosts
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='.herokuapp.com,localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
 
 
 INSTALLED_APPS = [
@@ -42,6 +39,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
 ROOT_URLCONF = 'GROCERY.urls'
@@ -70,7 +68,7 @@ WSGI_APPLICATION = 'GROCERY.wsgi.application'
 
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL')
+        default=config('DATABASE_URL')
     )
 }
 
