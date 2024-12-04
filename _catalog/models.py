@@ -31,15 +31,35 @@ class Category(models.Model):
             level += 1
             parent = parent.parent
         return level
+    
 
 class Product(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products')
     supplier = models.ForeignKey('_suppliers.Supplier', on_delete=models.CASCADE, related_name='products')
     name = models.CharField(max_length=255)
+    about_product = models.CharField(max_length=255, blank=True)
+    rsp = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    por = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    pack_size = models.CharField(max_length=10, blank=True)
+    product_code = models.CharField(max_length=10, blank=True)
+    retail_EAN = models.CharField(max_length=13, blank=True)
+    VAT_RATE_CHOICES = [
+        ('standard', 'Standard'),
+        ('reduced', 'Reduced'),
+        ('zero', 'Zero'),
+    ]
+    vat_rate = models.CharField(
+        max_length=10,
+        choices=VAT_RATE_CHOICES,
+        default='standard'
+    )
+    brand = models.CharField(max_length=35, blank=True)
+    image = models.URLField(max_length=500, null=True, blank=True)
     description = models.TextField()
-    price = models.DecimalField(max_digits=10, decimal_places=2)
+    ingredients = models.TextField(blank=True)
+    other_information = models.TextField(blank=True)
     unit = models.CharField(max_length=50)
-    image = models.ImageField(upload_to='product_images/', null=True, blank=True)
+    
     AVAILABILITY_STATUS_CHOICES = [
         ('in_stock', 'In Stock'),
         ('out_of_stock', 'Out of Stock'),
@@ -51,15 +71,10 @@ class Product(models.Model):
         choices=AVAILABILITY_STATUS_CHOICES,
         default='in_stock'
     )
-    is_available = models.BooleanField(default=True)
-    weight = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     requires_cooling = models.BooleanField(default=False)
     supplier_code = models.CharField(max_length=100)
     supplier_price = models.DecimalField(max_digits=10, decimal_places=2)
     min_order_quantity = models.PositiveIntegerField(default=1)
-    lead_time_days = models.PositiveIntegerField()
-    reorder_point = models.PositiveIntegerField()
-    reorder_quantity = models.PositiveIntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
