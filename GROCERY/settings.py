@@ -16,6 +16,15 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 # Allowed Hosts
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='.herokuapp.com,localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
 
+# Check if running on Heroku
+ON_HEROKU = 'DYNO' in os.environ
+
+if not ON_HEROKU:
+    # Only import env.py when running locally
+    try:
+        from env import *
+    except ImportError:
+        pass
 
 INSTALLED_APPS = [
     'django.contrib.admin',
