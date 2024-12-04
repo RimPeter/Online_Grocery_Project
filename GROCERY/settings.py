@@ -11,7 +11,11 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
-
+import os
+import dj_database_url
+from env import *
+from decouple import config
+import socket
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -23,9 +27,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-(0(!r-eju=m+q+=refkn%k-bj!c_*ct(2=0_2*iv2ep)yhro$m'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+hostname = socket.gethostname()
+if hostname in ["localhost", "127.0.0.1"]:
+    DEBUG = True
+else:
+    DEBUG = False
 
-ALLOWED_HOSTS = []
+
+
+ALLOWED_HOSTS = ['.herokuapp.com', 'localhost', '127.0.0.1']
 
 
 # Application definition
@@ -80,10 +90,9 @@ WSGI_APPLICATION = 'GROCERY.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL')
+    )
 }
 
 
