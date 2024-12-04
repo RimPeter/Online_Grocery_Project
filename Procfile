@@ -1,1 +1,1 @@
-web: gunicorn online-grocery.wsgi --log-file -
+web: gunicorn GROCERY.wsgi --log-file -
