@@ -13,6 +13,7 @@ class Category(models.Model):
 
     class Meta:
         verbose_name_plural = 'Categories'
+        ordering = ['name']
 
     def __str__(self):
         # Generate full category path (e.g., "Main Category > Subcategory > Sub-subcategory")
