@@ -12,15 +12,19 @@ Product List - Online Grocery
         {% for product in products %}
             <div class="col-md-3">
                 <div class="card mb-4 shadow-sm">
-                    {% if product.image %}
-                        <img src="{{ product.image }}" class="card-img-top" alt="{{ product.name }}">
+                    {% if product.image_url %}
+                        <img src="{{ product.image_url }}" class="card-img-top" alt="{{ product.name }}">
                     {% else %}
                         <img src="{% static 'images/default_product.jpg' %}" class="card-img-top" alt="No Image">
                     {% endif %}
                     <div class="card-body">
                         <h5 class="card-title">{{ product.name }}</h5>
-                        <p class="card-text">{{ product.description|truncatewords:20 }}</p>
-                        <p class="card-text"><strong>Price:</strong> ${{ product.price }}</p>
+                        <p class="card-text">{{ product.variant|default:"No description available" }}</p>
+                        <p class="card-text"><strong>Category:</strong> {{ product.category }}</p>
+                        <p class="card-text"><strong>Price:</strong> £{{ product.price }}</p>
+                        {% if product.promotion_end_date %}
+                            <p class="card-text text-danger"><strong>Promotion ends on:</strong> {{ product.promotion_end_date }}</p>
+                        {% endif %}
                         <a href="{% url 'product_detail' product.pk %}" class="btn btn-primary">View Details</a>
                     </div>
                 </div>
