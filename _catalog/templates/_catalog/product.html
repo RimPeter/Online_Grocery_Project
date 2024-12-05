@@ -10,7 +10,7 @@ Product List - Online Grocery
     <h1>Product List</h1>
     <div class="row">
         {% for product in products %}
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="card mb-4 shadow-sm">
                     {% if product.image %}
                         <img src="{{ product.image }}" class="card-img-top" alt="{{ product.name }}">
