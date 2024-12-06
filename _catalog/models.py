@@ -35,3 +35,12 @@ class All_Products(models.Model):
 
     def __str__(self):
         return self.name
+
+class Product_Labels_For_Searchbar(models.Model):
+    product = models.ForeignKey(All_Products, on_delete=models.CASCADE, related_name='search_labels')
+    labels = models.TextField(blank=True, help_text="Space-separated search labels derived from ga_product_id and category")
+
+    def __str__(self):
+        return f"Labels for {self.product.name}"
+    
+    
