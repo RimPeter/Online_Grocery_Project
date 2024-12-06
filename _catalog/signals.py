@@ -1,6 +1,7 @@
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from .models import All_Products, Product_Labels_For_Searchbar
+from django.core.cache import cache
 
 @receiver(post_save, sender=All_Products)
 def update_search_labels(sender, instance, **kwargs):
@@ -15,3 +16,10 @@ def update_search_labels(sender, instance, **kwargs):
         product=instance,
         defaults={'labels': labels_str}
     )
+
+
+@receiver([post_save, post_delete], sender=Product_Labels_For_Searchbar)
+def clear_labels_cache(sender, **kwargs):
+    cache.delete('all_labels')
+    
+    
