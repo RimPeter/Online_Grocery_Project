@@ -9,6 +9,34 @@ Product List - Online Grocery
 <div class="container">
     <h1>Product List</h1>
 
+<!-- Navbar with Dropdown for Level 1 and Level 2 -->
+<nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#">Categories</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                {% for level1_category, level2_categories in level1_to_level2.items %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown{{ forloop.counter }}" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            {{ level1_category }}
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="navbarDropdown{{ forloop.counter }}">
+                            {% for level2_category in level2_categories %}
+                                <li>
+                                    <a class="dropdown-item" href="?q={{ level2_category }}">{{ level2_category }}</a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</nav>
+
     <form method="GET" action="">
         <div class="input-group mb-3">
             <input type="text" name="q" class="form-control" placeholder="Search for products..." value="{{ request.GET.q }}">
@@ -16,7 +44,7 @@ Product List - Online Grocery
         </div>
     </form>
 
-    <!-- Labels List -->
+    {% comment %} <!-- Labels List -->
     <div class="mb-4">
         <h5>Browse by Labels:</h5>
         <div>
@@ -31,7 +59,7 @@ Product List - Online Grocery
             {% endfor %}
         </div>
     </div>
-    <!-- End of Labels List -->
+    <!-- End of Labels List --> {% endcomment %}
 
     <div class="row">
         {% for product in products %}
