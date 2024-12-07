@@ -1,3 +1,4 @@
+# This file is a custom Django management command that loads products from a JSON file into the database.
 #   python manage.py load_json
 
 from django.core.management.base import BaseCommand

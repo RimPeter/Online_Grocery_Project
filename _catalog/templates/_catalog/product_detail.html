@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.name }}{% endblock %}
+
+{% block content %}
+<div id="main" class="main productpagenav">
+    <div class="inner">
+        <!-- Breadcrumb navigation -->
+        <div class="prodnav mobile">
+            <ul class="breadcrumb">
+                <li><a href="#">{{ product.category }}</a></li>
+                {% if product.variant %}
+                    <li><a href="#">{{ product.variant }}</a></li>
+                {% endif %}
+                <li>{{ product.name }}</li>
+            </ul>
+        </div>
+
+        <!-- Product details -->
+        <div class="shop-products productpagedetail" id="shop-products">
+            <div class="productpagedetail-inner">
+                <!-- Product Image -->
+                <div class="prodimage">
+                    <span class="prodimage-main">
+                        <img src="{{ product.image_url }}" alt="{{ product.name }}" id="prodimage">
+                    </span>
+                </div>
+
+                <!-- Product Information -->
+                <div class="right">
+                    <h1 class="prodname">{{ product.name }}</h1>
+                    <p class="prodsize">£{{ product.price }} - {{ product.list_position }}</p>
+                    <div class="blueline">&nbsp;</div>
+                    <p class="prodlogin"><a href="{% url 'home' %}">Log in to buy</a></p>
+                    <div class="blueline">&nbsp;</div>
+                    <table class="prodtable">
+                        <tbody>
+                            <tr><th>Product:</th><td>{{ product.name }}</td></tr>
+                            <tr><th>RSP:</th><td>£{{ product.rsp}}</td></tr>
+                            <tr><th>Promotion Ends:</th><td>{{ product.promotion_end_date|date:"d M Y" }}</td></tr>
+                            <tr><th>VAT Rate:</th><td>{{ product.get_vat_rate_display }}</td></tr>
+                            <tr><th>Retail EAN:</th><td>{{ product.retail_EAN }}</td></tr>
+                            <tr><th>Category:</th><td>{{ product.category }}</td></tr>
+                            <tr><th>Variant:</th><td>{{ product.variant }}</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Disclaimer -->
+        <p class="disclaimer">
+            The image and product information have been prepared for illustration and information purposes only and may differ from that shown.
+        </p>
+    </div>
+</div>
+{% endblock %}

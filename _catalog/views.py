@@ -7,10 +7,6 @@ import json
 import os
 from django.core.paginator import Paginator
 
-def product_list(request):
-    products = All_Products.objects.all()
-    return render(request, '_catalog/product.html', {'products': products})
-
 
 def home(request):
     return render(request, '_catalog/home.html')

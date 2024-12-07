@@ -26,6 +26,7 @@ class All_Products(models.Model):
         ('standard', 'Standard'),
         ('reduced', 'Reduced'),
         ('zero', 'Zero'),
+        ('exempt', 'Exempt'),
     ]
     vat_rate = models.CharField(
         max_length=10,

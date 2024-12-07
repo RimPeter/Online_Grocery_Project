@@ -1,3 +1,4 @@
+# This script generates JSON files mapping labels to ga_product_ids and vice versa.
 # _catalog/management/commands/generate_label_mappings.py
 #   python manage.py generate_label_mappings
 

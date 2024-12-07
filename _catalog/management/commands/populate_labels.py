@@ -1,3 +1,4 @@
+# This script populates the Product_Labels_For_Searchbar model with labels from All_Products, continuing from where it stopped.
 #   python manage.py populate_labels
 
 from django.core.management.base import BaseCommand

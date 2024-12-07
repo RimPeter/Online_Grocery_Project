@@ -1,3 +1,4 @@
+# Usage: Generate a JSON file from product categories
 #    python manage.py generate_category_json
 
 
