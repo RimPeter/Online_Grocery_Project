@@ -1,11 +1,10 @@
 from django.shortcuts import render, get_object_or_404
 from collections import defaultdict
-from .models import All_Products, Product_Labels_For_Searchbar
-from django.core.cache import cache
+from .models import All_Products
 from django.conf import settings
 import json
 import os
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 
 def home(request):
@@ -14,6 +13,9 @@ def home(request):
 def product_detail(request, pk):
     product = get_object_or_404(All_Products, pk=pk)
     return render(request, '_catalog/product_detail.html', {'product': product})
+
+# _catalog/views.py
+
 
 
 def product_list(request):
@@ -30,14 +32,30 @@ def product_list(request):
                 if level2 not in level1_to_level2[level1]:
                     level1_to_level2[level1].append(level2)
 
-    # Rest of your product filtering logic...
+    # Product filtering logic
     query = request.GET.get('q', '').strip()
-    products = All_Products.objects.all()
+    products = All_Products.objects.filter(ga_product_id__endswith="1")  # Filter products ending with '1'
+    products = products.exclude(image_url='/img/products/no-image.png')  # Exclude products with no image
     if query:
         products = products.filter(category__icontains=query)
 
+    # Pagination setup
+    paginator = Paginator(products, 12)  # Show 12 products per page
+    page_number = request.GET.get('page')
+
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        # If page is not an integer, deliver first page.
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        # If page is out of range, deliver last page of results.
+        page_obj = paginator.page(paginator.num_pages)
+
     context = {
-        'products': products,
+        'products': page_obj,  # Pass paginated products to the template
         'level1_to_level2': dict(level1_to_level2),  # Pass Level 1 to Level 2 mapping
+        'page_obj': page_obj,  # Pass page object for pagination controls
+        'query': query,  # Pass current query to maintain search in pagination links
     }
     return render(request, '_catalog/product.html', context)

@@ -1,1 +1,7 @@
 body { background-color: red; }
+
+/* Ensure that the card stretches to fill the height */
+.card {
+    display: flex;
+    flex-direction: column;
+}

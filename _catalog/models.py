@@ -16,7 +16,7 @@ class All_Products(models.Model):
     variant = models.CharField(max_length=255, null=True, blank=True)
     list_position = models.PositiveIntegerField()
     url = models.URLField()
-    image_url = models.URLField(null=True, blank=True)
+    image_url = models.URLField(null=True, blank=True, db_index=True)
     sku = models.CharField(max_length=50, null=True, blank=True)
     rsp = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     promotion_end_date = models.DateField(null=True, blank=True)
