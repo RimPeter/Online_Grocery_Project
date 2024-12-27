@@ -1,3 +1,81 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.contrib.auth import authenticate, login, logout, get_user_model
+from django.urls import reverse
+from django.contrib.auth.hashers import make_password
 
-# Create your views here.
+def login_view(request):
+    """
+    Renders a login form and handles the login process.
+    """
+    if request.method == "POST":
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect('home')
+        else:
+            context = {'error': 'Invalid username or password'}
+            return render(request, 'accounts/login.html', context)
+
+    # GET: Render the login form
+    return render(request, 'accounts/login.html')
+
+
+def logout_view(request):
+    """
+    Logs out the user and redirects them to the home page.
+    """
+    logout(request)
+    return redirect('home')
+
+
+def signup_view(request):
+    """
+    Handles both GET (render sign-up page) and POST (create new user).
+    """
+    if request.method == 'POST':
+        # Always initialize context at the top
+        context = {}
+
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        phone = request.POST.get('phone')
+        password1 = request.POST.get('password1')
+        password2 = request.POST.get('password2')
+
+        # 1. Check password match
+        if password1 != password2:
+            context['error'] = 'Passwords do not match'
+            return render(request, 'accounts/signup.html', context)
+
+        # 2. Retrieve the User model
+        User = get_user_model()
+
+        # 3. Check if username exists
+        if User.objects.filter(username=username).exists():
+            context['username_error'] = 'Username already taken'
+            return render(request, 'accounts/signup.html', context)
+
+        # 4. Check if email exists
+        if User.objects.filter(email=email).exists():
+            context['email_error'] = 'Email address already in use'
+            return render(request, 'accounts/signup.html', context)
+
+        # 5. Create the user
+        new_user = User.objects.create(
+            username=username,
+            email=email,
+            phone=phone,
+            password=make_password(password1),  # Hashes the password
+        )
+
+        # 6. (Optional) Log the user in automatically
+        # login(request, new_user)
+
+        # 7. Redirect to login or home, whichever you prefer
+        return redirect('login')
+
+    # GET: Render the signup page (no context needed by default)
+    return render(request, 'accounts/signup.html')
