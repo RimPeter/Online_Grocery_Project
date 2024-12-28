@@ -5,6 +5,8 @@ from django.contrib.auth.hashers import make_password
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .forms import ConfirmPasswordForm
+from django.core.mail import send_mail, EmailMessage
+from django.conf import settings
 
 def login_view(request):
     """
@@ -101,3 +103,57 @@ def delete_account(request):
         # GET request: Show the confirmation form
         form = ConfirmPasswordForm(user=request.user)
         return render(request, 'accounts/delete_account.html', {'form': form})
+    
+def send_welcome_email(request):
+    # Suppose you already have the user email
+    user_email = 'test.user@example.com'
+
+    subject = "Welcome to Our Awesome App!"
+    message = (
+        "Hi there,\n\n"
+        "Thanks for signing up. We're excited to have you on board!\n\n"
+        "Best,\nThe Team"
+    )
+    from_email = settings.EMAIL_HOST_USER  # or "YourName <your_gmail_address@gmail.com>"
+    recipient_list = [user_email]
+
+    send_mail(
+        subject,
+        message,
+        from_email,
+        recipient_list,
+        fail_silently=False,
+    )
+    return render(request, 'email_sent.html')
+
+def send_welcome_email_advanced(request):
+    user_email = 'test.user@example.com'
+    subject = "Welcome to Our Awesome App!"
+    body = "Hi there,\n\nThanks for signing up. Enjoy our platform!\n\nBest,\nThe Team"
+
+    email = EmailMessage(
+        subject=subject,
+        body=body,
+        from_email=settings.EMAIL_HOST_USER,
+        to=[user_email],
+    )
+    # Optionally add an attachment or do other customizations:
+    # email.attach('filename.pdf', pdf_data, 'application/pdf')
+    
+    email.send(fail_silently=False)
+    return render(request, 'email_sent.html')
+
+def send_html_email():
+    subject = "HTML Email Test"
+    plain_message = "This is the fallback text if HTML can't be rendered."
+    html_message = "<h1>Welcome!</h1><p>This is an <strong>HTML</strong> email.</p>"
+    from_email = settings.EMAIL_HOST_USER
+    to = ['test.user@example.com']
+
+    send_mail(
+        subject,
+        plain_message,
+        from_email,
+        [to],
+        html_message=html_message
+    )
