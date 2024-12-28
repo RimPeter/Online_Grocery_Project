@@ -7,6 +7,8 @@ from django.contrib import messages
 from .forms import ConfirmPasswordForm
 from django.core.mail import send_mail, EmailMessage
 from django.conf import settings
+from .utils import create_verification_code_for_user, send_verification_email
+from .models import VerificationCode
 
 def login_view(request):
     """
@@ -73,17 +75,48 @@ def signup_view(request):
             username=username,
             email=email,
             phone=phone,
-            password=make_password(password1),  # Hashes the password
+            password=make_password(password1),
+            is_active=False  # User must verify email before logging in
         )
+        code = create_verification_code_for_user(new_user)
 
-        # 6. (Optional) Log the user in automatically
-        # login(request, new_user)
+        send_verification_email(new_user, code)
 
-        # 7. Redirect to login or home, whichever you prefer
-        return redirect('login')
+        messages.success(request, "Your account has been created, but we need to verify your email address. Check your inbox for the code.")
+        return redirect('verify_account')
+
 
     # GET: Render the signup page (no context needed by default)
     return render(request, 'accounts/signup.html')
+
+def verify_account(request):
+    if request.method == 'POST':
+        code = request.POST.get('code', '').strip()
+
+        if not code:
+            return render(request, 'accounts/verify_account.html', {'error': 'Please enter a valid code.'})
+
+        try:
+            # Find the verification entry
+            vc = VerificationCode.objects.get(code=code, is_used=False, user__is_active=False)
+        except VerificationCode.DoesNotExist:
+            # Code not found or already used
+            return render(request, 'accounts/verify_account.html', {'error': 'Invalid or expired code.'})
+
+        # If we get here, the code is correct and belongs to an inactive user
+        user = vc.user
+        user.is_active = True
+        user.save()
+
+        # Mark the code as used
+        vc.is_used = True
+        vc.save()
+
+        messages.success(request, "Your email has been verified and your account is now active. You can log in!")
+        return redirect('login')
+
+    # GET
+    return render(request, 'accounts/verify_account.html')
 
 @login_required
 def delete_account(request):

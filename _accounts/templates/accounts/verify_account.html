@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Verify Account{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <h2>Verify Your Email</h2>
+
+    {% if messages %}
+      {% for msg in messages %}
+        <div class="alert alert-info">{{ msg }}</div>
+      {% endfor %}
+    {% endif %}
+
+    {% if error %}
+      <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label for="code" class="form-label">Verification Code</label>
+        <input
+          type="text"
+          name="code"
+          id="code"
+          class="form-control"
+          placeholder="Enter the code we emailed you"
+          required
+        >
+      </div>
+      <button type="submit" class="btn btn-primary">Verify</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

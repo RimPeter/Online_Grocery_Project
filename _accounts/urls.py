@@ -22,4 +22,5 @@ urlpatterns = [
         name='password_change_done'
     ),
     path('delete_account/', views.delete_account, name='delete_account'),
+    path('verify_account/', views.verify_account, name='verify_account'),
 ]
