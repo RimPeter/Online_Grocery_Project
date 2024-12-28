@@ -14,8 +14,6 @@ urlpatterns = [
         ), 
         name='password_change'
     ),
-    
-    # 2) Password change done/confirmation page
     path(
         'password_change/done/', 
         auth_views.PasswordChangeDoneView.as_view(
@@ -23,4 +21,5 @@ urlpatterns = [
         ), 
         name='password_change_done'
     ),
+    path('delete_account/', views.delete_account, name='delete_account'),
 ]

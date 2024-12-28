@@ -2,6 +2,9 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.urls import reverse
 from django.contrib.auth.hashers import make_password
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from .forms import ConfirmPasswordForm
 
 def login_view(request):
     """
@@ -22,7 +25,7 @@ def login_view(request):
     # GET: Render the login form
     return render(request, 'accounts/login.html')
 
-
+@login_required
 def logout_view(request):
     """
     Logs out the user and redirects them to the home page.
@@ -79,3 +82,22 @@ def signup_view(request):
 
     # GET: Render the signup page (no context needed by default)
     return render(request, 'accounts/signup.html')
+
+@login_required
+def delete_account(request):
+    """
+    Deletes the currently logged-in user's account, but requires password confirmation.
+    """
+    if request.method == 'POST':
+        form = ConfirmPasswordForm(user=request.user, data=request.POST)
+        if form.is_valid():
+            request.user.delete()
+            messages.success(request, "Your account has been deleted.")
+            return redirect('home')  # or wherever you want to redirect
+        else:
+            # Form not valid (password incorrect). The form will show an error message.
+            return render(request, 'accounts/delete_account.html', {'form': form})
+    else:
+        # GET request: Show the confirmation form
+        form = ConfirmPasswordForm(user=request.user)
+        return render(request, 'accounts/delete_account.html', {'form': form})

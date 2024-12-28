@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete Account{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6 text-center">
+    <h2>Delete Account</h2>
+    <p>This action cannot be undone. Please confirm with your password.</p>
+
+    {# Show form errors (if any) #}
+    {% if form.errors %}
+      <div class="alert alert-danger">
+        Please correct the error(s) below.
+      </div>
+    {% endif %}
+
+    <form method="POST" novalidate>
+      {% csrf_token %}
+      {{ form.as_p }}
+      
+      <button type="submit" class="btn btn-danger">Yes, Delete My Account</button>
+      <a class="btn btn-secondary" href="{% url 'home' %}">Cancel</a>
+    </form>
+  </div>
+</div>
+{% endblock %}
