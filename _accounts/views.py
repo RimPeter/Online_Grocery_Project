@@ -9,6 +9,7 @@ from django.core.mail import send_mail, EmailMessage
 from django.conf import settings
 from .utils import create_verification_code_for_user, send_verification_email
 from .models import VerificationCode
+from django.utils.crypto import get_random_string
 
 def login_view(request):
     """
@@ -196,3 +197,102 @@ def custom_404_view(request, exception):
     Custom 404 error handler.
     """
     return render(request, '404.html', status=404)
+
+def forgot_password_view(request):
+    """
+    1. Renders a form to request the user's email (GET).
+    2. Processes the form (POST), finds the user, generates a new password, sets it, and emails it.
+    """
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        User = get_user_model()
+
+        try:
+            # 1. Look up the user by email
+            user = User.objects.get(email=email)
+
+            # 2. Generate a new random password (length can be changed as desired)
+            new_password = get_random_string(length=10)
+
+            # 3. Set the user's password to the new random password
+            user.set_password(new_password)
+            user.save()
+
+            # 4. Send an email with the username & new password
+            subject = 'Your Account Credentials'
+            message = (
+                f"Hello {user.username},\n\n"
+                f"You requested to reset your password.\n\n"
+                f"Here are your new login credentials:\n"
+                f"Username: {user.username}\n"
+                f"Password: {new_password}\n\n"
+                f"Please log in and change your password immediately."
+            )
+            from_email = settings.EMAIL_HOST_USER  # Make sure this is set in settings.py
+            recipient_list = [email]
+
+            send_mail(
+                subject,
+                message,
+                from_email,
+                recipient_list,
+                fail_silently=False,
+            )
+
+            # 5. Inform the user
+            messages.success(request, "A new password has been sent to your email.")
+            return redirect('login')
+
+        except User.DoesNotExist:
+            # If no user is found with the given email
+            return render(request, 'accounts/forgot_password.html', {
+                'error': "No user found with that email address."
+            })
+
+    # GET request: just render the form
+    return render(request, 'accounts/forgot_password.html')
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        User = get_user_model()
+
+        # Try to find a user with that email
+        try:
+            user = User.objects.get(email=email)
+
+            # Generate a new random password
+            new_password = User.objects.make_random_password()  # e.g., 'x4gUy73B'
+
+            # Set the user's password to the new random password
+            user.set_password(new_password)
+            user.save()
+
+            # Send an email with username & newly generated password
+            subject = 'Your Account Credentials'
+            message = (
+                f"Hi {user.username},\n\n"
+                f"Here are your new login credentials:\n"
+                f"Username: {user.username}\n"
+                f"Password: {new_password}\n\n"
+                f"Please log in and change your password immediately."
+            )
+            from_email = settings.EMAIL_HOST_USER
+            recipient_list = [email]
+
+            send_mail(
+                subject,
+                message,
+                from_email,
+                recipient_list,
+                fail_silently=False,
+            )
+
+            messages.success(request, "A new password has been sent to your email address.")
+            return redirect('login')
+
+        except User.DoesNotExist:
+            return render(request, 'accounts/forgot_password.html', {
+                'error': "No user found with that email address."
+            })
+
+    return render(request, 'accounts/forgot_password.html')
+
