@@ -1,4 +1,4 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from collections import defaultdict
 from .models import All_Products
 from django.conf import settings
@@ -13,10 +13,6 @@ def home(request):
 def product_detail(request, pk):
     product = get_object_or_404(All_Products, pk=pk)
     return render(request, '_catalog/product_detail.html', {'product': product})
-
-# _catalog/views.py
-
-
 
 def product_list(request):
     # Load JSON file
@@ -59,3 +55,35 @@ def product_list(request):
         'query': query,  # Pass current query to maintain search in pagination links
     }
     return render(request, '_catalog/product.html', context)
+
+def cart_view(request):
+    """
+    Displays the shopping cart.
+    """
+    # Example cart structure from session (modify as needed)
+    cart = request.session.get('cart', {})
+
+    # Pass cart to the template
+    context = {
+        'cart': cart,  # This should be a dictionary of product IDs and quantities
+    }
+    return render(request, '_catalog/cart.html', context)
+
+def add_to_cart(request, product_id):
+    """
+    Adds a product to the cart stored in the session.
+    """
+    # Ensure the cart exists in the session
+    cart = request.session.get('cart', {})
+
+    # Increment the quantity of the product in the cart
+    if product_id in cart:
+        cart[product_id] += 1
+    else:
+        cart[product_id] = 1
+
+    # Save the updated cart back to the session
+    request.session['cart'] = cart
+
+    # Redirect to the product list or product detail page
+    return redirect('product_list')
