@@ -32,6 +32,7 @@ def product_list(request):
     query = request.GET.get('q', '').strip()
     products = All_Products.objects.filter(ga_product_id__endswith="1")  # Filter products ending with '1'
     products = products.exclude(image_url='/img/products/no-image.png')  # Exclude products with no image
+    products = products.order_by('id')
     if query:
         products = products.filter(category__icontains=query)
 
@@ -60,30 +61,76 @@ def cart_view(request):
     """
     Displays the shopping cart.
     """
-    # Example cart structure from session (modify as needed)
+    # Get the cart from session or use an empty dict if not found
     cart = request.session.get('cart', {})
 
-    # Pass cart to the template
+    cart_items = []
+    total_price = 0
+
+    if cart:
+        # Convert cart keys to a list of strings, then fetch matching products
+        product_ids = list(cart.keys())
+        products = All_Products.objects.filter(pk__in=product_ids)
+
+        # Create a dictionary for quick lookup: { 'id_as_string': product_object }
+        products_by_id = {str(p.pk): p for p in products}
+
+        # Build a list of cart item details
+        for pid, quantity in cart.items():
+            product = products_by_id.get(str(pid))
+            if product:
+                item_total = product.price * quantity
+                total_price += item_total
+
+                cart_items.append({
+                    'product': product,
+                    'quantity': quantity,
+                    'item_total': item_total,
+                })
+
     context = {
-        'cart': cart,  # This should be a dictionary of product IDs and quantities
+        'cart_items': cart_items,   # List of dictionaries with product, quantity, and subtotal
+        'total_price': total_price  # Grand total of the cart
     }
     return render(request, '_catalog/cart.html', context)
 
 def add_to_cart(request, product_id):
-    """
-    Adds a product to the cart stored in the session.
-    """
-    # Ensure the cart exists in the session
     cart = request.session.get('cart', {})
-
-    # Increment the quantity of the product in the cart
+    
     if product_id in cart:
         cart[product_id] += 1
     else:
         cart[product_id] = 1
-
-    # Save the updated cart back to the session
     request.session['cart'] = cart
-
-    # Redirect to the product list or product detail page
     return redirect('product_list')
+
+def update_cart(request):
+    """
+    Updates the cart: remove an item or change its quantity.
+    """
+    if request.method == 'POST':
+        product_id = request.POST.get('product_id')
+        action = request.POST.get('action')  # 'remove' or 'update'
+        cart = request.session.get('cart', {})
+
+        if action == 'remove':
+            # Remove the item from cart
+            if product_id in cart:
+                del cart[product_id]
+
+        elif action == 'update':
+            # Change the quantity (only if it's valid and > 0)
+            new_quantity = request.POST.get('quantity')
+            if new_quantity is not None:
+                new_quantity = int(new_quantity)
+                if new_quantity > 0:
+                    cart[product_id] = new_quantity
+                else:
+                    # If 0 or negative, remove the item from the cart
+                    if product_id in cart:
+                        del cart[product_id]
+
+        # Save the updated cart back to the session
+        request.session['cart'] = cart
+
+    return redirect('cart_view')

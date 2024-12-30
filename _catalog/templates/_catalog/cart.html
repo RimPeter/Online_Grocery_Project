@@ -6,20 +6,87 @@
 {% block content %}
 <div class="container my-5">
   <h1>Your Shopping Cart</h1>
-  {% if cart %}
+  
+  {% if cart_items %}
     <ul class="list-group">
-      {% for product_id, quantity in cart.items %}
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-          Product ID: {{ product_id }} - Quantity: {{ quantity }}
+      {% for item in cart_items %}
+        <li class="list-group-item">
+          <div class="row align-items-center">
+            
+            <!-- Product Image -->
+            <div class="col-md-2">
+              {% if item.product.image_url %}
+                <img src="{{ item.product.image_url }}" alt="{{ item.product.name }}" class="img-fluid">
+              {% else %}
+                <img src="{% static 'images/default_product.jpg' %}" alt="No Image" class="img-fluid">
+              {% endif %}
+            </div>
+            
+            <!-- Product Name -->
+            <div class="col-md-3">
+              <h5>{{ item.product.name }}</h5>
+            </div>
+            
+            <!-- Price -->
+            <div class="col-md-2">
+              <p>Price: £{{ item.product.price }}</p>
+            </div>
+            
+            <!-- Quantity Update Form -->
+            <div class="col-md-2">
+              <form method="POST" action="{% url 'update_cart' %}">
+                {% csrf_token %}
+                <!-- Hidden input for product ID -->
+                <input type="hidden" name="product_id" value="{{ item.product.pk }}">
+                <!-- Hidden input for update action -->
+                <input type="hidden" name="action" value="update">
+                
+                <div class="input-group">
+                  <input
+                    type="number"
+                    name="quantity"
+                    class="form-control"
+                    value="{{ item.quantity }}"
+                    min="1"
+                  >
+                  <button class="btn btn-primary" type="submit">Update</button>
+                </div>
+              </form>
+            </div>
+            
+            <!-- Subtotal -->
+            <div class="col-md-2">
+              <p>Subtotal: £{{ item.item_total }}</p>
+            </div>
+            
+            <!-- Remove Item Form -->
+            <div class="col-md-1 text-end">
+              <form method="POST" action="{% url 'update_cart' %}">
+                {% csrf_token %}
+                <input type="hidden" name="product_id" value="{{ item.product.pk }}">
+                <input type="hidden" name="action" value="remove">
+                <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+              </form>
+            </div>
+            
+          </div>
         </li>
       {% endfor %}
     </ul>
-    <div class="mt-3">
-      <a href="{% url 'product_list' %}" class="btn btn-secondary">Continue Shopping</a>
-      <a href="#" class="btn btn-primary">Proceed to Checkout</a>
+
+    <!-- Total Price and Checkout Buttons -->
+    <div class="mt-3 d-flex justify-content-between align-items-center">
+      <h4>Total Price: £{{ total_price }}</h4>
+      <div>
+        <a href="{% url 'product_list' %}" class="btn btn-secondary">Continue Shopping</a>
+        <a href="#" class="btn btn-primary">Proceed to Checkout</a>
+      </div>
     </div>
+    
   {% else %}
-    <p>Your cart is empty. <a href="{% url 'product_list' %}">Browse products</a></p>
+    <p>Your cart is empty. 
+      <a href="{% url 'product_list' %}">Browse products</a>
+    </p>
   {% endif %}
 </div>
 {% endblock %}
