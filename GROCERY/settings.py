@@ -18,7 +18,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY')
 
 # Debug Mode
-DEBUG = config('DEBUG', default=False, cast=bool)
+DEBUG = False#config('DEBUG', default=False, cast=bool)
 
 # Allowed Hosts
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='.herokuapp.com,localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])

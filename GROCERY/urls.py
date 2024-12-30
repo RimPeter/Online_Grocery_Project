@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
+from _accounts.views import custom_404_view
 
 
 urlpatterns = [
@@ -7,3 +8,5 @@ urlpatterns = [
     path('', include('_catalog.urls')),
     path('accounts/', include('_accounts.urls')),
 ]
+
+handler404 = custom_404_view

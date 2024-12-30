@@ -190,3 +190,9 @@ def send_html_email():
         [to],
         html_message=html_message
     )
+
+def custom_404_view(request, exception):
+    """
+    Custom 404 error handler.
+    """
+    return render(request, '404.html', status=404)
