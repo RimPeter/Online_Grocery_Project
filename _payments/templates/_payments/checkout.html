@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Checkout{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1>Checkout</h1>
+
+  <!-- Payment Form -->
+  <form id="payment-form">
+    <div id="payment-element"><!--Stripe.js injects the Payment Element here--></div>
+    <button id="submit" class="btn btn-primary mt-3">Pay Now</button>
+    <div id="error-message" class="text-danger mt-2"></div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+  const stripe = Stripe("{{ STRIPE_PUBLIC_KEY }}");
+  const options = { clientSecret: "{{ clientSecret }}", appearance: {} };
+  const elements = stripe.elements(options);
+  const paymentElement = elements.create("payment");
+  paymentElement.mount("#payment-element");
+
+  const form = document.getElementById("payment-form");
+  const submitButton = document.getElementById("submit");
+  const errorMessage = document.getElementById("error-message");
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    submitButton.disabled = true;
+
+    const { error } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: "{{ success_url }}",
+      },
+    });
+
+    if (error) {
+      errorMessage.textContent = error.message;
+      submitButton.disabled = false;
+    } 
+  });
+</script>
+
+
+{% endblock %}

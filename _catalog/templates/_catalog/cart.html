@@ -79,7 +79,9 @@
       <h4>Total Price: £{{ total_price }}</h4>
       <div>
         <a href="{% url 'product_list' %}" class="btn btn-secondary">Continue Shopping</a>
-        <a href="#" class="btn btn-primary">Proceed to Checkout</a>
+        <a href="{% url 'checkout' %}" class="btn btn-success">
+            Proceed to Checkout
+        </a>
       </div>
     </div>
     

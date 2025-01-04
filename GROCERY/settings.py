@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     '_orders',
     '_scheduling',
     '_suppliers',
+    '_payments',
     
 ]
 
@@ -141,3 +142,10 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'hull@localappliancerentals.co.uk'
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+
+# Stripe settings
+
+import os
+STRIPE_PUBLIC_KEY = os.getenv("STRIPE_PUBLIC_KEY")
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
