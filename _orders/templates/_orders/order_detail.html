@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Order Detail | {{ order.id }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h1>Order #{{ order.id }}</h1>
+  <p>Order Date: {{ order.created_at|date:"Y-m-d H:i" }}</p>
+  <p><strong>Total:</strong> ${{ order.total }}</p>
+  
+  <hr>
+  <h2>Items</h2>
+  {% if order_items %}
+  <table class="table table-striped table-hover">
+    <thead>
+      <tr>
+        <th>Image</th>
+        <th>Product</th>
+        <th>Price (Each)</th>
+        <th>Quantity</th>
+        <th>Subtotal</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in order_items %}
+      <tr>
+        <td>
+        <img 
+            src="{{ item.product.image_url }}" 
+            alt="{{ item.product.name }}" 
+            width="100"
+        >
+        {% comment %} {{ item.product.name }} {% endcomment %}
+        </td>
+        <td>{{ item.product.name }}</td>
+        <td>${{ item.price }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>${{ item.subtotal|floatformat:2 }}</td> 
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No items found in this order.</p>
+  {% endif %}
+</div>
+{% endblock %}

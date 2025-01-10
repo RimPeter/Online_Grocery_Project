@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Order History{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h1>My Order History</h1>
+
+  {% if orders %}
+  <table class="table table-striped table-hover">
+    <thead>
+      <tr>
+        <th scope="col">Order #</th>
+        <th scope="col">Date</th>
+        <th scope="col">Total</th>
+        <th scope="col">Status</th>
+        <th scope="col">Details</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for order in orders %}
+      <tr>
+        <!-- You might replace order.id with order.order_number or similar -->
+        <td>{{ order.id }}</td>
+        
+        <!-- Example: format created_at timestamp -->
+        <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
+        
+        <!-- Example: order.total or any field you have for cost -->
+        <td>${{ order.total }}</td>
+
+        <!-- If you have choices for status, you can use get_status_display -->
+        <td>{{ order.get_status_display|default:order.status }}</td>
+        
+        <!-- A "View" link to detailed info about this order -->
+        <td>
+          <a 
+            href="{% url 'order_detail' order.id %}" 
+            class="btn btn-primary btn-sm"
+          >
+            View
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>You have no orders yet.</p>
+  {% endif %}
+</div>
+{% endblock %}
