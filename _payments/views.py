@@ -122,6 +122,9 @@ def stripe_webhook_view(request):
                 # If you have a link from Payment -> Order, mark the order as paid
                 # payment.order.status = 'paid'
                 # payment.order.save()
+                order = payment.order  
+                order.status = 'paid'
+                order.save()
 
             except Payment.DoesNotExist:
                 pass

@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Select Delivery Slot{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h1>Select Your Delivery Slot</h1>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}" role="alert">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="POST" action="">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="delivery_date" class="form-label">Delivery Date</label>
+      <input 
+        type="date"
+        id="delivery_date"
+        name="delivery_date"
+        class="form-control"
+        required
+      >
+    </div>
+
+    <div class="mb-3">
+      <label for="delivery_time" class="form-label">Delivery Time</label>
+      <input
+        type="time"
+        id="delivery_time"
+        name="delivery_time"
+        class="form-control"
+        required
+      >
+    </div>
+
+    <button type="submit" class="btn btn-success">Confirm Delivery Slot</button>
+    <a href="{% url 'cart_view' %}" class="btn btn-secondary">Back to Cart</a>
+  </form>
+</div>
+{% endblock %}
