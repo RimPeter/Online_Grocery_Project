@@ -6,4 +6,5 @@ urlpatterns = [
     path('history/', order_history_view, name='order_history'),
     path('<int:order_id>/', order_detail_view, name='order_detail'),
     path('delivery-slots/', views.delivery_slots_view, name='delivery_slots'),
+    path('delete/<int:order_id>/', views.delete_order_view, name='order_delete'),
 ]

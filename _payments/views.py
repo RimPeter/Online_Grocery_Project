@@ -29,7 +29,7 @@ def checkout_view(request):
     order = Order.objects.create(
         user=request.user,
         total=total_price,  # We can also store total at checkout
-        # status='pending'  # if you have a status field
+        status='pending'  # if you have a status field
     )
 
     # 4. Create OrderItem records (line items) for that order
@@ -47,11 +47,10 @@ def checkout_view(request):
 
     payment = Payment.objects.create(
         user=request.user,
+        order=order,
         amount=total_price,
         currency='usd',
         status='created',
-        # Optionally link Payment to the order if you like:
-        # order=order,  # if Payment model has an order field
     )
 
     amount_in_cents = int(total_price * 100)
@@ -62,7 +61,6 @@ def checkout_view(request):
         metadata={
             'payment_id': payment.id,
             'username': request.user.username,
-            # 'order_id': order.id,  # Could pass order ID if desired
         },
     )
 
@@ -70,7 +68,7 @@ def checkout_view(request):
     payment.save()
 
     # 6. Pass client secret to the template
-    success_url = request.build_absolute_uri(reverse('payment_success'))
+    success_url = request.build_absolute_uri(reverse('payment_success')) + f"?payment_id={payment.id}"
     context = {
         'clientSecret': intent['client_secret'],
         'STRIPE_PUBLIC_KEY': settings.STRIPE_PUBLIC_KEY,
@@ -79,14 +77,26 @@ def checkout_view(request):
     }
     return render(request, '_payments/checkout.html', context)
 
-# payments/views.py (add these methods)
 def payment_success_view(request):
-    """
-    A simple success page. 
-    In a real scenario, confirm payment status with Stripe 
-    or rely on webhooks to update your Payment model.
-    """
-    messages.success(request, "Payment successful!")
+    payment_id = request.GET.get('payment_id')
+    if not payment_id:
+        messages.error(request, "No payment ID provided.")
+        return redirect('order_history')
+
+    try:
+        payment = Payment.objects.get(id=payment_id, user=request.user)
+    except Payment.DoesNotExist:
+        messages.error(request, "Payment not found or not yours.")
+        return redirect('order_history')
+
+    order = payment.order
+    if order and order.status == 'pending':
+        order.status = 'paid'
+        order.save()
+        messages.success(request, f"Order #{order.id} is now paid.")
+    else:
+        messages.info(request, "Order is not pending or does not exist.")
+
     return render(request, '_payments/payment_success.html')
 
 
@@ -104,27 +114,23 @@ def stripe_webhook_view(request):
         event = stripe.Webhook.construct_event(
             payload, sig_header, endpoint_secret
         )
-    except ValueError:
-        return HttpResponse(status=400)
     except stripe.error.SignatureVerificationError:
         return HttpResponse(status=400)
 
     if event['type'] == 'payment_intent.succeeded':
         payment_intent = event['data']['object']
         payment_id = payment_intent['metadata'].get('payment_id')
-        # order_id = payment_intent['metadata'].get('order_id') # If you set it
+
         if payment_id:
             try:
                 payment = Payment.objects.get(id=payment_id)
                 payment.status = 'succeeded'
                 payment.save()
 
-                # If you have a link from Payment -> Order, mark the order as paid
-                # payment.order.status = 'paid'
-                # payment.order.save()
                 order = payment.order  
-                order.status = 'paid'
-                order.save()
+                if order and order.status == 'pending':
+                    order.status = 'paid'
+                    order.save()
 
             except Payment.DoesNotExist:
                 pass

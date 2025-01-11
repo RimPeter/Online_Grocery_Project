@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from _orders.models import Order
 
 class Payment(models.Model):
     STATUS_CHOICES = (
@@ -15,6 +16,7 @@ class Payment(models.Model):
         null=True,
         blank=True
     )
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, null=True, blank=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     currency = models.CharField(max_length=3, default='usd')
     status = models.CharField(

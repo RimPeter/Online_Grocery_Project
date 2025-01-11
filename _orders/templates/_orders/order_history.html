@@ -30,16 +30,33 @@
         <td>${{ order.total }}</td>
 
         <!-- If you have choices for status, you can use get_status_display -->
-        <td>{{ order.get_status_display|default:order.status }}</td>
+        <td>{{ order.get_status_display }}</td>
         
         <!-- A "View" link to detailed info about this order -->
+        
         <td>
-          <a 
-            href="{% url 'order_detail' order.id %}" 
-            class="btn btn-primary btn-sm"
-          >
+          <a href="{% url 'order_detail' order.id %}" class="btn btn-primary btn-sm">
             View
           </a>
+            {% if order.status == 'pending' %}
+              <a 
+                href="{% url 'checkout' %}?order_id={{ order.id }}" 
+                class="btn btn-success btn-sm"
+              >
+                Pay
+              </a>
+            {% endif %}
+          <form 
+            action="{% url 'order_delete' order.id %}" 
+            method="POST" 
+            style="display:inline;"
+            onsubmit="return confirm('Are you sure you want to delete this order?');"
+          >
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger btn-sm">
+              Delete
+            </button>
+          </form>
         </td>
       </tr>
       {% endfor %}

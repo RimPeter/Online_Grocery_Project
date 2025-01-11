@@ -63,3 +63,17 @@ def delivery_slots_view(request):
     # GET request: just show the form
     return render(request, '_orders/delivery_slots.html')
 
+@login_required
+def delete_order_view(request, order_id):
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    if request.method == 'POST':
+        # Make sure only the owner can delete
+        order.delete()
+        messages.success(request, f"Order #{order_id} has been deleted.")
+        return redirect('order_history')
+    else:
+        messages.error(request, "Invalid request method.")
+        return redirect('order_history')
+
+
+
