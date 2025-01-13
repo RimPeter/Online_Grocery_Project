@@ -14,26 +14,38 @@
         <th scope="col">Date</th>
         <th scope="col">Total</th>
         <th scope="col">Status</th>
+        <th scope="col">Delivery Date</th>
+        <th scope="col">Delivery Time</th>
         <th scope="col">Details</th>
       </tr>
     </thead>
     <tbody>
       {% for order in orders %}
       <tr>
-        <!-- You might replace order.id with order.order_number or similar -->
         <td>{{ order.id }}</td>
-        
-        <!-- Example: format created_at timestamp -->
         <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
-        
-        <!-- Example: order.total or any field you have for cost -->
         <td>${{ order.total }}</td>
-
-        <!-- If you have choices for status, you can use get_status_display -->
         <td>{{ order.get_status_display }}</td>
-        
-        <!-- A "View" link to detailed info about this order -->
-        
+        <td>
+            {% if order.delivery_date %}
+              {{ order.delivery_date|date:"Y-m-d" }}
+            {% else %}
+              <span class="text-danger">Not scheduled</span>
+              <a 
+                href="{% url 'delivery_slots' %}?order_id={{ order.id }}" 
+                class="btn btn-warning btn-sm"
+              >
+                Schedule
+              </a>
+            {% endif %}
+          </td>
+          <td>
+            {% if order.delivery_time %}
+              {{ order.delivery_time|time:"H:i" }}
+            {% else %}
+              Not scheduled
+            {% endif %}
+          </td>        
         <td>
           <a href="{% url 'order_detail' order.id %}" class="btn btn-primary btn-sm">
             View
