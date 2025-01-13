@@ -13,26 +13,39 @@ from .models import Payment
 
 @login_required
 def checkout_view(request):
-    """One checkout view that can handle both new orders and existing 'pending' orders."""
     stripe.api_key = settings.STRIPE_SECRET_KEY
 
-    # 1. Attempt to get existing pending order from query string
+    # 1. Attempt to get an existing pending order from the query string
     order_id = request.GET.get('order_id')
     order = None
     if order_id:
         try:
-            order = Order.objects.get(id=order_id, user=request.user, status='pending')
+            order = Order.objects.get(
+                id=order_id, 
+                user=request.user, 
+                status='pending'
+            )
         except Order.DoesNotExist:
             order = None
 
-    # 2. If no valid pending order, create one from cart
+    # 2. If no valid pending order is found by 'order_id', 
+    #    look for *any* existing pending order for this user.
+    if not order:
+        existing_order = Order.objects.filter(
+            user=request.user, 
+            status='pending'
+        ).first()
+        if existing_order:
+            order = existing_order
+
+    # 3. If there still isn’t a pending order, create a new one.
     if not order:
         cart = request.session.get('cart', {})
         if not cart:
             messages.error(request, "Your cart is empty. Please add items before checking out.")
             return redirect('cart_view')
 
-        # compute total price
+        # Compute total
         total_price = 0
         product_ids = list(cart.keys())
         products = All_Products.objects.filter(pk__in=product_ids)
@@ -40,13 +53,14 @@ def checkout_view(request):
             quantity = cart[str(product.pk)]
             total_price += product.price * quantity
 
-        # create new Order
+        # Create new Order
         order = Order.objects.create(
             user=request.user,
             total=total_price,
             status='pending'
         )
-        # create OrderItems
+
+        # Create OrderItems
         for product in products:
             quantity = cart[str(product.pk)]
             OrderItem.objects.create(
@@ -55,7 +69,6 @@ def checkout_view(request):
                 quantity=quantity,
                 price=product.price
             )
-
     # 3. Create or update Payment record
     payment, created = Payment.objects.get_or_create(
         user=request.user,
