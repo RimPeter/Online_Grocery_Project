@@ -161,12 +161,18 @@ def update_cart(request):
 
 def load_more_products(request):
     page_number = request.GET.get('page', 1)
-    query = request.GET.get('q', '')
+    query = request.GET.get('q', '').strip()
 
-    products_qs = All_Products.objects.order_by('id')  # Order by something consistent
+    # Start with the same base queryset:
+    products_qs = All_Products.objects.filter(ga_product_id__endswith="1")
+    products_qs = products_qs.exclude(image_url='/img/products/no-image.png')
+    products_qs = products_qs.order_by('id')   # same ordering
+    print(products_qs.count()) 
+
+    # Same filter condition:
     if query:
-        products_qs = products_qs.filter(name__icontains=query)
-    
+        products_qs = products_qs.filter(category__icontains=query)
+
     paginator = Paginator(products_qs, 8)
     page_obj = paginator.get_page(page_number)
 
@@ -174,9 +180,10 @@ def load_more_products(request):
         request,
         '_catalog/partial_products.html',
         {
-            'page_obj': page_obj,       # <--- pass this in
-            'products': page_obj,       # <--- or use page_obj.object_list if preferred
+            'page_obj': page_obj,  # or 'products': page_obj
+            'products': page_obj   # so partial can loop & also check page_obj.has_next
         }
     )
+
 
 
