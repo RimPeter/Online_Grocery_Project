@@ -96,13 +96,11 @@
             />
             {% endif %}
             <div class="card-body d-flex flex-column">
-              <h5 class="card-title">{{ product.name }}</h5>
+              <h6 class="card-title">{{ product.name }}</h6>
               <p class="card-text">
                 {{ product.variant|default:"No description available" }}
               </p>
-              <p class="card-text">
-                <strong>Category:</strong> {{ product.category }}
-              </p>
+            
               <p class="card-text">
                 <strong>Price:</strong> £{{ product.price }}
               </p>
