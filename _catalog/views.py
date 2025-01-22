@@ -6,7 +6,9 @@ import json
 import os
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from _orders.models import Order
+from _catalog.models import All_Products, Product
 from django.contrib.auth.decorators import login_required
+
 
 
 def home(request):
@@ -156,3 +158,25 @@ def update_cart(request):
         request.session['cart'] = cart
 
     return redirect('cart_view')
+
+def load_more_products(request):
+    page_number = request.GET.get('page', 1)
+    query = request.GET.get('q', '')
+
+    products_qs = All_Products.objects.order_by('id')  # Order by something consistent
+    if query:
+        products_qs = products_qs.filter(name__icontains=query)
+    
+    paginator = Paginator(products_qs, 8)
+    page_obj = paginator.get_page(page_number)
+
+    return render(
+        request,
+        '_catalog/partial_products.html',
+        {
+            'page_obj': page_obj,       # <--- pass this in
+            'products': page_obj,       # <--- or use page_obj.object_list if preferred
+        }
+    )
+
+
