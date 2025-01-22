@@ -69,5 +69,29 @@ def delete_order_view(request, order_id):
         messages.error(request, "Invalid request method.")
         return redirect('order_history')
 
+@login_required
+def pending_order_view(request):
+    """
+    Displays the 'pending' order details before the user selects a delivery slot.
+    """
+    # Try retrieving an existing pending order for this user
+    try:
+        order = Order.objects.get(user=request.user, status='pending')
+    except Order.DoesNotExist:
+        messages.error(request, "You have no pending order.")
+        return redirect('cart_view')  # or wherever makes sense
 
+    # Fetch related order items (assuming you have an OrderItem model)
+    order_items = order.items.select_related('product').all()
+
+    # Calculate totals or retrieve from your model logic
+    total = sum(item.price * item.quantity for item in order_items)
+
+    # Pass order and items to the template
+    context = {
+        'order': order,
+        'order_items': order_items,
+        'total': total,
+    }
+    return render(request, '_orders/pending_order.html', context)
 

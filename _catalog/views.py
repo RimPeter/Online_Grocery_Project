@@ -5,6 +5,8 @@ from django.conf import settings
 import json
 import os
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from _orders.models import Order
+from django.contrib.auth.decorators import login_required
 
 
 def home(request):
@@ -57,40 +59,60 @@ def product_list(request):
     }
     return render(request, '_catalog/product.html', context)
 
+@login_required
 def cart_view(request):
     """
-    Displays the shopping cart.
+    Displays the shopping cart and associates it with a pending Order.
     """
     # Get the cart from session or use an empty dict if not found
     cart = request.session.get('cart', {})
 
+    # Try to fetch an existing 'pending' order for this user
+    # (Adjust your logic if you have more nuanced order statuses.)
+    try:
+        order = Order.objects.get(user=request.user, status='pending')
+        created_new = False
+    except Order.DoesNotExist:
+        # If none exists, create a new one
+        order = Order.objects.create(user=request.user, status='pending')
+        created_new = True
+
+    # Build cart items and total price from session data
     cart_items = []
     total_price = 0
-
     if cart:
-        # Convert cart keys to a list of strings, then fetch matching products
         product_ids = list(cart.keys())
         products = All_Products.objects.filter(pk__in=product_ids)
-
-        # Create a dictionary for quick lookup: { 'id_as_string': product_object }
         products_by_id = {str(p.pk): p for p in products}
 
-        # Build a list of cart item details
         for pid, quantity in cart.items():
             product = products_by_id.get(str(pid))
             if product:
                 item_total = product.price * quantity
                 total_price += item_total
-
                 cart_items.append({
                     'product': product,
                     'quantity': quantity,
                     'item_total': item_total,
                 })
 
+    # (Optional) Sync cart items to the Order
+    # Usually you'd create an OrderItem model to store individual line items.
+    # For example:
+    #   order.items.all().delete()  # Clear existing items if necessary
+    #   for cart_item in cart_items:
+    #       OrderItem.objects.create(
+    #           order=order,
+    #           product=cart_item['product'],
+    #           quantity=cart_item['quantity'],
+    #           price=cart_item['product'].price
+    #       )
+
     context = {
-        'cart_items': cart_items,   # List of dictionaries with product, quantity, and subtotal
-        'total_price': total_price  # Grand total of the cart
+        'cart_items': cart_items,
+        'total_price': total_price,
+        'order': order,  # Pass the order to the template
+        'created_new': created_new,
     }
     return render(request, '_catalog/cart.html', context)
 
