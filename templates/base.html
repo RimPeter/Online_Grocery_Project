@@ -46,22 +46,40 @@
             <a class="nav-link" href="{% url 'cart_view' %}">Cart</a>
           </li>
           {% if user.is_authenticated %}
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'password_change' %}"
-              >Change Password</a
-            >
-          </li>
+          
           <li class="nav-item">
             <span class="navbar-text"> Logged in as {{ user.username }} </span>
           </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'home' %}">Account</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link text-danger" href="{% url 'delete_account' %}"
-              >Delete Account</a
-            >
-          </li>
+          <li class="nav-item dropdown">
+    <a
+      class="nav-link dropdown-toggle"
+      href="#"
+      id="navbarAccountDropdown"
+      role="button"
+      data-bs-toggle="dropdown"
+      aria-expanded="false"
+    >
+      Account
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="navbarAccountDropdown">
+      <li>
+        <a class="dropdown-item" href="{% url 'password_change' %}">Change Password</a>
+      </li>
+      <li>
+        <a class="dropdown-item text-danger" href="{% url 'delete_account' %}">
+          Delete Account
+        </a>
+      </li>
+      <li>
+        <a class="dropdown-item" href="{% url 'order_history' %}">My Orders</a>
+      </li>
+      <li><hr class="dropdown-divider" /></li>
+      <li>
+        <a class="dropdown-item" href="{% url 'logout' %}">Logout</a>
+      </li>
+    </ul>
+  </li>
+          
           <li class="nav-item">
             <a class="nav-link" href="{% url 'order_history' %}">My Orders</a>
           </li>

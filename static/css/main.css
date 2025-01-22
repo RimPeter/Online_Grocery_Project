@@ -1,4 +1,6 @@
-body { background-color: lightgreen; }
+body { 
+    background-color: lightgreen; 
+}
 
 /* Ensure that the card stretches to fill the height */
 .card {
