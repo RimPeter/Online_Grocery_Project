@@ -5,3 +5,8 @@ body { background-color: lightgreen; }
     display: flex;
     flex-direction: column;
 }
+
+.card-title {
+    background-color: lightblue;
+    padding: 10px;
+}
