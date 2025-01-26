@@ -1,4 +1,6 @@
-body { background-color: lightgreen; }
+body { 
+    background-color: lightgreen; 
+}
 
 /* Ensure that the card stretches to fill the height */
 .card {
@@ -7,6 +9,14 @@ body { background-color: lightgreen; }
 }
 
 .card-title {
-    background-color: lightblue;
+    background-color: lightgreen;
     padding: 10px;
+    border-radius: 5px;
+}
+
+.price {
+    background-color: lightgreen;
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 1em;
 }
