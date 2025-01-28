@@ -3,6 +3,8 @@ import os
 import dj_database_url
 from decouple import config
 import socket
+from django.contrib.messages import constants as message_constants
+
 #from env import *
 ON_HEROKU = 'DYNO' in os.environ
 
@@ -77,6 +79,16 @@ TEMPLATES = [
         },
     },
 ]
+
+MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
+
+MESSAGE_TAGS = {
+    message_constants.DEBUG: 'debug',
+    message_constants.INFO: 'info',
+    message_constants.SUCCESS: 'success',
+    message_constants.WARNING: 'warning',
+    message_constants.ERROR: 'danger',
+}
 
 WSGI_APPLICATION = 'GROCERY.wsgi.application'
 

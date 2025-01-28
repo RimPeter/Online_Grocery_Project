@@ -2,6 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from collections import defaultdict
 from .models import All_Products
 from django.conf import settings
+from django.contrib import messages
 import json
 import os
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -123,8 +124,11 @@ def add_to_cart(request, product_id):
     
     if product_id in cart:
         cart[product_id] += 1
+        messages.success(request, "Quantity updated in cart.")
     else:
         cart[product_id] = 1
+        messages.success(request, "Product added to cart.")
+        
     request.session['cart'] = cart
     return redirect('product_list')
 
@@ -141,6 +145,7 @@ def update_cart(request):
             # Remove the item from cart
             if product_id in cart:
                 del cart[product_id]
+                messages.success(request, "Item removed from your cart.")
 
         elif action == 'update':
             # Change the quantity (only if it's valid and > 0)
@@ -149,10 +154,13 @@ def update_cart(request):
                 new_quantity = int(new_quantity)
                 if new_quantity > 0:
                     cart[product_id] = new_quantity
+                    messages.success(request, "Item quantity updated.")
+                    
                 else:
                     # If 0 or negative, remove the item from the cart
                     if product_id in cart:
                         del cart[product_id]
+                        messages.success(request, "Item removed from your cart.")
 
         # Save the updated cart back to the session
         request.session['cart'] = cart
