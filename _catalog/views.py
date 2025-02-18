@@ -6,8 +6,8 @@ from django.contrib import messages
 import json
 import os
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from _orders.models import Order
-from _catalog.models import All_Products, Product
+from _orders.models import Order, OrderItem
+from _catalog.models import All_Products
 from django.contrib.auth.decorators import login_required
 
 
@@ -66,28 +66,32 @@ def product_list(request):
 def cart_view(request):
     """
     Displays the shopping cart and associates it with a pending Order.
+    Also, synchronizes the pending order items with the session cart.
     """
-    # Get the cart from session or use an empty dict if not found
+    # Get the cart from session (or use an empty dict if not found)
     cart = request.session.get('cart', {})
 
-    # Try to fetch an existing 'pending' order for this user
-    # (Adjust your logic if you have more nuanced order statuses.)
-    try:
-        order = Order.objects.get(user=request.user, status='pending')
+    # Fetch all pending orders for the user, ordered by newest first.
+    pending_orders = Order.objects.filter(user=request.user, status='pending').order_by('-created_at')
+    if pending_orders.exists():
+        order = pending_orders.first()  # Use the latest pending order.
         created_new = False
-    except Order.DoesNotExist:
-        # If none exists, create a new one
+        # Delete any older pending orders.
+        if pending_orders.count() > 1:
+            pending_orders.exclude(pk=order.pk).delete()
+    else:
+        # If no pending order exists, create a new one.
         order = Order.objects.create(user=request.user, status='pending')
         created_new = True
 
-    # Build cart items and total price from session data
+    # Build cart items and calculate the total price from session data.
     cart_items = []
     total_price = 0
+    products_by_id = {}
     if cart:
         product_ids = list(cart.keys())
         products = All_Products.objects.filter(pk__in=product_ids)
         products_by_id = {str(p.pk): p for p in products}
-
         for pid, quantity in cart.items():
             product = products_by_id.get(str(pid))
             if product:
@@ -99,22 +103,24 @@ def cart_view(request):
                     'item_total': item_total,
                 })
 
-    # (Optional) Sync cart items to the Order
-    # Usually you'd create an OrderItem model to store individual line items.
-    # For example:
-    #   order.items.all().delete()  # Clear existing items if necessary
-    #   for cart_item in cart_items:
-    #       OrderItem.objects.create(
-    #           order=order,
-    #           product=cart_item['product'],
-    #           quantity=cart_item['quantity'],
-    #           price=cart_item['product'].price
-    #       )
+    # Synchronize the pending order with the session cart.
+    # Remove any existing order items...
+    order.items.all().delete()
+    # ...and recreate them from the current cart.
+    for pid, quantity in cart.items():
+        product = products_by_id.get(str(pid))
+        if product:
+            OrderItem.objects.create(
+                order=order,
+                product=product,
+                quantity=quantity,
+                price=product.price
+            )
 
     context = {
         'cart_items': cart_items,
         'total_price': total_price,
-        'order': order,  # Pass the order to the template
+        'order': order,  # This order now has updated OrderItems.
         'created_new': created_new,
     }
     return render(request, '_catalog/cart.html', context)
