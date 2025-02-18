@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse
 from django.urls import reverse
-
+from decimal import Decimal, ROUND_HALF_UP
 from _catalog.models import All_Products
 from _orders.models import Order, OrderItem
 from .models import Payment
@@ -21,13 +21,9 @@ def checkout_view(request, order_id):
     except Order.DoesNotExist:
         order = None
 
-    # If no valid pending order is found via order_id,
-    # look for any pending order for this user.
+    # If no valid pending order is found via order_id, look for any pending order for this user.
     if not order:
-        existing_order = Order.objects.filter(
-            user=request.user, 
-            status='pending'
-        ).first()
+        existing_order = Order.objects.filter(user=request.user, status='pending').first()
         if existing_order:
             order = existing_order
 
@@ -38,7 +34,6 @@ def checkout_view(request, order_id):
             messages.error(request, "Your cart is empty. Please add items before checking out.")
             return redirect('cart_view')
 
-        # Compute total
         total_price = 0
         product_ids = list(cart.keys())
         products = All_Products.objects.filter(pk__in=product_ids)
@@ -46,14 +41,12 @@ def checkout_view(request, order_id):
             quantity = cart[str(product.pk)]
             total_price += product.price * quantity
 
-        # Create new Order
         order = Order.objects.create(
             user=request.user,
             total=total_price,
             status='pending'
         )
 
-        # Create OrderItems
         for product in products:
             quantity = cart[str(product.pk)]
             OrderItem.objects.create(
@@ -62,6 +55,13 @@ def checkout_view(request, order_id):
                 quantity=quantity,
                 price=product.price
             )
+
+    # If the order total is zero, recalculate it from OrderItems.
+    if order.total == 0:
+        calculated_total = sum(item.price * item.quantity for item in order.items.all())
+        order.total = calculated_total
+        order.save()
+        print(f"Recalculated order total: {order.total}")
 
     # Create or update Payment record
     payment, created = Payment.objects.get_or_create(
@@ -74,12 +74,19 @@ def checkout_view(request, order_id):
         }
     )
     if not created:
-        # if payment already exists, update amount if needed
         payment.amount = order.total
         payment.save()
 
-    # Create (or update) the Stripe PaymentIntent
-    amount_in_cents = int(order.total * 100)
+    # Calculate amount in cents (using proper rounding if needed)
+    from decimal import Decimal, ROUND_HALF_UP
+    amount_in_cents = int((order.total * Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
+    print(f"Order total: {order.total} | Amount in cents: {amount_in_cents}")
+
+    # Optional: check if amount is below minimum
+    if amount_in_cents < 50:
+        messages.error(request, "Order total is too low to process payment. Please add more items.")
+        return redirect('cart_view')
+
     intent = stripe.PaymentIntent.create(
         amount=amount_in_cents,
         currency='usd',
@@ -91,10 +98,7 @@ def checkout_view(request, order_id):
     payment.stripe_payment_intent_id = intent['id']
     payment.save()
 
-    # Build the success URL
-    success_url = request.build_absolute_uri(
-        reverse('payment_success')
-    ) + f"?payment_id={payment.id}"
+    success_url = request.build_absolute_uri(reverse('payment_success')) + f"?payment_id={payment.id}"
 
     context = {
         'clientSecret': intent['client_secret'],
