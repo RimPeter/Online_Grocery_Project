@@ -12,24 +12,17 @@ from _orders.models import Order, OrderItem
 from .models import Payment
 
 @login_required
-def checkout_view(request):
+def checkout_view(request, order_id):
     stripe.api_key = settings.STRIPE_SECRET_KEY
 
-    # 1. Attempt to get an existing pending order from the query string
-    order_id = request.GET.get('order_id')
-    order = None
-    if order_id:
-        try:
-            order = Order.objects.get(
-                id=order_id, 
-                user=request.user, 
-                status='pending'
-            )
-        except Order.DoesNotExist:
-            order = None
+    # Use the order_id provided by the URL to retrieve the order.
+    try:
+        order = Order.objects.get(id=order_id, user=request.user, status='pending')
+    except Order.DoesNotExist:
+        order = None
 
-    # 2. If no valid pending order is found by 'order_id', 
-    #    look for *any* existing pending order for this user.
+    # If no valid pending order is found via order_id,
+    # look for any pending order for this user.
     if not order:
         existing_order = Order.objects.filter(
             user=request.user, 
@@ -38,7 +31,7 @@ def checkout_view(request):
         if existing_order:
             order = existing_order
 
-    # 3. If there still isn’t a pending order, create a new one.
+    # If there still isn’t a pending order, create a new one.
     if not order:
         cart = request.session.get('cart', {})
         if not cart:
@@ -69,7 +62,8 @@ def checkout_view(request):
                 quantity=quantity,
                 price=product.price
             )
-    # 3. Create or update Payment record
+
+    # Create or update Payment record
     payment, created = Payment.objects.get_or_create(
         user=request.user,
         order=order,
@@ -84,7 +78,7 @@ def checkout_view(request):
         payment.amount = order.total
         payment.save()
 
-    # 4. Create (or update) the Stripe PaymentIntent
+    # Create (or update) the Stripe PaymentIntent
     amount_in_cents = int(order.total * 100)
     intent = stripe.PaymentIntent.create(
         amount=amount_in_cents,
@@ -97,7 +91,7 @@ def checkout_view(request):
     payment.stripe_payment_intent_id = intent['id']
     payment.save()
 
-    # 5. Return checkout template
+    # Build the success URL
     success_url = request.build_absolute_uri(
         reverse('payment_success')
     ) + f"?payment_id={payment.id}"
