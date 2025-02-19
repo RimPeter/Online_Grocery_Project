@@ -9,6 +9,8 @@ urlpatterns = [
     path('accounts/', include('_accounts.urls')),
     path('payments/', include('_payments.urls')),
     path('orders/', include('_orders.urls')),
+    
+    path('', include('web_materials.urls')),
 ]
 
 handler404 = custom_404_view

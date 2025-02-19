@@ -47,7 +47,7 @@
             {% endif %}
           </td>        
         <td>
-          <a href="{% url 'order_detail' order.id %}" class="btn btn-primary btn-sm">
+          <a href="{% url 'order_summery' order.id %}" class="btn btn-primary btn-sm">
             View
           </a>
             {% if order.status == 'pending' %}

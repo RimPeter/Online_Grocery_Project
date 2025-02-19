@@ -1,0 +1,204 @@
+// Responsive Variables
+$xxl: "only screen and (min-width: 1601px) and (max-width: 1900px)";
+$xl: "only screen and (min-width: 1601px) and (max-width: 1800px)";
+$laptop: "only screen and (min-width: 1200px) and (max-width: 1600px)";
+$lg: "only screen and (min-width: 992px) and (max-width: 1200px)";
+$md: "only screen and (min-width: 768px) and (max-width: 991px)";
+$xs: "(max-width: 767px)";
+$sm: "only screen and (min-width: 576px) and (max-width: 767px)";
+
+//Landscape-responsive
+$xs-landscape: "only screen and (min-width: 540px) and (max-width: 767px) and (orientation: landscape)";
+
+.faq-area {
+    padding: 100px 0 140px 0;
+
+    .container {
+
+        .faq-que-list {
+            .accordion-item {
+                border: 1px solid rgb(231, 231, 231);
+                border-radius: 7px;
+                background-color: transparent;
+                margin-bottom: 25px;
+                
+
+                button:focus,
+                input:focus,
+                input:focus,
+                textarea,
+                textarea:focus {
+                    outline: 0;
+                }
+
+                .accordion-button {
+                    transition: unset;
+                    color: #000;
+                    font-size: 16px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    line-height: 1;
+                    border: 0;
+                    background-color: transparent;
+                    border-radius: 0;
+                    padding: 20px 25px 18px 25px;
+                    position: relative;
+                    box-shadow: 0;
+                    -webkit-transition: unset;
+                    -moz-transition: unset;
+                    -ms-transition: unset;
+                    -o-transition: unset;
+                    word-wrap: normal;
+
+                    &.collapsed {
+                        box-shadow: 0 10px 10px 0 rgba(255, 255, 255, 0.2);
+                    }
+
+                    @media(max-width:991px) and (min-width:768px) {
+                        padding: 21px 15px;
+                        font-size: 18px;
+                    }
+
+                    @media(max-width:767px) {
+                        padding: 21px 15px;
+                        font-size: 18px;
+                    }
+
+
+
+                    &:not(.collapsed) {
+                        color: unset;
+                        background-color: unset;
+                        box-shadow: unset;
+                    }
+
+                    &:focus {
+                        box-shadow: none;
+                        outline: 0;
+                    }
+
+                    &::before {
+                        content: "\f068";
+                        position: absolute;
+                        font-family: "Font awesome 5 Pro";
+                        font-size: 16px;
+                        font-weight: 700;
+                        color: #000;
+                        right: 30px;
+                        top: 50%;
+                        transform: translateY(-50%);
+                        z-index: 1;
+
+                        @media(max-width:991px) and (min-width:768px) {
+                            right: 10px;
+                            font-size: 16px;
+                        }
+
+                        @media(max-width:767px) {
+                            right: 10px;
+                            font-size: 16px;
+                        }
+                    }
+
+                    &::after {
+                        display: none;
+                    }
+                }
+
+                .collapsed {
+                    border: 0;
+
+                    &::before {
+                        content: "\f067";
+                    }
+                }
+
+                .accordion-body {
+                    padding: 0;
+                    padding: 0 30px 24px 25px;
+
+                    p {
+                        font-size: 16px;
+                        color: #777777;
+                        font-weight: 400;
+                        line-height: 28px;
+                    }
+
+                    @media(max-width:767px) {
+                        padding: 0 15px 24px 15px;
+                    }
+
+
+                }
+            }
+        }
+
+        .faq-bg-area {
+            position: relative;
+            z-index: 1;
+
+            &::before {
+                content: "";
+                position: absolute;
+                background-image: -moz-linear-gradient(0deg, rgb(8, 106, 216) 0%, rgb(55, 140, 255) 100%);
+                background-image: -webkit-linear-gradient(0deg, rgb(8, 106, 216) 0%, rgb(55, 140, 255) 100%);
+                background-image: -ms-linear-gradient(0deg, rgb(8, 106, 216) 0%, rgb(55, 140, 255) 100%);
+                opacity: 0.941;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                z-index: -1;
+            }
+
+            .faq-que-list {
+                .accordion-item {
+                    border: 0;
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+
+                    &:nth-child(1) {
+                        border-top: 1px solid rgba(255, 255, 255, 0.2);
+                    }
+
+                    .accordion-button {
+                        color: #fff;
+                        padding-left: 0;
+                        padding-right: 0;
+
+                        @media(max-width:767px) {
+                            padding-left: 0;
+                            padding-right: 15px;
+                        }
+
+
+
+                        &::before {
+                            color: #fff;
+                            right: 0;
+                        }
+                    }
+
+                    .accordion-body {
+                        padding: 0 30px 20px 0;
+
+                        p {
+                            font-size: 16px;
+                            color: #666666;
+                            font-weight: 300;
+                            line-height: 28px;
+                        }
+
+                        @media(max-width:767px) {
+                            padding: 0 15px 20px 0;
+                        }
+
+
+                        p {
+                            color: rgba(255, 255, 255, 0.8);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

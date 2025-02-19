@@ -1,0 +1,111 @@
+// Responsive Variables
+$xxl: "only screen and (min-width: 1601px) and (max-width: 1900px)";
+$xl: "only screen and (min-width: 1601px) and (max-width: 1800px)";
+$laptop: "only screen and (min-width: 1200px) and (max-width: 1600px)";
+$lg: "only screen and (min-width: 992px) and (max-width: 1200px)";
+$md: "only screen and (min-width: 768px) and (max-width: 991px)";
+$xs: "(max-width: 767px)";
+$sm: "only screen and (min-width: 576px) and (max-width: 767px)";
+
+//Landscape-responsive
+$xs-landscape: "only screen and (min-width: 540px) and (max-width: 767px) and (orientation: landscape)";
+
+.error-area {
+    position: relative;
+    display: table;
+    width: 100%;
+    height: 100vh;
+    background-repeat: no-repeat !important;
+    background-size: cover !important;
+    background: #ffffff;
+
+    .content-area {
+        position: relative;
+        margin: 0 auto;
+        text-align: center;
+
+        .container {
+            position: fixed;
+            top: 50%;
+            left: 0;
+            right: 0;
+            transform: translateY(-50%);
+
+            .error-404 {
+                display: block;
+                .section-inner {
+                    max-width: 550px;
+                    margin: 0 auto;
+
+                    .error-img {
+                        margin-bottom: 30px;
+
+                        @media(max-width:450px) {
+                            margin-bottom: 10px;
+                        }
+                        img{
+                            width: 400px;
+                        }
+                    }
+
+                    .title {
+                        margin-bottom: 40px;
+
+                        @media(max-width:450px) {
+                            margin-bottom: 20px;
+                        }
+
+                        .sub-title {
+                            font-size: 48px;
+                            font-weight: bold;
+                            padding-bottom: 20px;
+
+                            @media(max-width:450px) {
+                                padding-bottom: 10px;
+                            }
+                            @media(max-width:400px) {
+                                font-size: 38px;
+                            }
+                        }
+
+                        .sect-title {
+                            font-size: 18px;
+                            font-weight: 300;
+                            color: #666666;
+                            line-height: 28px;
+                            @media(max-width:576px){
+                                br{
+                                    display: none;
+                                }
+                            }
+                            @media(max-width:450px){
+                                font-size: 16px;
+                            }
+                        }
+                    }
+
+                    .section-button {
+                        a {
+                            font-size: 14px;
+                            color: #fff;
+                            background-color: #000;
+                            padding: 16px 30px;
+                            border: 1px solid #000;
+                            transition: all .3s ease-in-out;
+
+                            &:hover {
+                                i {
+                                    transform: translateX(-5px);
+                                }
+                            }
+
+                            i {
+                                padding-right: 20px;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
