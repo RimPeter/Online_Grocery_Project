@@ -81,6 +81,11 @@ C:/Program Files (x86)/Koala/rubygems/gems/sass-3.5.2/bin/sass:13:in `<top (requ
 C:/Program Files (x86)/Koala/bin/sass:22:in `load'
 C:/Program Files (x86)/Koala/bin/sass:22:in `<main>'
 */
+#product {
+  border-radius: 50%;
+}
+
+
 body:before {
   white-space: pre;
   font-family: monospace;
