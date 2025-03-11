@@ -2,8 +2,9 @@ from pathlib import Path
 import os
 import dj_database_url
 from decouple import config
-import socket
 from django.contrib.messages import constants as message_constants
+from dotenv import load_dotenv
+load_dotenv()
 
 #from env import *
 ON_HEROKU = 'DYNO' in os.environ
