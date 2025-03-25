@@ -28,7 +28,11 @@
       {% for item in order_items %}
         <li class="list-group-item">
           <div class="row">
-            <div class="col-md-6">{{ item.product.name }}</div>
+            <strong><div class="col-md-6">{{ item.product.name }}</div></strong>
+            
+            <div class="col-md-6">
+              <img src="{{ item.product.image_url }}" alt="{{ item.product.name }}" style="max-width: 100px; max-height: 100px;">
+            </div>
             <div class="col-md-2">Quantity: {{ item.quantity }}</div>
             <div class="col-md-2">Price: £{{ item.price }}</div>
             <div class="col-md-2">Subtotal: £{{ item.subtotal }}</div>
@@ -47,6 +51,6 @@
   </div>
 
   <!-- Link to Proceed to Pay -->
-  <a href="{% url 'checkout' order_id=order.id %}" class="btn btn-primary">Proceed to Pay</a>
-</div>
+  {% comment %} <a href="{% url 'checkout' order_id=order.id %}" class="btn btn-primary">Proceed to Pay</a>
+</div> {% endcomment %}
 {% endblock %}
