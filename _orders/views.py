@@ -7,7 +7,7 @@ from django.contrib import messages
 @login_required
 def order_history_view(request):
     orders = Order.objects.filter(user=request.user,
-                                  status='paid'
+                                  status__in= ('paid', 'processed', 'delivered')
                                   ).order_by('-created_at')
     return render(request, '_orders/order_history.html', {'orders': orders})
 
