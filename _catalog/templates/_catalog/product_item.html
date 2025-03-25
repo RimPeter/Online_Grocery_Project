@@ -2,12 +2,16 @@
 <div class="col-lg-3 col-md-4 col-sm-6 col-6 d-flex align-items-stretch">
   <div class="card mb-4 shadow-sm h-100">
     {% if product.image_url %}
-    <img
+    <a href="{% url 'product_detail' product.pk %}" >
+          <img
       src="{{ product.image_url }}"
       class="card-img-top"
       alt="{{ product.name }}"
     />
+        </a>
+    
     {% else %}
+
     <img
       src="{% static 'images/default_product.jpg' %}"
       class="card-img-top"

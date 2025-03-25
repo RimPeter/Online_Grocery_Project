@@ -31,7 +31,9 @@
             <strong><div class="col-md-6">{{ item.product.name }}</div></strong>
             
             <div class="col-md-6">
+              <a href="{% url 'product_detail' item.product.pk %}">
               <img src="{{ item.product.image_url }}" alt="{{ item.product.name }}" style="max-width: 100px; max-height: 100px;">
+              </a>
             </div>
             <div class="col-md-2">Quantity: {{ item.quantity }}</div>
             <div class="col-md-2">Price: £{{ item.price }}</div>
