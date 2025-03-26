@@ -30,6 +30,21 @@
                 <div class="right">
                     <h1 class="prodname">{{ product.name }}</h1>
                     <p class="prodsize">£{{ product.price }} - {{ product.list_position }}</p>
+                    <form method="POST" action="{% url 'add_to_cart' product.id %}">
+                        {% csrf_token %}
+                        <div class="input-group mb-2">
+                            <input
+                            type="number"
+                            name="quantity"
+                            class="form-control"
+                            value="1"
+                            min="1"
+                            />
+                            <button type="submit" class="btn btn-primary">
+                                Add
+                            </button>
+                        </div>
+                    </form>
                     <div class="blueline">&nbsp;</div>
                     <p class="prodlogin"><a href="{% url 'home' %}">Log in to buy</a></p>
                     <div class="blueline">&nbsp;</div>
@@ -42,6 +57,9 @@
                             <tr><th>Retail EAN:</th><td>{{ product.retail_EAN }}</td></tr>
                             <tr><th>Category:</th><td>{{ product.category }}</td></tr>
                             <tr><th>Variant:</th><td>{{ product.variant }}</td></tr>
+                            <tr><th>
+                               
+                            </td></tr>
                         </tbody>
                     </table>
                 </div>
