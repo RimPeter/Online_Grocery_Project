@@ -44,9 +44,7 @@ INSTALLED_APPS = [
     '_scheduling',
     '_suppliers',
     '_payments',
-    
-    'web_materials',
-]
+    ]
 
 LOGIN_URL = '/accounts/login/'  
 LOGIN_REDIRECT_URL = 'home'
@@ -151,14 +149,6 @@ MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
-    os.path.join(
-        BASE_DIR,
-        'web_materials',
-        'themeforest-GyXNz1qN-weiboo-ecommerce-django-5-template',
-        'Weiboo',
-        'Weiboo',
-        'static'
-    ),
 ]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATIC_URL = '/static/'
