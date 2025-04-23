@@ -1,11 +1,11 @@
 from django.db import models
 
-class Category(models.Model):
-    pass
+# class Category(models.Model):
+#     pass
     
 
-class Product(models.Model):
-    pass
+# class Product(models.Model):
+#     pass
 
 
 class All_Products(models.Model):
