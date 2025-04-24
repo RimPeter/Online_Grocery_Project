@@ -12,7 +12,12 @@ class All_Products(models.Model):
     ga_product_id = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=255)
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    category = models.CharField(max_length=255)
+    
+    # Split category into three levels
+    main_category = models.CharField(max_length=255, blank=True)
+    sub_category = models.CharField(max_length=255, blank=True)
+    sub_subcategory = models.CharField(max_length=255, blank=True)
+    
     variant = models.CharField(max_length=255, null=True, blank=True)
     list_position = models.PositiveIntegerField()
     url = models.URLField()

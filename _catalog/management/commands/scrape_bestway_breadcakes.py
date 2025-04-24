@@ -41,6 +41,12 @@ class Command(BaseCommand):
                 ga_product_variant = li.get("data-ga-product-variant", "").strip()
                 ga_product_url = li.get("data-ga-product-url", "").strip()
 
+                # Split category into main, sub and sub-sub
+                categories = [c.strip() for c in ga_product_category.split('>')]
+                main_category = categories[0] if len(categories) > 0 else ''
+                sub_category = categories[1] if len(categories) > 1 else ''
+                sub_subcategory = categories[2] if len(categories) > 2 else ''
+
                 # Extract image URL
                 img_tag = li.select_one(".prodimageinner img")
                 image_url = img_tag["src"].strip() if img_tag and img_tag.has_attr("src") else None
@@ -65,7 +71,9 @@ class Command(BaseCommand):
                     "ga_product_id": ga_product_id,
                     "name": ga_product_name,
                     "price": float(ga_product_price) if ga_product_price else 0.0,
-                    "category": ga_product_category,
+                    "main_category": main_category,
+                    "sub_category": sub_category,
+                    "sub_subcategory": sub_subcategory,
                     "variant": ga_product_variant,
                     "list_position": list_position,
                     "url": f"https://www.bestwaywholesale.co.uk{ga_product_url}",
