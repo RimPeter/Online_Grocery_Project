@@ -5,7 +5,15 @@ from django.utils.html import format_html
    
 @admin.register(All_Products)
 class All_ProductsAdmin(admin.ModelAdmin):
-    list_display = ('name', 'url', 'image_link','image_url', 'price', 'category')
+    list_display = ('name', 
+                    'url', 
+                    'image_link',
+                    'image_url', 
+                    'price', 
+                    'main_category', 
+                    'sub_category', 
+                    'sub_subcategory',)
+    
     list_filter = ('name', 'price')
     search_fields = ('name', 'sku')
     ordering = ('name',)

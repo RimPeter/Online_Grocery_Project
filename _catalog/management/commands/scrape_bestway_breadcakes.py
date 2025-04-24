@@ -14,7 +14,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         # The three URLs you want to scrape
         
-        urls_file = os.path.join(os.path.dirname(__file__), 'urls.json')
+        urls_file = os.path.join(os.path.dirname(__file__), 'bestway_urls.json')
         with open(urls_file, 'r', encoding='utf-8') as f:
             urls = json.load(f)
         
