@@ -5,6 +5,7 @@ from django.conf import settings
 from django.contrib import messages
 import json
 import os
+from django.db.models import Q
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from _orders.models import Order, OrderItem
 from _catalog.models import All_Products
@@ -39,7 +40,11 @@ def product_list(request):
     products = products.exclude(image_url='/img/products/no-image.png')  # Exclude products with no image
     products = products.order_by('id')
     if query:
-        products = products.filter(category__icontains=query)
+        products = products.filter(
+           Q(main_category__icontains=query) |
+           Q(sub_category__icontains=query) |
+           Q(sub_subcategory__icontains=query)
+           )
 
     # Pagination setup
     paginator = Paginator(products, 12)  # Show 12 products per page
@@ -185,7 +190,11 @@ def load_more_products(request):
 
     # Same filter condition:
     if query:
-        products_qs = products_qs.filter(category__icontains=query)
+        products_qs = products_qs.filter(
+            Q(main_category__icontains=query) |
+            Q(sub_category__icontains=query) |
+            Q(sub_subcategory__icontains=query)
+            )
 
     paginator = Paginator(products_qs, 8)
     page_obj = paginator.get_page(page_number)
