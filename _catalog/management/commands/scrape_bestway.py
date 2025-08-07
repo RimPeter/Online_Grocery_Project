@@ -111,7 +111,7 @@ class Command(BaseCommand):
                     defaults = dict(
                         name=name,
                         price=price,
-                        category=cat,
+                        main_category=cat,
                         variant=var,
                         list_position=list_position,
                         url=f"https://www.bestwaywholesale.co.uk{relurl}",
@@ -122,8 +122,8 @@ class Command(BaseCommand):
                         multi_buy=False,
                         retail_EAN="",
                         vat_rate="standard",
-                        level1_category=level1,
-                        level2_category=level2 or "",
+                        sub_category=level1,
+                        sub_subcategory=level2 or "",
                     )
 
                     # avoid double work if the same product ID appears in

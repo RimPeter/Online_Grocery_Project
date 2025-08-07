@@ -27,6 +27,11 @@ class All_Products(models.Model):
     promotion_end_date = models.DateField(null=True, blank=True)
     multi_buy = models.BooleanField(default=False)
     retail_EAN = models.CharField(max_length=13, blank=True)
+    
+    # level1_category = models.CharField(max_length=255, blank=True)   # temp
+    # level2_category = models.CharField(max_length=255, blank=True)   # temp
+    # category        = models.CharField(max_length=255, blank=True)   # temp
+    
     VAT_RATE_CHOICES = [
         ('standard', 'Standard'),
         ('reduced', 'Reduced'),
