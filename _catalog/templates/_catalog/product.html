@@ -16,81 +16,6 @@
         <div class="card-header">
           <strong>Categories</strong>
         </div>
-        {% comment %} <ul class="list-group list-group-flush">
-          
-          {% for level1_category, level2_categories in level1_to_level2.items %}
-          <li class="list-group-item">
-            <!-- Collapsible trigger for Level 1 Category -->
-            <a
-              class="d-flex justify-content-between align-items-center text-decoration-none"
-              data-bs-toggle="collapse"
-              href="#collapse-{{ forloop.counter }}"
-              role="button"
-              aria-expanded="false"
-              aria-controls="collapse-{{ forloop.counter }}"
-            >
-              <strong>{{ level1_category }}</strong>
-              <span class="ms-2">
-                <i class="bi bi-caret-down-fill"></i>
-              </span>
-            </a>
-            <!-- Level 2 Category List (collapsible) -->
-            <ul
-              class="collapse ms-4 mt-2"
-              id="collapse-{{ forloop.counter }}"
-              style="list-style-type: disc;"
-            >
-              {% for level2_category in level2_categories %}
-              <li style="list-style-position: outside;">
-                <a class="text-decoration-none" href="?q={{ level2_category }}">
-                  {{ level2_category }}
-                </a>
-              </li>
-              {% endfor %}
-            </ul>
-          </li>
-          {% endfor %} 
-
-
-        </ul> {% endcomment %}
-
-        {% comment %} <ul class="list-group list-group-flush">
-          {% for level1, node in category_tree.items %}
-            <li class="list-group-item">
-              {% if node.items %}
-                <a
-                  class="d-flex justify-content-between align-items-center text-decoration-none"
-                  data-bs-toggle="collapse"
-                  href="#cat-{{ forloop.counter }}"
-                  role="button"
-                  aria-expanded="false"
-                  aria-controls="cat-{{ forloop.counter }}"
-                >
-                  <strong>{{ level1 }}</strong>
-                  <span class="ms-2"><i class="bi bi-caret-down-fill"></i></span>
-                </a>
-
-                <ul class="collapse ms-4 mt-2" id="cat-{{ forloop.counter }}" style="list-style-type: disc;">
-                  {# node is a dict: {level2: url} — we ignore the URL and filter locally #}
-                  {% for level2, _ in node.items %}
-                    <li style="list-style-position: outside;">
-                      <a class="text-decoration-none" href="?q={{ level2|urlencode }}">
-                        {{ level2 }}
-                      </a>
-                    </li>
-                  {% endfor %}
-                </ul>
-              {% else %}
-                {# Leaf Level-1 category: filter by the Level-1 name #}
-                <a class="text-decoration-none d-block" href="?q={{ level1|urlencode }}">
-                  <strong>{{ level1 }}</strong>
-                </a>
-              {% endif %}
-            </li>
-          {% empty %}
-            <li class="list-group-item text-muted">No categories found.</li>
-          {% endfor %}
-        </ul> {% endcomment %}
 
         <ul class="list-group list-group-flush">
           {% for level1, node in category_tree.items %}
@@ -134,7 +59,7 @@
     <!-- Right Column: Search Form & Product Listing -->
     <div class="col-md-9">
       <!-- Search Form -->
-      <form method="GET" action="" class="mb-3">
+      {% comment %} <form method="GET" action="" class="mb-3">
         <div class="input-group">
           <input
             type="text"
@@ -147,7 +72,48 @@
             Search
           </button>
         </div>
-      </form>
+      </form> {% endcomment %}
+
+<form method="GET" action="" class="mb-3" id="search-form">
+  {# preserve current filters when searching #}
+  {% if request.GET.l1 %}<input type="hidden" name="l1" id="l1-field" value="{{ request.GET.l1 }}">{% else %}<input type="hidden" name="l1" id="l1-field">{% endif %}
+  {% if request.GET.l2 %}<input type="hidden" name="l2" id="l2-field" value="{{ request.GET.l2 }}">{% else %}<input type="hidden" name="l2" id="l2-field">{% endif %}
+
+  <div class="input-group">
+    <input
+      type="text"
+      name="q"
+      id="search-input"
+      class="form-control"
+      placeholder="Search for products or categories..."
+      value="{{ request.GET.q }}"
+      list="category-suggestions"
+      autocomplete="off"
+    />
+    <button class="btn btn-outline-secondary" type="submit">
+      Search
+    </button>
+  </div>
+
+  {# As-you-type dropdown suggestions: Level-1, Level-2, and combined "L1 › L2" #}
+  <datalist id="category-suggestions">
+    {% for level1, node in category_tree.items %}
+      <option value="{{ level1 }}"></option>
+      {% if node.items %}
+        {% for level2, _ in node.items %}
+          <option value="{{ level2 }}"></option>
+          <option value="{{ level1 }} › {{ level2 }}"></option>
+        {% endfor %}
+      {% endif %}
+    {% endfor %}
+  </datalist>
+</form>
+
+{# Safe JSON payloads for exact-matching on submit #}
+{{ level1_names|json_script:"level1-names" }}
+{{ level2_names|json_script:"level2-names" }}
+
+      
 
       <!-- Product Container -->
       <!-- We'll insert initial products here, and then append more as the user scrolls -->
@@ -194,28 +160,21 @@
 
     // Create an Intersection Observer
     const observer = new IntersectionObserver(async (entries) => {
-      // If the sentinel is visible, load more products
-      if (entries.some(entry => entry.isIntersecting)) {
-        // Show spinner
+      if (entries.some(e => e.isIntersecting)) {
         loadingSpinner.style.display = 'inline-block';
-
-        // Get next page number
         let page = nextPageInput.value;
 
         try {
-          // Build the URL to fetch the next page of products
-          // This points to a new Django view or an API endpoint that returns partial HTML
           let url = "{% url 'load_more_products' %}?page=" + page;
 
           {% if request.GET.q %}
           url += "&q={{ request.GET.q|urlencode }}";
           {% endif %}
-          {% if request.GET.l1 %}
-          url += "&l1={{ request.GET.l1|urlencode }}";
-          {% endif %}
-          {% if request.GET.l2 %}
-          url += "&l2={{ request.GET.l2|urlencode }}";
-          {% endif %}
+
+          // Always forward current l1/l2 from the URL
+          const params = new URLSearchParams(window.location.search);
+          if (params.get('l1')) url += "&l1=" + encodeURIComponent(params.get('l1'));
+          if (params.get('l2')) url += "&l2=" + encodeURIComponent(params.get('l2'));
 
 
           // Fetch the next set of products (HTML or JSON)
@@ -280,4 +239,78 @@
     toastList.forEach(toast => toast.show());
   });
 </script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const form   = document.getElementById('search-form');
+  const input  = document.getElementById('search-input');
+  const l1f    = document.getElementById('l1-field');
+  const l2f    = document.getElementById('l2-field');
+  const L1     = JSON.parse(document.getElementById('level1-names').textContent || "[]");
+  const L2     = JSON.parse(document.getElementById('level2-names').textContent || "[]");
+
+  const fold = s => (s || '').toLocaleLowerCase();
+
+  form.addEventListener('submit', function () {
+    const v = input.value.trim();
+    if (!v) return; // nothing to do
+
+    // Combined "Level1 › Level2"
+    if (v.includes('›')) {
+      const [l1, l2] = v.split('›').map(s => s.trim());
+      if (l1 && l2) {
+        l1f.value = l1;
+        l2f.value = l2;
+        input.value = ''; // prevent fuzzy search; we want exact l1/l2
+        return;
+      }
+    }
+
+    // Exact Level-1 match -> use l1 param, clear q
+    const l1Hit = L1.find(x => fold(x) === fold(v));
+    if (l1Hit) {
+      l1f.value = l1Hit;
+      l2f.value = '';
+      input.value = ''; // no fuzzy search
+      return;
+    }
+
+    // Exact Level-2 match -> leave q as-is (server's exact-match logic will kick in)
+    const l2Hit = L2.find(x => fold(x) === fold(v));
+    if (l2Hit) {
+      // Keep input.value; do not set l1/l2 (let backend exact-match on q)
+      return;
+    }
+
+    // Otherwise: leave as free-text fuzzy search
+  });
+});
+</script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Only on small screens
+    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+    if (!isMobile) return;
+
+    // Only after a search or category filter
+    const params = new URLSearchParams(window.location.search);
+    const didFilter = params.has('q') || params.has('l1') || params.has('l2');
+    if (!didFilter) return;
+
+    // Scroll to the first product card
+    requestAnimationFrame(() => {
+      // Grab the first rendered child within the product grid
+      const firstItem = document.querySelector('#product-container > *');
+      if (!firstItem) return;
+
+      // If you have a fixed/sticky navbar, offset for it
+      const header = document.querySelector('.sticky-top, .navbar, header');
+      const offset = header ? header.getBoundingClientRect().height : 0;
+
+      const y = firstItem.getBoundingClientRect().top + window.pageYOffset - offset - 8;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    });
+  });
+</script>
+
+
 {% endblock %}
