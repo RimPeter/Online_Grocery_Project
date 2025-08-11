@@ -53,44 +53,80 @@
 
 
         </ul> {% endcomment %}
-        <ul class="list-group list-group-flush">
-  {# debug: categories loaded = {{ category_tree|length }} #}
-  {% for level1, node in category_tree.items %}
-    <li class="list-group-item">
-      {% if node.items %}
-        <a
-          class="d-flex justify-content-between align-items-center text-decoration-none"
-          data-bs-toggle="collapse"
-          href="#cat-{{ forloop.counter }}"
-          role="button"
-          aria-expanded="false"
-          aria-controls="cat-{{ forloop.counter }}"
-        >
-          <strong>{{ level1 }}</strong>
-          <span class="ms-2"><i class="bi bi-caret-down-fill"></i></span>
-        </a>
 
-        <ul class="collapse ms-4 mt-2" id="cat-{{ forloop.counter }}" style="list-style-type: disc;">
-          {# node is a dict: {level2: url} — we ignore the URL and filter locally #}
-          {% for level2, _ in node.items %}
-            <li style="list-style-position: outside;">
-              <a class="text-decoration-none" href="?q={{ level2|urlencode }}">
-                {{ level2 }}
-              </a>
+        {% comment %} <ul class="list-group list-group-flush">
+          {% for level1, node in category_tree.items %}
+            <li class="list-group-item">
+              {% if node.items %}
+                <a
+                  class="d-flex justify-content-between align-items-center text-decoration-none"
+                  data-bs-toggle="collapse"
+                  href="#cat-{{ forloop.counter }}"
+                  role="button"
+                  aria-expanded="false"
+                  aria-controls="cat-{{ forloop.counter }}"
+                >
+                  <strong>{{ level1 }}</strong>
+                  <span class="ms-2"><i class="bi bi-caret-down-fill"></i></span>
+                </a>
+
+                <ul class="collapse ms-4 mt-2" id="cat-{{ forloop.counter }}" style="list-style-type: disc;">
+                  {# node is a dict: {level2: url} — we ignore the URL and filter locally #}
+                  {% for level2, _ in node.items %}
+                    <li style="list-style-position: outside;">
+                      <a class="text-decoration-none" href="?q={{ level2|urlencode }}">
+                        {{ level2 }}
+                      </a>
+                    </li>
+                  {% endfor %}
+                </ul>
+              {% else %}
+                {# Leaf Level-1 category: filter by the Level-1 name #}
+                <a class="text-decoration-none d-block" href="?q={{ level1|urlencode }}">
+                  <strong>{{ level1 }}</strong>
+                </a>
+              {% endif %}
             </li>
+          {% empty %}
+            <li class="list-group-item text-muted">No categories found.</li>
+          {% endfor %}
+        </ul> {% endcomment %}
+
+        <ul class="list-group list-group-flush">
+          {% for level1, node in category_tree.items %}
+            <li class="list-group-item">
+              {% if node.items %}
+                <a
+                  class="d-flex justify-content-between align-items-center text-decoration-none"
+                  data-bs-toggle="collapse"
+                  href="#cat-{{ forloop.counter }}"
+                  role="button"
+                  aria-expanded="false"
+                  aria-controls="cat-{{ forloop.counter }}"
+                >
+                  <strong>{{ level1 }}</strong>
+                  <span class="ms-2"><i class="bi bi-caret-down-fill"></i></span>
+                </a>
+
+                <ul class="collapse ms-4 mt-2" id="cat-{{ forloop.counter }}" style="list-style-type: disc;">
+                  {% for level2, _ in node.items %}
+                    <li style="list-style-position: outside;">
+                      <a class="text-decoration-none" href="?l1={{ level1|urlencode }}&l2={{ level2|urlencode }}">
+                        {{ level2 }}
+                      </a>
+                    </li>
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <a class="text-decoration-none d-block" href="?l1={{ level1|urlencode }}">
+                  <strong>{{ level1 }}</strong>
+                </a>
+              {% endif %}
+            </li>
+          {% empty %}
+            <li class="list-group-item text-muted">No categories found.</li>
           {% endfor %}
         </ul>
-      {% else %}
-        {# Leaf Level-1 category: filter by the Level-1 name #}
-        <a class="text-decoration-none d-block" href="?q={{ level1|urlencode }}">
-          <strong>{{ level1 }}</strong>
-        </a>
-      {% endif %}
-    </li>
-  {% empty %}
-    <li class="list-group-item text-muted">No categories found.</li>
-  {% endfor %}
-</ul>
 
       </div>
     </div>
@@ -122,7 +158,6 @@
       </div>
 
       <!-- A hidden element to store the next page number or URL -->
-      <!-- You can also store a dedicated 'has_more' or something if you want -->
 {% if page_obj.has_next %}
   <input type="hidden" id="next-page" value="{{ page_obj.next_page_number }}">
 {% else %}
@@ -172,10 +207,16 @@
           // This points to a new Django view or an API endpoint that returns partial HTML
           let url = "{% url 'load_more_products' %}?page=" + page;
 
-          // If there's a search term, pass it along
           {% if request.GET.q %}
           url += "&q={{ request.GET.q|urlencode }}";
           {% endif %}
+          {% if request.GET.l1 %}
+          url += "&l1={{ request.GET.l1|urlencode }}";
+          {% endif %}
+          {% if request.GET.l2 %}
+          url += "&l2={{ request.GET.l2|urlencode }}";
+          {% endif %}
+
 
           // Fetch the next set of products (HTML or JSON)
           const response = await fetch(url, {

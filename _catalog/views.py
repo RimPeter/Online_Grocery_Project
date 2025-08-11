@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from collections import defaultdict
+
 from .models import All_Products
 from django.conf import settings
 from django.contrib import messages
@@ -8,7 +9,6 @@ import os
 from django.db.models import Q
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from _orders.models import Order, OrderItem
-from _catalog.models import All_Products
 from django.contrib.auth.decorators import login_required
 
 
@@ -103,19 +103,49 @@ def product_list(request):
             category_tree[level1] = sub
         else:
             category_tree[level1] = pick_best_url(node)
+            
+    # ... after category_tree = {...} is built
 
-    # --- the rest of your existing product query/pagination unchanged ---
+    # Build quick lookups of known category names for exact-match search
+    level1_names = set(category_tree.keys())
+    level2_names = set()
+    for node in category_tree.values():
+        if isinstance(node, dict):
+            level2_names.update(node.keys())
+
+    # --- the rest of your existing product query/pagination ---
     query = request.GET.get('q', '').strip()
+    l1 = request.GET.get('l1', '').strip()
+    l2 = request.GET.get('l2', '').strip()
+
     products = (All_Products.objects
                 .filter(ga_product_id__endswith="1")
                 .exclude(image_url='/img/products/no-image.png')
                 .order_by('id'))
-    if query:
+
+    if l2:
         products = products.filter(
-            Q(main_category__icontains=query) |
-            Q(sub_category__icontains=query) |
-            Q(sub_subcategory__icontains=query)
+            sub_category__iexact=l1,
+            sub_subcategory__iexact=l2
         )
+    elif l1:
+        products = products.filter(sub_category__iexact=l1)
+    elif query:
+        q_ci = query.casefold()
+        if q_ci in {n.casefold() for n in level2_names}:
+            # Exact Level-2 hit like "Eggs"
+            products = products.filter(sub_subcategory__iexact=query)
+        elif q_ci in {n.casefold() for n in level1_names}:
+            # Exact Level-1 hit
+            products = products.filter(sub_category__iexact=query)
+        else:
+            # Fallback fuzzy search (also include product name)
+            products = products.filter(
+                Q(name__icontains=query) |
+                Q(main_category__icontains=query) |
+                Q(sub_category__icontains=query) |
+                Q(sub_subcategory__icontains=query)
+            )
 
     paginator = Paginator(products, 24)
     page_number = request.GET.get('page')
@@ -248,19 +278,50 @@ def update_cart(request):
 def load_more_products(request):
     page_number = request.GET.get('page', 1)
     query = request.GET.get('q', '').strip()
+    l1 = request.GET.get('l1', '').strip()
+    l2 = request.GET.get('l2', '').strip()
 
-    # Start with the same base queryset:
-    products_qs = All_Products.objects.filter(ga_product_id__endswith="1")
-    products_qs = products_qs.exclude(image_url='/img/products/no-image.png')
-    products_qs = products_qs.order_by('id')   # same ordering
-    print(products_qs.count()) 
+    products_qs = (All_Products.objects
+                   .filter(ga_product_id__endswith="1")
+                   .exclude(image_url='/img/products/no-image.png')
+                   .order_by('id'))
 
-    # Same filter condition:
-    if query:
+    # Rebuild the category name sets (or refactor into a helper if you prefer)
+    from pathlib import Path
+    category_file = (
+        Path(settings.BASE_DIR)
+        / "_catalog"
+        / "management"
+        / "commands"
+        / "product_category.json"
+    )
+    with open(category_file, "r", encoding="utf-8") as f:
+        raw = json.load(f)
+    level1_names, level2_names = set(), set()
+    for k, node in raw.items():
+        level1_names.add(k)
+        if isinstance(node, dict):
+            level2_names.update(node.keys())
+
+    if l2:
         products_qs = products_qs.filter(
-            Q(main_category__icontains=query) |
-            Q(sub_category__icontains=query) |
-            Q(sub_subcategory__icontains=query)
+            sub_category__iexact=l1,
+            sub_subcategory__iexact=l2
+        )
+    elif l1:
+        products_qs = products_qs.filter(sub_category__iexact=l1)
+    elif query:
+        q_ci = query.casefold()
+        if q_ci in {n.casefold() for n in level2_names}:
+            products_qs = products_qs.filter(sub_subcategory__iexact=query)
+        elif q_ci in {n.casefold() for n in level1_names}:
+            products_qs = products_qs.filter(sub_category__iexact=query)
+        else:
+            products_qs = products_qs.filter(
+                Q(name__icontains=query) |
+                Q(main_category__icontains=query) |
+                Q(sub_category__icontains=query) |
+                Q(sub_subcategory__icontains=query)
             )
 
     paginator = Paginator(products_qs, 8)
@@ -269,11 +330,7 @@ def load_more_products(request):
     return render(
         request,
         '_catalog/partial_products.html',
-        {
-            'page_obj': page_obj,  # or 'products': page_obj
-            'products': page_obj   # so partial can loop & also check page_obj.has_next
-        }
+        {'page_obj': page_obj, 'products': page_obj}
     )
-
 
 
