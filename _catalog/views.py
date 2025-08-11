@@ -20,50 +20,117 @@ def product_detail(request, pk):
     product = get_object_or_404(All_Products, pk=pk)
     return render(request, '_catalog/product_detail.html', {'product': product})
 
+# def product_list(request):
+#     # Load JSON file
+#     category_file = os.path.join(settings.BASE_DIR, 'category_structure.json')
+#     with open(category_file, 'r', encoding='utf-8') as f:
+#         category_data = json.load(f)
+
+#     # Extract Level 1 and Level 2 categories
+#     level1_to_level2 = defaultdict(list)
+#     for level1, level2_list in category_data.items():
+#         for level2_dict in level2_list:
+#             for level2 in level2_dict.keys():
+#                 if level2 not in level1_to_level2[level1]:
+#                     level1_to_level2[level1].append(level2)
+
+#     # Product filtering logic
+#     query = request.GET.get('q', '').strip()
+#     products = All_Products.objects.filter(ga_product_id__endswith="1")  # Filter products ending with '1'
+#     products = products.exclude(image_url='/img/products/no-image.png')  # Exclude products with no image
+#     products = products.order_by('id')
+#     if query:
+#         products = products.filter(
+#            Q(main_category__icontains=query) |
+#            Q(sub_category__icontains=query) |
+#            Q(sub_subcategory__icontains=query)
+#            )
+
+#     # Pagination setup
+#     paginator = Paginator(products, 12)  # Show 12 products per page
+#     page_number = request.GET.get('page')
+
+#     try:
+#         page_obj = paginator.page(page_number)
+#     except PageNotAnInteger:
+#         # If page is not an integer, deliver first page.
+#         page_obj = paginator.page(1)
+#     except EmptyPage:
+#         # If page is out of range, deliver last page of results.
+#         page_obj = paginator.page(paginator.num_pages)
+
+#     context = {
+#         'products': page_obj,  # Pass paginated products to the template
+#         'level1_to_level2': dict(level1_to_level2),  # Pass Level 1 to Level 2 mapping
+#         'page_obj': page_obj,  # Pass page object for pagination controls
+#         'query': query,  # Pass current query to maintain search in pagination links
+#     }
+#     return render(request, '_catalog/product.html', context)
+
+# _catalog/views.py
+from pathlib import Path  # add this import
+
 def product_list(request):
-    # Load JSON file
-    category_file = os.path.join(settings.BASE_DIR, 'category_structure.json')
-    with open(category_file, 'r', encoding='utf-8') as f:
-        category_data = json.load(f)
+    # Load the same JSON you use for scraping
+    category_file = (
+        Path(settings.BASE_DIR)
+        / "_catalog"
+        / "management"
+        / "commands"
+        / "product_category.json"
+    )
+    with open(category_file, "r", encoding="utf-8") as f:
+        raw = json.load(f)
 
-    # Extract Level 1 and Level 2 categories
-    level1_to_level2 = defaultdict(list)
-    for level1, level2_list in category_data.items():
-        for level2_dict in level2_list:
-            for level2 in level2_dict.keys():
-                if level2 not in level1_to_level2[level1]:
-                    level1_to_level2[level1].append(level2)
+    def pick_best_url(url_or_list):
+        if isinstance(url_or_list, list):
+            # Prefer larger page-size if provided, else last item
+            for pref in ("s=200", "s=100"):
+                for u in url_or_list:
+                    if f"?{pref}" in u or f"&{pref}" in u:
+                        return u
+            return url_or_list[-1]
+        return url_or_list
 
-    # Product filtering logic
+    # Build a *sorted* tree so the template can just use .items
+    category_tree = {}
+    for level1 in sorted(raw.keys(), key=str.casefold):
+        node = raw[level1]
+        if isinstance(node, dict):
+            sub = {}
+            for level2 in sorted(node.keys(), key=str.casefold):
+                sub[level2] = pick_best_url(node[level2])
+            category_tree[level1] = sub
+        else:
+            category_tree[level1] = pick_best_url(node)
+
+    # --- the rest of your existing product query/pagination unchanged ---
     query = request.GET.get('q', '').strip()
-    products = All_Products.objects.filter(ga_product_id__endswith="1")  # Filter products ending with '1'
-    products = products.exclude(image_url='/img/products/no-image.png')  # Exclude products with no image
-    products = products.order_by('id')
+    products = (All_Products.objects
+                .filter(ga_product_id__endswith="1")
+                .exclude(image_url='/img/products/no-image.png')
+                .order_by('id'))
     if query:
         products = products.filter(
-           Q(main_category__icontains=query) |
-           Q(sub_category__icontains=query) |
-           Q(sub_subcategory__icontains=query)
-           )
+            Q(main_category__icontains=query) |
+            Q(sub_category__icontains=query) |
+            Q(sub_subcategory__icontains=query)
+        )
 
-    # Pagination setup
-    paginator = Paginator(products, 12)  # Show 12 products per page
+    paginator = Paginator(products, 24)
     page_number = request.GET.get('page')
-
     try:
         page_obj = paginator.page(page_number)
     except PageNotAnInteger:
-        # If page is not an integer, deliver first page.
         page_obj = paginator.page(1)
     except EmptyPage:
-        # If page is out of range, deliver last page of results.
         page_obj = paginator.page(paginator.num_pages)
 
     context = {
-        'products': page_obj,  # Pass paginated products to the template
-        'level1_to_level2': dict(level1_to_level2),  # Pass Level 1 to Level 2 mapping
-        'page_obj': page_obj,  # Pass page object for pagination controls
-        'query': query,  # Pass current query to maintain search in pagination links
+        'products': page_obj,
+        'page_obj': page_obj,
+        'query': query,
+        'category_tree': category_tree,   # <-- use this in template
     }
     return render(request, '_catalog/product.html', context)
 
