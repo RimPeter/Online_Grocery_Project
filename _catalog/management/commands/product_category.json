@@ -224,17 +224,23 @@
   "Oils & Ghees": "https://www.bestwaywholesale.co.uk/grocery/87",
   "Pets": {
     "Bird": "https://www.bestwaywholesale.co.uk/grocery/211/502481",
-    "Cat Snacks & Treats": "https://www.bestwaywholesale.co.uk/grocery/211/502451",
-    "Dog Meal Biscuits": "https://www.bestwaywholesale.co.uk/grocery/211/502381",
-    "Economy Cat": "https://www.bestwaywholesale.co.uk/grocery/211/502411",
-    "Economy Dog": "https://www.bestwaywholesale.co.uk/grocery/211/502351",
     "Fish": "https://www.bestwaywholesale.co.uk/grocery/211/502491",
-    "Litters": "https://www.bestwaywholesale.co.uk/grocery/211/502461",
+    "Small Animal": "https://www.bestwaywholesale.co.uk/grocery/211/502471"
+  },
+
+  "Cats": {
+    "Cat Snacks & Treats": "https://www.bestwaywholesale.co.uk/grocery/211/502451",
+    "Economy Cat": "https://www.bestwaywholesale.co.uk/grocery/211/502411",
     "Mid Cat": "https://www.bestwaywholesale.co.uk/grocery/211/502421",
-    "Mid Dog": "https://www.bestwaywholesale.co.uk/grocery/211/502361",
     "Premium Cat": "https://www.bestwaywholesale.co.uk/grocery/211/502431",
+    "Litters": "https://www.bestwaywholesale.co.uk/grocery/211/502461"
+  },
+
+  "Dogs": {
+    "Dog Meal Biscuits": "https://www.bestwaywholesale.co.uk/grocery/211/502381",
+    "Economy Dog": "https://www.bestwaywholesale.co.uk/grocery/211/502351",
+    "Mid Dog": "https://www.bestwaywholesale.co.uk/grocery/211/502361",
     "Premium Dog": "https://www.bestwaywholesale.co.uk/grocery/211/502371",
-    "Small Animal": "https://www.bestwaywholesale.co.uk/grocery/211/502471",
     "Treats": "https://www.bestwaywholesale.co.uk/grocery/211/502391"
   },
   "Pickles & Sauces": {
