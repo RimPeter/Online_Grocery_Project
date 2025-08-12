@@ -83,9 +83,29 @@ def signup_view(request):
 
         send_verification_email(new_user, code)
 
+        new_user = User.objects.create(
+            username=username, email=email, phone=phone,
+            password=make_password(password1), is_active=False
+        )
+        code = create_verification_code_for_user(new_user)
+        safe_code = getattr(code, 'code', code)
+
+        try:
+            send_verification_email(new_user, safe_code)
+        except (SMTPAuthenticationError, SMTPException, Exception):
+            logger.exception("Verification email failed for %s", new_user.username)
+            if settings.DEBUG:
+                messages.warning(request,
+                    f"We couldn't send the email (dev). Use this code: {safe_code}")
+            else:
+                messages.error(request,
+                    "We couldn’t send your verification email right now. Please try again later.")
+            return redirect('verify_account')
+
         messages.success(request, "Your account has been created, but we need to verify your email address. Check your inbox for the code.")
         return redirect('verify_account')
 
+        
 
     # GET: Render the signup page (no context needed by default)
     return render(request, 'accounts/signup.html')
