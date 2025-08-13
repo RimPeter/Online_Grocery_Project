@@ -1,6 +1,13 @@
 {% load static %}
 <div class="col-lg-3 col-md-4 col-sm-6 col-6 d-flex align-items-stretch">
-  <div class="card mb-4 shadow-sm h-100">
+  <div class="card mb-4 shadow-sm h-100 position-relative">
+    {% if product.is_bulk %}
+      <span class="position-absolute top-0 start-0 m-2 badge rounded-pill text-bg-warning" style="z-index: 2;">
+          Bulk Item
+      </span>
+    {% endif %}
+
+
     {% if product.image_url %}
     <a href="{% url 'product_detail' product.pk %}" >
           <img

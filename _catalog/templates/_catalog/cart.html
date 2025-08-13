@@ -14,7 +14,12 @@
           <div class="row align-items-center">
             
             <!-- Product Image -->
-            <div class="col-md-2">
+            <div class="col-md-2 position-relative">
+              {% if item.product.is_bulk %}
+                <span class="position-absolute top-0 start-0 m-2 badge rounded-pill text-bg-warning" style="z-index:2;">
+                  Bulk Item
+                </span>
+              {% endif %}
               {% if item.product.image_url %}
                 <img src="{{ item.product.image_url }}" alt="{{ item.product.name }}" class="img-fluid">
               {% else %}
@@ -25,6 +30,10 @@
             <!-- Product Name -->
             <div class="col-md-3">
               <h6 class="price">{{ item.product.name }}</h6>
+              <div class="small text-muted">
+              {{ item.product.variant|default:"" }}
+              {% if item.product.is_bulk %} · Pack of {{ item.product.pack_amount }}{% endif %}
+            </div>
             </div>
             
             <!-- Price -->
