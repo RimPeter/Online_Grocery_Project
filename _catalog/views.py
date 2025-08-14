@@ -10,6 +10,9 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from _orders.models import Order, OrderItem
 from django.contrib.auth.decorators import login_required
 from pathlib import Path
+from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
+
 
 def home(request):
     return render(request, '_catalog/home.html')
@@ -187,7 +190,12 @@ def add_to_cart(request, product_id):
         messages.success(request, "Product added to cart.")
         
     request.session['cart'] = cart
-    return redirect('product_list')
+    
+    return_to = request.POST.get('return_to') or request.META.get('HTTP_REFERER') or reverse('product_list')
+    if not url_has_allowed_host_and_scheme(return_to, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        return_to = reverse('product_list')
+    
+    return redirect(request.META.get('HTTP_REFERER') or reverse('product_list'))
 
 def update_cart(request):
     """

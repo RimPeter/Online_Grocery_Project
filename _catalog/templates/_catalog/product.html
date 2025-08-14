@@ -291,6 +291,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
     if (!isMobile) return;
 
+    if (sessionStorage.getItem('restoredScrollOnce') === '1') return;
+
     // Only after a search or category filter
     const params = new URLSearchParams(window.location.search);
     const didFilter = params.has('q') || params.has('l1') || params.has('l2');
@@ -311,6 +313,56 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 </script>
+<script>
+/**
+ * Preserve scroll position across the add-to-cart redirect (esp. mobile).
+ * - On submit of an .add-to-cart-form, store scrollY.
+ * - On next load, restore it immediately.
+ */
+(function () {
+  // Try to prevent browsers from auto-resetting scroll
+  if ('scrollRestoration' in history) {
+    history.scrollRestoration = 'manual';
+  }
+
+  // Restore scroll as early as possible on the new page
+  if (sessionStorage.getItem('restoreAfterAdd') === '1') {
+    var y = parseInt(sessionStorage.getItem('scrollYBeforeAdd') || '0', 10);
+    if (!isNaN(y)) {
+      window.scrollTo(0, y);
+    }
+    // Let other scripts know we've restored; clear shortly after
+    sessionStorage.setItem('restoredScrollOnce', '1');
+    setTimeout(function () {
+      sessionStorage.removeItem('restoredScrollOnce');
+    }, 1000);
+
+    sessionStorage.removeItem('restoreAfterAdd');
+    sessionStorage.removeItem('scrollYBeforeAdd');
+  }
+
+  // Capture submits on any current/future add-to-cart form (works with infinite scroll)
+  document.addEventListener('submit', function (e) {
+    var f = e.target;
+    if (f && f.classList && f.classList.contains('add-to-cart-form')) {
+      sessionStorage.setItem('scrollYBeforeAdd', String(window.scrollY));
+      sessionStorage.setItem('restoreAfterAdd', '1');
+    }
+  }, true); // capture phase catches it even if forms are inside other handlers
+})();
+</script>
+<script>
+document.addEventListener('submit', function (e) {
+  const f = e.target.closest('form.add-to-cart-form');
+  if (!f) return;
+  const good = f.dataset.actionUrl;
+  if (good && f.getAttribute('action') !== good) {
+    f.setAttribute('action', good);
+  }
+}, true);
+</script>
+
+
 
 
 {% endblock %}
