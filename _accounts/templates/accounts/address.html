@@ -5,35 +5,27 @@
 
 {% block content %}
 <div class="row g-4">
-  <!-- Add / Edit Address Form -->
+  <!-- Add Address Form -->
   <div class="col-lg-6">
     <div class="card shadow-sm">
       <div class="card-body">
         <h1 class="h4 mb-3">Add Delivery Address</h1>
-        {#
-          Context this template understands:
-          - optional "form": a ModelForm for Address (may include is_default)
-          - optional "action": URL to POST to (defaults to current path)
-          - "addresses": queryset of the user's Address objects
-        #}
+
         <form method="post" action="{{ action|default:'' }}" class="address-form" novalidate>
           {% csrf_token %}
 
           {% if form %}
             {{ form.non_field_errors }}
-
             <div class="mb-3">
               <label class="form-label" for="id_street_address">Street address</label>
               {{ form.street_address }}
               {{ form.street_address.errors }}
             </div>
-
             <div class="mb-3">
               <label class="form-label" for="id_apartment">Apartment / Unit (optional)</label>
               {{ form.apartment }}
               {{ form.apartment.errors }}
             </div>
-
             <div class="row">
               <div class="col-md-6 mb-3">
                 <label class="form-label" for="id_city">City</label>
@@ -46,14 +38,11 @@
                 {{ form.postal_code.errors }}
               </div>
             </div>
-
             <div class="mb-3">
               <label class="form-label" for="id_delivery_instructions">Delivery instructions (optional)</label>
               {{ form.delivery_instructions }}
               {{ form.delivery_instructions.errors }}
             </div>
-
-            {# Only render if the form provides it (supports both models with/without is_default) #}
             {% if form.is_default %}
             <div class="form-check mb-3">
               {{ form.is_default }}
@@ -61,48 +50,40 @@
               {{ form.is_default.errors }}
             </div>
             {% endif %}
-
           {% else %}
-          {# Manual fields fallback (if no Django form is passed) #}
-          <div class="mb-3">
-            <label class="form-label" for="street_address">Street address</label>
-            <input type="text" class="form-control" id="street_address" name="street_address" required>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label" for="apartment">Apartment / Unit (optional)</label>
-            <input type="text" class="form-control" id="apartment" name="apartment">
-          </div>
-
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label class="form-label" for="city">City</label>
-              <input type="text" class="form-control" id="city" name="city" required>
+            <div class="mb-3">
+              <label class="form-label" for="street_address">Street address</label>
+              <input type="text" class="form-control" id="street_address" name="street_address" required>
             </div>
-            <div class="col-md-6 mb-3">
-              <label class="form-label" for="postal_code">Postal code</label>
-              <input type="text" class="form-control" id="postal_code" name="postal_code" required>
+            <div class="mb-3">
+              <label class="form-label" for="apartment">Apartment / Unit (optional)</label>
+              <input type="text" class="form-control" id="apartment" name="apartment">
             </div>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label" for="delivery_instructions">Delivery instructions (optional)</label>
-            <textarea class="form-control" id="delivery_instructions" name="delivery_instructions" rows="3"></textarea>
-          </div>
-
-          <div class="form-check mb-3">
-            <input class="form-check-input" type="checkbox" id="is_default" name="is_default">
-            <label class="form-check-label" for="is_default">Set as default address</label>
-          </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label" for="city">City</label>
+                <input type="text" class="form-control" id="city" name="city" required>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label" for="postal_code">Postal code</label>
+                <input type="text" class="form-control" id="postal_code" name="postal_code" required>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="delivery_instructions">Delivery instructions (optional)</label>
+              <textarea class="form-control" id="delivery_instructions" name="delivery_instructions" rows="3"></textarea>
+            </div>
+            <div class="form-check mb-3">
+              <input class="form-check-input" type="checkbox" id="is_default" name="is_default">
+              <label class="form-check-label" for="is_default">Set as default address</label>
+            </div>
           {% endif %}
 
           <button type="submit" class="btn btn-primary">Save address</button>
         </form>
 
         <p class="text-muted small mt-3">
-          Tip: for Bootstrap-styled Django fields, you can either install <code>django-widget-tweaks</code> and add
-          <code>&#123;% load widget_tweaks %&#125;</code> at the top of your template, or define widget CSS classes in a
-          ModelForm (recommended for consistency).
+          Tip: define Bootstrap classes on your Django widgets in the ModelForm for best results.
         </p>
       </div>
     </div>
@@ -124,6 +105,9 @@
                 <div class="ms-2 me-auto">
                   <div class="fw-semibold">
                     {{ addr.street_address }}{% if addr.apartment %}, {{ addr.apartment }}{% endif %}
+                    {% if addr.is_default %}
+                      <span class="badge bg-success ms-2 align-self-start">Default</span>
+                    {% endif %}
                   </div>
                   <div>{{ addr.city }}, {{ addr.postal_code }}</div>
                   {% if addr.delivery_instructions %}
@@ -159,11 +143,9 @@
 {% block extra_css %}
 <style>
   .card { border-radius: 1rem; }
-  /* Give bare Django form widgets a Bootstrap look without custom filters */
   .address-form input[type="text"],
   .address-form textarea,
-  .address-form select,
-  .address-form input[type="checkbox"] {
+  .address-form select {
     display: block;
     width: 100%;
     padding: .375rem .75rem;
