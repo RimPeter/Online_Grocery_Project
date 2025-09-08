@@ -51,7 +51,13 @@
     <h4 class="mt-3">Total: £{{ total }}</h4>
   </div>
 
-  
+  <!-- Link to Proceed to Pay -->
+<div class="d-flex justify-content-end mt-3">
+  <a href="{% url 'checkout' order.id %}" class="btn btn-primary btn-lg">
+    Proceed to Checkout
+  </a>
+</div>
+
 
   <!-- Link to Proceed to Pay -->
   {% comment %} <a href="{% url 'checkout' order_id=order.id %}" class="btn btn-primary">Proceed to Pay</a>

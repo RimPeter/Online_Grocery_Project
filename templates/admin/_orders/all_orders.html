@@ -1,0 +1,41 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+  <div class="app-order module">
+    <h1>All Customer Orders</h1>
+
+    <p>
+      <a class="button" href="{% url 'admin:_orders_order_changelist' %}">Back to Order list</a>
+    </p>
+
+    <table class="adminlist">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>User</th>
+          <th>Status</th>
+          <th>Items</th>
+          <th>Total</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for o in orders %}
+        <tr>
+          <td>{{ o.id }}</td>
+          <td>{{ o.user }}</td>
+          <td>{{ o.get_status_display }}</td>
+          <td>{{ o.items_count }}</td>
+          <td>£{{ o.total }}</td>
+          <td>{{ o.created_at|date:"Y-m-d H:i" }}</td>
+          <td><a href="{% url 'admin:_orders_order_change' o.id %}">Open</a></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7">No orders found.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}
