@@ -12,13 +12,13 @@
         <h1 class="h4 mb-3">Add Delivery Address</h1>
         {#
           Context this template understands:
-          - optional "form": a ModelForm for Address
+          - optional "form": a ModelForm for Address (may include is_default)
           - optional "action": URL to POST to (defaults to current path)
+          - "addresses": queryset of the user's Address objects
         #}
         <form method="post" action="{{ action|default:'' }}" class="address-form" novalidate>
           {% csrf_token %}
 
-          {# If a Django form is provided, render it plainly (no custom filters required) #}
           {% if form %}
             {{ form.non_field_errors }}
 
@@ -53,11 +53,15 @@
               {{ form.delivery_instructions.errors }}
             </div>
 
+            {# Only render if the form provides it (supports both models with/without is_default) #}
+            {% if form.is_default %}
             <div class="form-check mb-3">
               {{ form.is_default }}
               <label class="form-check-label" for="id_is_default">Set as default address</label>
               {{ form.is_default.errors }}
             </div>
+            {% endif %}
+
           {% else %}
           {# Manual fields fallback (if no Django form is passed) #}
           <div class="mb-3">
@@ -96,10 +100,10 @@
         </form>
 
         <p class="text-muted small mt-3">
-  Tip: for Bootstrap-styled Django fields, you can either install <code>django-widget-tweaks</code> and add
-  <code>&#123;% load widget_tweaks %&#125;</code> at the top of your template, or define widget CSS classes in a
-  ModelForm (recommended for consistency).
-</p>
+          Tip: for Bootstrap-styled Django fields, you can either install <code>django-widget-tweaks</code> and add
+          <code>&#123;% load widget_tweaks %&#125;</code> at the top of your template, or define widget CSS classes in a
+          ModelForm (recommended for consistency).
+        </p>
       </div>
     </div>
   </div>
@@ -126,9 +130,20 @@
                     <div class="text-muted small mt-1">Instructions: {{ addr.delivery_instructions }}</div>
                   {% endif %}
                 </div>
-                {% if addr.is_default %}
-                  <span class="badge bg-success rounded-pill">Default</span>
-                {% endif %}
+                <div class="d-flex gap-2">
+                  <form method="post" action="{% url 'set_default_address' addr.id %}">
+                    {% csrf_token %}
+                    {% if addr.is_default %}
+                      <button type="submit" class="btn btn-success btn-sm" disabled>Default</button>
+                    {% else %}
+                      <button type="submit" class="btn btn-outline-primary btn-sm">Make default</button>
+                    {% endif %}
+                  </form>
+                  <form method="post" action="{% url 'delete_address' addr.id %}" onsubmit="return confirm('Delete this address?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger btn-sm">Delete</button>
+                  </form>
+                </div>
               </div>
             {% endfor %}
           </div>
@@ -147,12 +162,14 @@
   /* Give bare Django form widgets a Bootstrap look without custom filters */
   .address-form input[type="text"],
   .address-form textarea,
-  .address-form select {
+  .address-form select,
+  .address-form input[type="checkbox"] {
     display: block;
     width: 100%;
     padding: .375rem .75rem;
     border: 1px solid #ced4da;
     border-radius: .375rem;
   }
+  .address-form input[type="checkbox"] { width: auto; display: inline-block; }
 </style>
 {% endblock %}

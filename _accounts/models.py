@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser, Group, Permission
 import uuid
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 
 class User(AbstractUser):
     email = models.EmailField(unique=True)
@@ -35,7 +36,14 @@ class Address(models.Model):
     postal_code = models.CharField(max_length=20)
     delivery_instructions = models.TextField(null=True, blank=True)
     is_default = models.BooleanField(default=False)
-
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user'],
+                condition=Q(is_default=True),
+                name='unique_default_address_per_user',
+            ),
+        ]
     def __str__(self):
         return f"{self.street_address}, {self.city}"
     

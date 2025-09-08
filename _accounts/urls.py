@@ -24,6 +24,8 @@ urlpatterns = [
     path('delete_account/', views.delete_account, name='delete_account'),
     path('verify_account/', views.verify_account, name='verify_account'),
     path('forgot-password/', views.forgot_password_view, name='forgot_password'),
-    path("addresses/", views.manage_addresses, name="manage_addresses")
-
+    # _accounts/urls.py
+    path('addresses/', views.manage_addresses, name='manage_addresses'),
+    path('addresses/<int:pk>/default/', views.set_default_address, name='set_default_address'),
+    path('addresses/<int:pk>/delete/', views.delete_address, name='delete_address')
 ]

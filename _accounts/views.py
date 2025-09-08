@@ -1,10 +1,10 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.urls import reverse
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .forms import ConfirmPasswordForm
+from .forms import ConfirmPasswordForm, AddressForm
 from django.core.mail import send_mail, EmailMessage
 from django.conf import settings
 from .utils import create_verification_code_for_user, send_verification_email
@@ -18,22 +18,47 @@ logger = logging.getLogger(__name__)
 @login_required
 def manage_addresses(request):
     if request.method == "POST":
-        Address.objects.create(
-            user=request.user,
-            street_address=request.POST.get("street_address"),
-            apartment=request.POST.get("apartment") or "",
-            city=request.POST.get("city"),
-            postal_code=request.POST.get("postal_code"),
-            delivery_instructions=request.POST.get("delivery_instructions") or "",
-            is_default=bool(request.POST.get("is_default")),
-        )
-        # ensure only one default
-        if request.POST.get("is_default"):
-            Address.objects.filter(user=request.user).exclude(is_default=True).update(is_default=False)
-        return redirect("manage_addresses")
+        form = AddressForm(request.POST)
+        if form.is_valid():
+            addr = form.save(commit=False)
+            addr.user = request.user
+            addr.save()
+            # if this one should be default, unset others
+            if getattr(addr, "is_default", False):
+                Address.objects.filter(user=request.user).exclude(pk=addr.pk).update(is_default=False)
+            messages.success(request, "Address saved.")
+            return redirect("manage_addresses")
+    else:
+        form = AddressForm()
 
-    addresses = request.user.addresses.all().order_by("-is_default", "city")
-    return render(request, "accounts/address.html", {"addresses": addresses})
+    addresses = request.user.addresses.all().order_by("-is_default", "city", "street_address")
+    return render(request, "accounts/address.html", {"form": form, "addresses": addresses})
+
+@login_required
+def set_default_address(request, pk):
+    if request.method != "POST":
+        return redirect("manage_addresses")
+    addr = get_object_or_404(Address, pk=pk, user=request.user)
+    Address.objects.filter(user=request.user).update(is_default=False)
+    addr.is_default = True
+    addr.save(update_fields=["is_default"])
+    messages.success(request, "Default address updated.")
+    return redirect("manage_addresses")
+
+@login_required
+def delete_address(request, pk):
+    addr = get_object_or_404(Address, pk=pk, user=request.user)
+    if request.method == "POST":
+        was_default = addr.is_default
+        addr.delete()
+        if was_default:
+            # promote another address to default if any remain
+            replacement = Address.objects.filter(user=request.user).first()
+            if replacement:
+                replacement.is_default = True
+                replacement.save(update_fields=["is_default"])
+        messages.success(request, "Address deleted.")
+    return redirect("manage_addresses")
 
 
 def login_view(request):
