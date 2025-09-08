@@ -44,11 +44,11 @@
               {{ form.delivery_instructions.errors }}
             </div>
             {% if form.is_default %}
-            <div class="form-check mb-3">
+            {% comment %} <div class="form-check mb-3">
               {{ form.is_default }}
               <label class="form-check-label" for="id_is_default">Set as default address</label>
               {{ form.is_default.errors }}
-            </div>
+            </div> {% endcomment %}
             {% endif %}
           {% else %}
             <div class="mb-3">
@@ -82,9 +82,9 @@
           <button type="submit" class="btn btn-primary">Save address</button>
         </form>
 
-        <p class="text-muted small mt-3">
+        {% comment %} <p class="text-muted small mt-3">
           Tip: define Bootstrap classes on your Django widgets in the ModelForm for best results.
-        </p>
+        </p> {% endcomment %}
       </div>
     </div>
   </div>

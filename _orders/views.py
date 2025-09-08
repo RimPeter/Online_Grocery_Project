@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from .models import Order, OrderItem
 from _catalog.models import All_Products
 from django.contrib import messages
+from _accounts.models import Address
 
 @login_required
 def order_history_view(request):
@@ -16,18 +17,20 @@ def order_summery_view(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
     order_items = order.items.select_related('product').all()
 
-    if not order_items:
-        print("DEBUG: No order items found for order", order_id) 
-           
-    # Calculate subtotal for each item and total order price
+    # Calculate per-item subtotal and total
     for item in order_items:
         item.subtotal = item.price * item.quantity
     total = sum(item.subtotal for item in order_items)
-    
+
+    # Get the user's default address (fallback to first if none marked default)
+    addresses = Address.objects.filter(user=request.user)
+    default_address = addresses.filter(is_default=True).first() or addresses.first()
+
     context = {
         'order': order,
         'order_items': order_items,
         'total': total,
+        'default_address': default_address, 
     }
     return render(request, '_orders/order_summery.html', context)
 

@@ -13,14 +13,20 @@
     <p><strong>Name:</strong> {{ request.user.get_full_name }}</p>
     <p><strong>Email:</strong> {{ request.user.email }}</p>
     {% if request.user.addresses.all %}
-      <p><strong>Address:</strong>
-        {% for address in request.user.addresses.all %}
-          {{ address.street_address }}, {{ address.city }}{% if not forloop.last %}<br>{% endif %}
-        {% endfor %}
-      </p>
+      {% if default_address %}
+     <p><strong>Address:</strong>
+       {{ default_address.street_address }}{% if default_address.apartment %}, {{ default_address.apartment }}{% endif %},
+       {{ default_address.city }}, {{ default_address.postal_code }}
+     </p>
+   {% endif %}
     {% endif %}
   </div>
-
+<!-- Delivery Slot Details -->
+  <div class="mb-4">
+    <h3>Delivery Slot</h3>
+    <p><strong>Date:</strong> {{ order.delivery_date }}</p>
+    <p><strong>Time:</strong> {{ order.delivery_time }}</p>
+  </div>
   <!-- Order Items and Prices -->
   <div class="mb-4">
     <h3>Order Items</h3>
@@ -45,12 +51,7 @@
     <h4 class="mt-3">Total: £{{ total }}</h4>
   </div>
 
-  <!-- Delivery Slot Details -->
-  <div class="mb-4">
-    <h3>Delivery Slot</h3>
-    <p><strong>Date:</strong> {{ order.delivery_date }}</p>
-    <p><strong>Time:</strong> {{ order.delivery_time }}</p>
-  </div>
+  
 
   <!-- Link to Proceed to Pay -->
   {% comment %} <a href="{% url 'checkout' order_id=order.id %}" class="btn btn-primary">Proceed to Pay</a>
