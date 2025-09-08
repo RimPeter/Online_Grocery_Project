@@ -181,21 +181,36 @@ def cart_view(request):
 
 def add_to_cart(request, product_id):
     cart = request.session.get('cart', {})
-    
-    if product_id in cart:
-        cart[product_id] += 1
-        messages.success(request, "Quantity updated in cart.")
-    else:
-        cart[product_id] = 1
-        messages.success(request, "Product added to cart.")
-        
+
+    # Always store keys as strings in the session cart
+    pid = str(product_id)
+
+    # Read quantity from the form, default to 1
+    qty_str = request.POST.get('quantity', '1')
+    try:
+        qty = max(1, int(qty_str))
+    except (TypeError, ValueError):
+        qty = 1
+
+    # Add or increment
+    current = int(cart.get(pid, 0))
+    cart[pid] = current + qty
+
+    # Save back to session
     request.session['cart'] = cart
-    
+
+    # Feedback
+    if current:
+        msg_qty = qty
+        messages.success(request, f"Added {msg_qty} more to cart.")
+    else:
+        messages.success(request, "Product added to cart.")
+
+    # Redirect back where the user came from (or product list as fallback)
     return_to = request.POST.get('return_to') or request.META.get('HTTP_REFERER') or reverse('product_list')
     if not url_has_allowed_host_and_scheme(return_to, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
         return_to = reverse('product_list')
-    
-    return redirect(request.META.get('HTTP_REFERER') or reverse('product_list'))
+    return redirect(return_to)
 
 def update_cart(request):
     """
