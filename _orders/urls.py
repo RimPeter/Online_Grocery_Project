@@ -7,4 +7,5 @@ urlpatterns = [
     path('delivery-slots/', views.delivery_slots_view, name='delivery_slots'),
     path('delete/<int:order_id>/', views.delete_order_view, name='order_delete'),
     path('order-summary/<int:order_id>/', views.order_summery_view, name='order_summery'),
+    path('orders/<int:order_id>/invoice/', views.invoice_page_view, name='invoice_page'),
 ]

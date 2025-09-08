@@ -135,3 +135,32 @@ def pending_order_view(request):
     }
     return render(request, '_orders/pending_order.html', context)
 
+@login_required
+def invoice_page_view(request, order_id):
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+
+    # Optional: only allow invoices for paid orders
+    if order.status != 'paid':
+        messages.error(request, "Invoice is available after payment.")
+        return redirect('order_summery', order_id=order.id)
+
+    order_items = order.items.select_related('product').all()
+    for item in order_items:
+        item.subtotal = item.price * item.quantity
+    total = sum(i.subtotal for i in order_items)
+
+    # If you show addresses on the invoice, pick default/fallback:
+    default_address = None
+    try:
+        from _accounts.models import Address
+        qs = Address.objects.filter(user=request.user)
+        default_address = qs.filter(is_default=True).first() or qs.first()
+    except Exception:
+        pass
+
+    return render(
+        request,
+        '_orders/invoice_page.html',
+        {'order': order, 'order_items': order_items, 'total': total, 'default_address': default_address}
+    )
+

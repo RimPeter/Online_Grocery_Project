@@ -53,9 +53,15 @@
 
   <!-- Link to Proceed to Pay -->
 <div class="d-flex justify-content-end mt-3">
-  <a href="{% url 'checkout' order.id %}" class="btn btn-primary btn-lg">
-    Proceed to Checkout
-  </a>
+  {% if order.status == 'paid' %}
+    <a href="{% url 'invoice_page' order.id %}" class="btn btn-secondary btn-lg">
+      Email invoice
+    </a>
+  {% else %}
+    <a href="{% url 'checkout' order.id %}" class="btn btn-primary btn-lg">
+      Proceed to Checkout
+    </a>
+  {% endif %}
 </div>
 
 
