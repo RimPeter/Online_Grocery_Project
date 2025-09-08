@@ -12,6 +12,10 @@ from .models import VerificationCode, Address
 from django.utils.crypto import get_random_string
 import logging
 from smtplib import SMTPException, SMTPAuthenticationError
+from django.db import IntegrityError, transaction
+from django.utils import timezone
+from datetime import timedelta
+from .models import PendingSignup
 
 logger = logging.getLogger(__name__)
 
@@ -90,101 +94,131 @@ def logout_view(request):
 
 
 def signup_view(request):
-    """
-    Handles both GET (render sign-up page) and POST (create new user).
-    """
     if request.method == 'POST':
-        # Always initialize context at the top
         context = {}
-
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        phone = request.POST.get('phone')
+        username = (request.POST.get('username') or "").strip()
+        email = (request.POST.get('email') or "").strip()
+        phone = (request.POST.get('phone') or "").strip()
         password1 = request.POST.get('password1')
         password2 = request.POST.get('password2')
 
-        # 1. Check password match
         if password1 != password2:
             context['error'] = 'Passwords do not match'
             return render(request, 'accounts/signup.html', context)
 
-        # 2. Retrieve the User model
         User = get_user_model()
 
-        # 3. Check if username exists
-        if User.objects.filter(username=username).exists():
+        # Case-insensitive checks against existing Users
+        if User.objects.filter(username__iexact=username).exists():
             context['username_error'] = 'Username already taken'
             return render(request, 'accounts/signup.html', context)
 
-        # 4. Check if email exists
-        if User.objects.filter(email=email).exists():
+        if User.objects.filter(email__iexact=email).exists():
             context['email_error'] = 'Email address already in use'
             return render(request, 'accounts/signup.html', context)
 
-        # 5. Create the user
-        new_user = User.objects.create(
+        # Clear any expired pending records for the same username/email
+        for ps in PendingSignup.objects.filter(username__iexact=username):
+            if ps.is_expired():
+                ps.delete()
+        for ps in PendingSignup.objects.filter(email__iexact=email):
+            if ps.is_expired():
+                ps.delete()
+
+        # If still pending and not expired, throttle/deny
+        if PendingSignup.objects.filter(username__iexact=username).exists():
+            context['username_error'] = 'A verification is already pending for this username. Check your email.'
+            return render(request, 'accounts/signup.html', context)
+        if PendingSignup.objects.filter(email__iexact=email).exists():
+            context['email_error'] = 'A verification is already pending for this email. Check your inbox.'
+            return render(request, 'accounts/signup.html', context)
+
+        code = get_random_string(length=8).lower()  # e.g., c5532027 style
+        pending = PendingSignup.objects.create(
             username=username,
             email=email,
             phone=phone,
-            password=make_password(password1),
-            is_active=False  # User must verify email before logging in
+            password_hash=make_password(password1),
+            code=code,
+            expires_at=timezone.now() + timedelta(minutes=30),
+            requester_ip=request.META.get('REMOTE_ADDR')
         )
-        code = create_verification_code_for_user(new_user)
-        email_ok = send_verification_email(new_user, code)
 
-        new_user = User.objects.create(
-            username=username, email=email, phone=phone,
-            password=make_password(password1), is_active=False
+        email_ok = send_verification_email(
+            # You can overload to accept raw details instead of a user
+            # or write a new helper for pending signups:
+            new_user := type('Temp', (), {'email': email, 'username': username}),  # lightweight shim
+            code
         )
-        code = create_verification_code_for_user(new_user)
-        email_ok = send_verification_email(new_user, code)
-        
+
         if not email_ok:
             if settings.DEBUG:
-                messages.warning(
-                    request,
-                    f"We couldn't send the email (dev). Use this code: {code}"
-                )
+                messages.warning(request, f"We couldn't send the email (dev). Use this code: {code}")
             else:
-                messages.error(request,
-                    "We couldn’t send your verification email right now. Please try again later.")
-            return redirect('verify_account')
+                pending.delete()
+                messages.error(request, "We couldn’t send your verification email right now. Please try again later.")
+                return render(request, 'accounts/signup.html', {})
 
-        messages.success(request, "Your account has been created, but we need to verify your email address. Check your inbox for the code.")
+        messages.success(request, "We sent a verification code to your email. Enter it to finish creating your account.")
         return redirect('verify_account')
 
-        
-
-    # GET: Render the signup page (no context needed by default)
     return render(request, 'accounts/signup.html')
+
 
 def verify_account(request):
     if request.method == 'POST':
-        code = request.POST.get('code', '').strip()
+        code = (request.POST.get('code') or '').strip()
 
         if not code:
             return render(request, 'accounts/verify_account.html', {'error': 'Please enter a valid code.'})
 
         try:
-            # Find the verification entry
-            vc = VerificationCode.objects.get(code=code, is_used=False, user__is_active=False)
-        except VerificationCode.DoesNotExist:
-            # Code not found or already used
-            return render(request, 'accounts/verify_account.html', {'error': 'Invalid or expired code.'})
+            pending = PendingSignup.objects.get(code=code)
+        except PendingSignup.DoesNotExist:
+            # Backward-compatibility: keep your old VerificationCode flow if desired
+            try:
+                vc = VerificationCode.objects.get(code=code, is_used=False, user__is_active=False)
+            except VerificationCode.DoesNotExist:
+                return render(request, 'accounts/verify_account.html', {'error': 'Invalid or expired code.'})
+            # Old path: activate existing user
+            user = vc.user
+            user.is_active = True
+            user.save(update_fields=['is_active'])
+            vc.is_used = True
+            vc.save(update_fields=['is_used'])
+            messages.success(request, "Your email has been verified. You can log in!")
+            return redirect('login')
 
-        # If we get here, the code is correct and belongs to an inactive user
-        user = vc.user
-        user.is_active = True
-        user.save()
+        # New pending-signup path
+        if pending.is_expired():
+            pending.delete()
+            return render(request, 'accounts/verify_account.html', {'error': 'Code expired. Please sign up again.'})
 
-        # Mark the code as used
-        vc.is_used = True
-        vc.save()
+        User = get_user_model()
+        try:
+            with transaction.atomic():
+                # Double-check uniqueness (case-insensitive) at commit time
+                if User.objects.filter(username__iexact=pending.username).exists():
+                    pending.delete()
+                    return render(request, 'accounts/verify_account.html', {'error': 'Username is no longer available.'})
+                if User.objects.filter(email__iexact=pending.email).exists():
+                    pending.delete()
+                    return render(request, 'accounts/verify_account.html', {'error': 'Email is no longer available.'})
+
+                user = User.objects.create(
+                    username=pending.username,
+                    email=pending.email,
+                    phone=pending.phone,
+                    password=pending.password_hash,
+                    is_active=True
+                )
+                pending.delete()
+        except IntegrityError:
+            return render(request, 'accounts/verify_account.html', {'error': 'That username or email was just taken. Please try again.'})
 
         messages.success(request, "Your email has been verified and your account is now active. You can log in!")
         return redirect('login')
 
-    # GET
     return render(request, 'accounts/verify_account.html')
 
 @login_required

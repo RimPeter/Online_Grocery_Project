@@ -156,22 +156,34 @@ STATIC_URL = '/static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # email settings
-if DEBUG:
-    # Dev: print emails to the console so sign-up never 500s
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-    DEFAULT_FROM_EMAIL = 'dev@localhost'
-else:
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = config('EMAIL_HOST', default='smtp.sendgrid.net')
-    EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
-    EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
-    EMAIL_HOST_USER = config('EMAIL_HOST_USER')           # e.g. 'apikey' for SendGrid
-    EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')   # e.g. your API key
-    DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')     # e.g. 'No Reply <no-reply@yourdomain>'
+    # Load .env
+try:
+    from dotenv import load_dotenv  # pip install python-dotenv
+    load_dotenv(BASE_DIR / ".env")
+except Exception:
+    pass  # optional: ignore if not installed
 
+def _nospace(s: str) -> str:
+    # remove any sneaky whitespace from pasted secrets
+    return "".join((s or "").split())
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    return os.getenv(name, str(default)).lower() in {"1","true","t","yes","y"}
+
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 465
+EMAIL_USE_SSL = True
+EMAIL_USE_TLS = False
+
+
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = _nospace(os.getenv("EMAIL_HOST_PASSWORD", ""))
+
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
 # Stripe settings
 
-import os
 STRIPE_PUBLIC_KEY = os.getenv("STRIPE_PUBLIC_KEY")
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")

@@ -6,6 +6,8 @@ from django.conf import settings
 from .models import VerificationCode
 from django.utils.translation import gettext as _
 
+logger = logging.getLogger(__name__) # Configure logger for this module
+
 def create_verification_code_for_user(user):
     """Generate a unique code and store it in the VerificationCode model."""
     code = str(uuid.uuid4())[:8]  # short random code, e.g., "a1b2-c3d4"
@@ -19,7 +21,7 @@ def send_verification_email(user, code) -> bool:
     """Send the verification code to the user's email."""
     subject = "Your Verification Code"
     message = f"Hello {user.username},\n\nHere is your verification code: {code}\n\n"
-    from_email = getattr(settings, "DEFAULT_FROM_EMAIL", settings.EMAIL_HOST_USER)
+    from_email = settings.DEFAULT_FROM_EMAIL
     recipient_list = [user.email]
 
     try:
@@ -30,7 +32,8 @@ def send_verification_email(user, code) -> bool:
             recipient_list,
             fail_silently=False
         )
-        return True
+        logger.info("Sent verification email from %s to %s", from_email, user.email)
+        return sent > 0
     except (SMTPAuthenticationError, SMTPException, Exception) as e:
         logger.exception("Verification email failed for %s: %s", user.username, e)
         return False

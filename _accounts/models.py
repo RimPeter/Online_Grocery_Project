@@ -4,6 +4,8 @@ import uuid
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
+from django.db.models.functions import Lower # For case-insensitive constraints
+from django.utils import timezone
 
 class User(AbstractUser):
     email = models.EmailField(unique=True)
@@ -24,6 +26,21 @@ class User(AbstractUser):
         help_text='Specific permissions for this user.',
         verbose_name='user permissions',
     )
+    
+    class Meta:
+        constraints = [
+            # Case-insensitive unique username
+            models.UniqueConstraint(
+                Lower('username'),
+                name='uniq_user_username_lower'
+            ),
+            # Case-insensitive unique email (skip NULLs)
+            models.UniqueConstraint(
+                Lower('email'),
+                condition=Q(email__isnull=False),
+                name='uniq_user_email_lower'
+            ),
+        ]
 
     def __str__(self):
         return self.email
@@ -60,3 +77,25 @@ class VerificationCode(models.Model):
 
     def __str__(self):
         return f"Verification code for {self.user.email}"
+    
+class PendingSignup(models.Model):
+    username = models.CharField(max_length=150)
+    email = models.EmailField()
+    phone = models.CharField(max_length=32, blank=True)
+    password_hash = models.CharField(max_length=128)
+    code = models.CharField(max_length=32)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    attempts = models.PositiveIntegerField(default=0)
+    requester_ip = models.GenericIPAddressField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(Lower('username'), name='uniq_pending_username_lower'),
+            models.UniqueConstraint(Lower('email'), condition=Q(email__isnull=False), name='uniq_pending_email_lower'),
+        ]
+
+    def is_expired(self):
+        return timezone.now() > self.expires_at
+    
+    
