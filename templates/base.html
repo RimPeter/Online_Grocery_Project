@@ -16,8 +16,12 @@
     />
     <!-- Additional CSS Files -->
     <link rel="stylesheet" href="{% static 'css/main.css' %}" />
-    {% comment %} <link rel="stylesheet" href="{% static 'web_materials/themeforest-GyXNz1qN-weiboo-ecommerce-django-5-template/Weiboo/Weiboo/static/css/*.css' %}" /> {% endcomment %}
-    {% block extra_css %}{% endblock %}
+    {% comment %}
+    <link
+      rel="stylesheet"
+      href="{% static 'web_materials/themeforest-GyXNz1qN-weiboo-ecommerce-django-5-template/Weiboo/Weiboo/static/css/*.css' %}"
+    />
+    {% endcomment %} {% block extra_css %}{% endblock %}
   </head>
   <body>
     <!-- Navigation Bar -->
@@ -47,40 +51,53 @@
             <a class="nav-link" href="{% url 'cart_view' %}">Cart</a>
           </li>
           {% if user.is_authenticated %}
-          
+
           <li class="nav-item">
             <span class="navbar-text"> Logged in as {{ user.username }} </span>
           </li>
           <li class="nav-item dropdown">
-    <a
-      class="nav-link dropdown-toggle"
-      href="#"
-      id="navbarAccountDropdown"
-      role="button"
-      data-bs-toggle="dropdown"
-      aria-expanded="false"
-    >
-      Account
-    </a>
-    <ul class="dropdown-menu" aria-labelledby="navbarAccountDropdown">
-      <li>
-        <a class="dropdown-item" href="{% url 'password_change' %}">Change Password</a>
-      </li>
-      <li>
-        <a class="dropdown-item text-danger" href="{% url 'delete_account' %}">
-          Delete Account
-        </a>
-      </li>
-      <li>
-        <a class="dropdown-item" href="{% url 'order_history' %}">My Orders</a>
-      </li>
-      <li><hr class="dropdown-divider" /></li>
-      <li>
-        <a class="dropdown-item" href="{% url 'logout' %}">Logout</a>
-      </li>
-    </ul>
-  </li>
-          
+            <a
+              class="nav-link dropdown-toggle"
+              href="#"
+              id="navbarAccountDropdown"
+              role="button"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+            >
+              Account
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="navbarAccountDropdown">
+              <li>
+                <a class="dropdown-item" href="{% url 'manage_addresses' %}"
+                  >Addresses</a
+                >
+              </li>
+
+              <li>
+                <a class="dropdown-item" href="{% url 'password_change' %}"
+                  >Change Password</a
+                >
+              </li>
+              <li>
+                <a
+                  class="dropdown-item text-danger"
+                  href="{% url 'delete_account' %}"
+                >
+                  Delete Account
+                </a>
+              </li>
+              <li>
+                <a class="dropdown-item" href="{% url 'order_history' %}"
+                  >My Orders</a
+                >
+              </li>
+              <li><hr class="dropdown-divider" /></li>
+              <li>
+                <a class="dropdown-item" href="{% url 'logout' %}">Logout</a>
+              </li>
+            </ul>
+          </li>
+
           <li class="nav-item">
             <a class="nav-link" href="{% url 'order_history' %}">My Orders</a>
           </li>
@@ -114,31 +131,30 @@
     </footer>
 
     <!-- Toast Container -->
-    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
-      {% if messages %}
-        {% for message in messages %}
-          <div
-            class="toast align-items-center text-bg-{{ message.tags }} border-0"
-            role="alert"
-            aria-live="assertive"
-            aria-atomic="true"
-            data-bs-autohide="true"
-            data-bs-delay="3000"
-          >
-            <div class="d-flex">
-              <div class="toast-body">
-                {{ message }}
-              </div>
-              <button
-                type="button"
-                class="btn-close btn-close-white me-2 m-auto"
-                data-bs-dismiss="toast"
-                aria-label="Close"
-              ></button>
-            </div>
-          </div>
-        {% endfor %}
-      {% endif %}
+    <div
+      class="toast-container position-fixed bottom-0 end-0 p-3"
+      style="z-index: 1100"
+    >
+      {% if messages %} {% for message in messages %}
+      <div
+        class="toast align-items-center text-bg-{{ message.tags }} border-0"
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+        data-bs-autohide="true"
+        data-bs-delay="3000"
+      >
+        <div class="d-flex">
+          <div class="toast-body">{{ message }}</div>
+          <button
+            type="button"
+            class="btn-close btn-close-white me-2 m-auto"
+            data-bs-dismiss="toast"
+            aria-label="Close"
+          ></button>
+        </div>
+      </div>
+      {% endfor %} {% endif %}
     </div>
 
     <!-- Bootstrap 5 JS Bundle (Includes Popper) -->
@@ -148,12 +164,12 @@
       crossorigin="anonymous"
     ></script>
     <script>
-      (function() {
-        var toastElList = [].slice.call(document.querySelectorAll('.toast'));
-        var toastList = toastElList.map(function(toastEl) {
+      (function () {
+        var toastElList = [].slice.call(document.querySelectorAll(".toast"));
+        var toastList = toastElList.map(function (toastEl) {
           return new bootstrap.Toast(toastEl);
         });
-        toastList.forEach(toast => toast.show());
+        toastList.forEach((toast) => toast.show());
       })();
     </script>
     <!-- Additional JavaScript Files -->

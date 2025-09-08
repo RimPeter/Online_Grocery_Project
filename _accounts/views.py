@@ -8,8 +8,33 @@ from .forms import ConfirmPasswordForm
 from django.core.mail import send_mail, EmailMessage
 from django.conf import settings
 from .utils import create_verification_code_for_user, send_verification_email
-from .models import VerificationCode
+from .models import VerificationCode, Address
 from django.utils.crypto import get_random_string
+import logging
+from smtplib import SMTPException, SMTPAuthenticationError
+
+logger = logging.getLogger(__name__)
+
+@login_required
+def manage_addresses(request):
+    if request.method == "POST":
+        Address.objects.create(
+            user=request.user,
+            street_address=request.POST.get("street_address"),
+            apartment=request.POST.get("apartment") or "",
+            city=request.POST.get("city"),
+            postal_code=request.POST.get("postal_code"),
+            delivery_instructions=request.POST.get("delivery_instructions") or "",
+            is_default=bool(request.POST.get("is_default")),
+        )
+        # ensure only one default
+        if request.POST.get("is_default"):
+            Address.objects.filter(user=request.user).exclude(is_default=True).update(is_default=False)
+        return redirect("manage_addresses")
+
+    addresses = request.user.addresses.all().order_by("-is_default", "city")
+    return render(request, "accounts/address.html", {"addresses": addresses})
+
 
 def login_view(request):
     """
@@ -80,23 +105,21 @@ def signup_view(request):
             is_active=False  # User must verify email before logging in
         )
         code = create_verification_code_for_user(new_user)
-
-        send_verification_email(new_user, code)
+        email_ok = send_verification_email(new_user, code)
 
         new_user = User.objects.create(
             username=username, email=email, phone=phone,
             password=make_password(password1), is_active=False
         )
         code = create_verification_code_for_user(new_user)
-        safe_code = getattr(code, 'code', code)
-
-        try:
-            send_verification_email(new_user, safe_code)
-        except (SMTPAuthenticationError, SMTPException, Exception):
-            logger.exception("Verification email failed for %s", new_user.username)
+        email_ok = send_verification_email(new_user, code)
+        
+        if not email_ok:
             if settings.DEBUG:
-                messages.warning(request,
-                    f"We couldn't send the email (dev). Use this code: {safe_code}")
+                messages.warning(
+                    request,
+                    f"We couldn't send the email (dev). Use this code: {code}"
+                )
             else:
                 messages.error(request,
                     "We couldn’t send your verification email right now. Please try again later.")
@@ -208,7 +231,7 @@ def send_html_email():
         subject,
         plain_message,
         from_email,
-        [to],
+        to,
         html_message=html_message
     )
 
@@ -230,89 +253,46 @@ def forgot_password_view(request):
         try:
             # 1. Look up the user by email
             user = User.objects.get(email=email)
-
-            # 2. Generate a new random password (length can be changed as desired)
-            new_password = get_random_string(length=10)
-
-            # 3. Set the user's password to the new random password
-            user.set_password(new_password)
-            user.save()
-
-            # 4. Send an email with the username & new password
-            subject = 'Your Account Credentials'
-            message = (
-                f"Hello {user.username},\n\n"
-                f"You requested to reset your password.\n\n"
-                f"Here are your new login credentials:\n"
-                f"Username: {user.username}\n"
-                f"Password: {new_password}\n\n"
-                f"Please log in and change your password immediately."
-            )
-            from_email = settings.EMAIL_HOST_USER  # Make sure this is set in settings.py
-            recipient_list = [email]
-
-            send_mail(
-                subject,
-                message,
-                from_email,
-                recipient_list,
-                fail_silently=False,
-            )
-
-            # 5. Inform the user
-            messages.success(request, "A new password has been sent to your email.")
-            return redirect('login')
-
-        except User.DoesNotExist:
-            # If no user is found with the given email
-            return render(request, 'accounts/forgot_password.html', {
-                'error': "No user found with that email address."
-            })
-
-    # GET request: just render the form
-    return render(request, 'accounts/forgot_password.html')
-    if request.method == 'POST':
-        email = request.POST.get('email')
-        User = get_user_model()
-
-        # Try to find a user with that email
-        try:
-            user = User.objects.get(email=email)
-
-            # Generate a new random password
-            new_password = User.objects.make_random_password()  # e.g., 'x4gUy73B'
-
-            # Set the user's password to the new random password
-            user.set_password(new_password)
-            user.save()
-
-            # Send an email with username & newly generated password
-            subject = 'Your Account Credentials'
-            message = (
-                f"Hi {user.username},\n\n"
-                f"Here are your new login credentials:\n"
-                f"Username: {user.username}\n"
-                f"Password: {new_password}\n\n"
-                f"Please log in and change your password immediately."
-            )
-            from_email = settings.EMAIL_HOST_USER
-            recipient_list = [email]
-
-            send_mail(
-                subject,
-                message,
-                from_email,
-                recipient_list,
-                fail_silently=False,
-            )
-
-            messages.success(request, "A new password has been sent to your email address.")
-            return redirect('login')
-
         except User.DoesNotExist:
             return render(request, 'accounts/forgot_password.html', {
                 'error': "No user found with that email address."
             })
 
-    return render(request, 'accounts/forgot_password.html')
+        # 2. Generate a new random password (length can be changed as desired)
+        new_password = get_random_string(length=10)
 
+        # 3. Set the user's password to the new random password
+        user.set_password(new_password)
+        user.save()
+
+        # 4. Send an email with the username & new password
+        subject = 'Your Account Credentials'
+        message = (
+            f"Hello {user.username},\n\n"
+            f"You requested to reset your password.\n\n"
+            f"Here are your new login credentials:\n"
+            f"Username: {user.username}\n"
+            f"Password: {new_password}\n\n"
+            f"Please log in and change your password immediately."
+        )
+        from_email = settings.EMAIL_HOST_USER  # Make sure this is set in settings.py
+        recipient_list = [email]
+
+        send_mail(
+            subject,
+            message,
+            from_email,
+            recipient_list,
+            fail_silently=False,
+        )
+
+        # 5. Inform the user
+        messages.success(request, "A new password has been sent to your email.")
+        return redirect('login')
+
+        
+    return render(request, 'accounts/forgot_password.html', {
+        'error': "No user found with that email address."
+    })
+
+    

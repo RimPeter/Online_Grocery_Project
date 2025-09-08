@@ -1,5 +1,26 @@
 
 from django import forms
+from .models import Address
+
+class AddressForm(forms.ModelForm):
+    class Meta:
+        model = Address
+        fields = [
+            "street_address",
+            "apartment",
+            "city",
+            "postal_code",
+            "delivery_instructions",
+            "is_default",
+        ]
+        widgets = {
+            "street_address": forms.TextInput(attrs={"class": "form-control"}),
+            "apartment": forms.TextInput(attrs={"class": "form-control"}),
+            "city": forms.TextInput(attrs={"class": "form-control"}),
+            "postal_code": forms.TextInput(attrs={"class": "form-control"}),
+            "delivery_instructions": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            "is_default": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
 
 class ConfirmPasswordForm(forms.Form):
     password = forms.CharField(
