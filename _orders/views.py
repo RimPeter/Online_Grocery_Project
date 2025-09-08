@@ -4,6 +4,12 @@ from .models import Order, OrderItem
 from _catalog.models import All_Products
 from django.contrib import messages
 from _accounts.models import Address
+from io import BytesIO
+from django.http import HttpResponse
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 
 @login_required
 def order_history_view(request):
@@ -163,4 +169,100 @@ def invoice_page_view(request, order_id):
         '_orders/invoice_page.html',
         {'order': order, 'order_items': order_items, 'total': total, 'default_address': default_address}
     )
+
+
+@login_required
+def invoice_pdf_view(request, order_id):
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+
+    # Optional: only allow invoices for paid orders
+    # if order.status != 'paid':
+    #     messages.error(request, "Invoice is available after payment.")
+    #     return redirect('invoice_page', order_id=order.id)
+
+    order_items = order.items.select_related('product').all()
+    for item in order_items:
+        item.subtotal = item.price * item.quantity
+    total = sum(i.subtotal for i in order_items)
+
+    # Pull default/fallback address
+    default_address = None
+    try:
+        from _accounts.models import Address
+        qs = Address.objects.filter(user=request.user)
+        default_address = qs.filter(is_default=True).first() or qs.first()
+    except Exception:
+        pass
+
+    # Build PDF
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=36, leftMargin=36, topMargin=48, bottomMargin=36
+    )
+    styles = getSampleStyleSheet()
+    elements = []
+
+    # Header
+    elements.append(Paragraph(f"Invoice #{order.id}", styles['Title']))
+    elements.append(Paragraph(order.created_at.strftime("%Y-%m-%d %H:%M"), styles['Normal']))
+    elements.append(Spacer(1, 12))
+
+    # Customer / Address
+    elements.append(Paragraph(f"<b>Customer:</b> {request.user.get_full_name() or request.user.username}", styles['Normal']))
+    elements.append(Paragraph(f"<b>Email:</b> {request.user.email}", styles['Normal']))
+    if default_address:
+        addr_lines = f"{default_address.street_address}"
+        if default_address.apartment:
+            addr_lines += f", {default_address.apartment}"
+        addr_lines += f"<br/>{default_address.city}, {default_address.postal_code}"
+        elements.append(Paragraph(f"<b>Address:</b><br/>{addr_lines}", styles['Normal']))
+    elements.append(Spacer(1, 12))
+
+    # Items table
+    data = [["Item", "Qty", "Price", "Subtotal"]]
+    for it in order_items:
+        data.append([
+            it.product.name,
+            str(it.quantity),
+            f"£{it.price}",
+            f"£{it.subtotal}",
+        ])
+
+    table = Table(data, colWidths=[260, 60, 80, 80])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.black),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('ALIGN', (1,1), (-1,-1), 'RIGHT'),
+        ('ALIGN', (0,0), (0,-1), 'LEFT'),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
+        ('BOTTOMPADDING', (0,0), (-1,0), 6),
+        ('TOPPADDING', (0,0), (-1,0), 6),
+    ]))
+    elements.append(table)
+    elements.append(Spacer(1, 12))
+
+    # Totals
+    elements.append(Paragraph(f"<b>Total:</b> £{total}", styles['Heading3']))
+
+    # Delivery slot (optional)
+    if order.delivery_date or order.delivery_time:
+        slot = []
+        if order.delivery_date:
+            slot.append(order.delivery_date.strftime("%Y-%m-%d"))
+        if order.delivery_time:
+            slot.append(order.delivery_time.strftime("%H:%M"))
+        elements.append(Spacer(1, 6))
+        elements.append(Paragraph(f"<b>Delivery:</b> {' '.join(slot)}", styles['Normal']))
+
+    doc.build(elements)
+    pdf = buffer.getvalue()
+    buffer.close()
+
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="invoice-{order.id}.pdf"'
+    return response
+
 
