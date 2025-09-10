@@ -1,42 +1,271 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+{% load static %}
+
 {% block title %}Invoice #{{ order.id }}{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-  <h1>Invoice #{{ order.id }}</h1>
-  <p><strong>Date:</strong> {{ order.created_at|date:"Y-m-d H:i" }}</p>
+<style>
+  /* Screen + print styles */
+  :root {
+    --fg: #111827;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+  }
+  @media print {
+    .no-print { display: none !important; }
+    @page { size: A4; margin: 12mm; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+  .invoice-wrap {
+    max-width: 900px;
+    margin: 2rem auto;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    color: var(--fg);
+  }
+  .topbar {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1rem;
+    margin-bottom: 1.25rem;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .brand img {
+    max-height: 64px;
+    width: auto;
+    object-fit: contain;
+  }
+  .brand h1 {
+    font-size: 1.25rem;
+    margin: 0;
+  }
+  .muted { color: var(--muted); }
+  .meta {
+    text-align: right;
+  }
+  .meta h2 {
+    font-size: 1.25rem;
+    margin: 0 0 .25rem 0;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    margin-bottom: .75rem;
+  }
+  .card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+  }
+  .card h3 {
+    margin: 0 0 .5rem 0;
+    font-size: 1rem;
+  }
+  .addr p { margin: .15rem 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    font-size: .95rem;
+  }
+  thead th {
+    text-align: left;
+    border-bottom: 2px solid var(--border);
+    padding: .625rem .5rem;
+  }
+  tbody td {
+    border-bottom: 1px solid var(--border);
+    padding: .625rem .5rem;
+    vertical-align: top;
+  }
+  tfoot td {
+    padding: .625rem .5rem;
+  }
+  .text-right { text-align: right; }
+  .totals {
+    margin-top: .5rem;
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 1rem;
+    align-items: start;
+  }
+  .summary {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+  }
+  .summary .row {
+    display: flex;
+    justify-content: space-between;
+    padding: .35rem 0;
+  }
+  .summary .row.total {
+    font-weight: 700;
+    border-top: 2px solid var(--border);
+    margin-top: .35rem;
+    padding-top: .6rem;
+  }
+  .footer-note {
+    margin-top: 1.25rem;
+    color: var(--muted);
+    font-size: .9rem;
+  }
+  .actions {
+    display: flex;
+    gap: .5rem;
+    margin-bottom: 1rem;
+    justify-content: flex-end;
+  }
+  .btn {
+    display: inline-block;
+    background: #111827;
+    color: #fff;
+    padding: .6rem .9rem;
+    border-radius: 8px;
+    text-decoration: none;
+    border: 1px solid #111827;
+  }
+  .btn.secondary {
+    background: #fff;
+    color: #111827;
+  }
+</style>
 
-  {% if default_address %}
-    <h5 class="mt-3">Billing / Delivery Address</h5>
-    <p>
-      {{ default_address.street_address }}{% if default_address.apartment %}, {{ default_address.apartment }}{% endif %}<br>
-      {{ default_address.city }}, {{ default_address.postal_code }}
-    </p>
-  {% endif %}
-
-  <h5 class="mt-3">Items</h5>
-  <ul class="list-group mb-3">
-    {% for item in order_items %}
-      <li class="list-group-item d-flex justify-content-between">
-        <div>
-          <strong>{{ item.product.name }}</strong><br>
-          Qty: {{ item.quantity }} × £{{ item.price }}
-        </div>
-        <div>£{{ item.subtotal }}</div>
-      </li>
-    {% endfor %}
-  </ul>
-
-  <h4 class="text-end">Total: £{{ total }}</h4>
-<div class="d-flex gap-2 mt-4">
-  
-  <a class="btn btn-outline-secondary" href="{% url 'invoice_pdf' order.id %}">Download PDF</a>
-  <a class="btn btn-primary" href="{% url 'order_history' %}">Back to Orders</a>
-</div>
-
-  {% comment %} <div class="d-flex gap-2 mt-4">
-    <button class="btn btn-outline-secondary" onclick="window.print()">Print</button>
-    <a class="btn btn-primary" href="{% url 'order_history' %}">Back to Orders</a>
+<div class="invoice-wrap">
+  <!-- Action buttons -->
+  <div class="actions no-print">
+    {% comment %} Update this URL name if yours differs {% endcomment %}
+    <a class="btn secondary" href="{% url 'order_summery' order.id %}">Back to order</a>
+    {% if order.status == 'paid' %}
+      <a class="btn" href="{% url 'invoice_pdf' order.id %}">Download PDF</a>
+    {% endif %}
+    <button class="btn secondary" type="button" onclick="window.print()">Print</button>
   </div>
-</div> {% endcomment %}
+
+  <!-- Header -->
+  <div class="topbar">
+    <div class="brand">
+      {% if company and company.logo %}
+        <img src="{{ company.logo.url }}" alt="{{ company.name }} logo">
+      {% endif %}
+      <div>
+        <h1>
+          {% if company %}
+            {% firstof company.legal_name company.name "Invoice" %}
+          {% else %}
+            Invoice
+          {% endif %}
+        </h1>
+        {% if company %}
+          <div class="muted">
+            {{ company.address_line1 }}{% if company.address_line2 %}, {{ company.address_line2 }}{% endif %},
+            {{ company.city }}{% if company.region %}, {{ company.region }}{% endif %} {{ company.postal_code }}, {{ company.country }}
+            {% if company.vat_number %}<br>VAT: {{ company.vat_number }}{% endif %}
+            {% if company.company_number %} · Company No: {{ company.company_number }}{% endif %}
+            {% if company.email %}<br>{{ company.email }}{% endif %}
+            {% if company.phone %} · {{ company.phone }}{% endif %}
+            {% if company.website %} · {{ company.website }}{% endif %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="meta">
+      <h2>Invoice #{{ order.id }}</h2>
+      <div class="muted">
+        Date: {{ order.created_at|date:"Y-m-d H:i" }}<br>
+        Status: {{ order.get_status_display }}
+      </div>
+      {% if order.delivery_date or order.delivery_time %}
+        <div class="muted" style="margin-top:.25rem">
+          Delivery:
+          {% if order.delivery_date %}{{ order.delivery_date|date:"Y-m-d" }}{% endif %}
+          {% if order.delivery_time %} {{ order.delivery_time|time:"H:i" }}{% endif %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Parties -->
+  <div class="grid">
+    <div class="card addr">
+      <h3>Bill To</h3>
+      <p><strong>{{ request.user.get_full_name|default:request.user.username }}</strong></p>
+      <p class="muted">{{ request.user.email }}</p>
+      {% if default_address %}
+        <p>{{ default_address.street_address }}{% if default_address.apartment %}, {{ default_address.apartment }}{% endif %}</p>
+        <p>{{ default_address.city }}, {{ default_address.postal_code }}</p>
+        {% if default_address.delivery_instructions %}
+          <p class="muted">Instructions: {{ default_address.delivery_instructions }}</p>
+        {% endif %}
+      {% else %}
+        <p class="muted">No saved address on file.</p>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <h3>Invoice Details</h3>
+      <p><strong>Order:</strong> #{{ order.id }}</p>
+      <p><strong>Created:</strong> {{ order.created_at|date:"Y-m-d H:i" }}</p>
+      <p><strong>Status:</strong> {{ order.get_status_display }}</p>
+      {% if company and company.currency_code %}
+        <p><strong>Currency:</strong> {{ company.currency_code }}</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Line items -->
+  <table aria-label="Invoice items">
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th class="text-right">Qty</th>
+        <th class="text-right">Price</th>
+        <th class="text-right">Subtotal</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for it in order_items %}
+        <tr>
+          <td>{{ it.product.name }}</td>
+          <td class="text-right">{{ it.quantity }}</td>
+          <td class="text-right">£{{ it.price|floatformat:2 }}</td>
+          <td class="text-right">£{{ it.subtotal|floatformat:2 }}</td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="4" class="muted">No items found for this invoice.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- Totals -->
+  <div class="totals">
+    <div></div>
+    <div class="summary">
+      {# Add tax/shipping rows if you later track them #}
+      <div class="row total">
+        <div>Total</div>
+        <div>£{{ total|floatformat:2 }}</div>
+      </div>
+    </div>
+  </div>
+
+  {% if company and company.invoice_footer %}
+    <div class="footer-note">
+      {{ company.invoice_footer|linebreaksbr }}
+    </div>
+  {% endif %}
+</div>
 {% endblock %}

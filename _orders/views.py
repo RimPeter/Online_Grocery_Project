@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from .models import Order, OrderItem
+from _accounts.models import Address, Company
 from _catalog.models import All_Products
 from django.contrib import messages
 from _accounts.models import Address
@@ -159,13 +160,16 @@ def invoice_page_view(request, order_id):
     total = sum(i.subtotal for i in order_items)
 
     # If you show addresses on the invoice, pick default/fallback:
-    default_address = None
+    default_address = Address.objects.filter(user=request.user).order_by('-is_default').first()
+    company = getattr(Company, "get_default", None)
+    company = company() if callable(company) else Company.objects.filter(is_default=True).first() or Company.objects.first()
+
+    
     try:
-        from _accounts.models import Address
-        qs = Address.objects.filter(user=request.user)
-        default_address = qs.filter(is_default=True).first() or qs.first()
+        company = Company.get_default()
     except Exception:
-        pass
+        company = Company.objects.filter(is_default=True).first() or Company.objects.first()
+
 
     return render(
         request,
