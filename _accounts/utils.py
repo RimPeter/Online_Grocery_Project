@@ -25,7 +25,7 @@ def send_verification_email(user, code) -> bool:
     recipient_list = [user.email]
 
     try:
-        send_mail(
+        sent = send_mail(
             subject,
             message,
             from_email,

@@ -152,12 +152,9 @@ def signup_view(request):
         )
 
         if not email_ok:
-            if settings.DEBUG:
-                messages.warning(request, f"We couldn't send the email (dev). Use this code: {code}")
-            else:
-                pending.delete()
-                messages.error(request, "We couldn’t send your verification email right now. Please try again later.")
-                return render(request, 'accounts/signup.html', {})
+            pending.delete()
+            messages.error(request, "We couldn’t send your verification email right now. Please try again later.")
+            return render(request, 'accounts/signup.html', {})
 
         messages.success(request, "We sent a verification code to your email. Enter it to finish creating your account.")
         return redirect('verify_account')
@@ -350,8 +347,6 @@ def forgot_password_view(request):
         return redirect('login')
 
         
-    return render(request, 'accounts/forgot_password.html', {
-        'error': "No user found with that email address."
-    })
+    return render(request, 'accounts/forgot_password.html')
 
     
