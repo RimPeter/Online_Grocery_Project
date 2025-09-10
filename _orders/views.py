@@ -30,6 +30,9 @@ def order_summery_view(request, order_id):
 
     # Get the user's default address (fallback to first if none marked default)
     addresses = Address.objects.filter(user=request.user)
+    if not addresses.exists():
+        messages.error(request, "Please add a delivery address before checking out.")
+        return redirect('manage_addresses')
     default_address = addresses.filter(is_default=True).first() or addresses.first()
 
     context = {
