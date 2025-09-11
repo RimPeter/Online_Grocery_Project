@@ -280,7 +280,8 @@ document.addEventListener('DOMContentLoaded', function () {
       // Keep input.value; do not set l1/l2 (let backend exact-match on q)
       return;
     }
-
+    l1f.value = '';
+    l2f.value = '';
     // Otherwise: leave as free-text fuzzy search
   });
 });

@@ -94,7 +94,10 @@ def product_list(request):
                 Q(sub_category__icontains=query) |
                 Q(sub_subcategory__icontains=query)
             )
-
+    elif l2:
+        products = products.filter(sub_category__iexact=l1, sub_subcategory__iexact=l2)
+    elif l1:
+        products = products.filter(sub_category__iexact=l1)
     # Pagination
     paginator = Paginator(products, 24)
     page_number = request.GET.get('page')
@@ -295,7 +298,11 @@ def load_more_products(request):
                 Q(sub_category__icontains=query) |
                 Q(sub_subcategory__icontains=query)
             )
-
+    elif l2:
+        products = products.filter(sub_category__iexact=l1, sub_subcategory__iexact=l2)
+    elif l1:
+        products = products.filter(sub_category__iexact=l1)
+        
     paginator = Paginator(products_qs, 8)
     page_obj = paginator.get_page(page_number)
 
