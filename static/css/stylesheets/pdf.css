@@ -1,0 +1,31 @@
+/* PDF-only, xhtml2pdf-safe CSS */
+body {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12pt;
+  color: #000000;
+  margin: 0;
+  padding: 0;
+}
+
+.invoice { width: 100%; }
+
+.invoice-header h1 {
+  margin: 0 0 6px 0;
+  font-size: 20pt;
+  color: #000000;
+}
+.invoice-header p {
+  margin: 0 0 12px 0;
+  color: #000000;
+}
+
+.invoice-meta { display: block; margin: 0 0 16px 0; }
+.invoice-meta > div { margin-bottom: 8px; }
+
+.items { width: 100%; border-collapse: collapse; margin-top: 8px; }
+.items th, .items td { border: 1px solid #000000; padding: 6px; }
+.items thead th { background: #dddddd; color: #000000; }
+
+.totals { margin-top: 12px; font-size: 13pt; color: #000000; }
+
+.footer-note { margin-top: 18px; font-size: 10pt; color: #000000; }

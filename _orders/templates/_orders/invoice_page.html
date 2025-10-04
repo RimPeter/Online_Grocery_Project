@@ -148,6 +148,10 @@
     <a class="btn secondary" href="{% url 'order_summery' order.id %}">Back to order</a>
     {% if order.status == 'paid' %}
       <a class="btn" href="{% url 'invoice_pdf' order.id %}">Download PDF</a>
+      <form action="{% url 'invoice_email' order.id %}" method="post" style="display:inline;">
+      {% csrf_token %}
+      <button class="btn secondary" type="submit">Email PDF</button>
+    </form>
     {% endif %}
     <button class="btn secondary" type="button" onclick="window.print()">Print</button>
   </div>
