@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<h3>My Profile</h3>
+<form method='post' novalidate>
+  {% csrf_token %}
+  <div class='row g-3'>
+    <div class='col-md-6'>
+      <label for='id_username' class='form-label'>Username</label>
+      {{ form.username }}
+      {% if form.username.errors %}<div class='text-danger small'>{{ form.username.errors|striptags }}</div>{% endif %}
+    </div>
+    <div class='col-md-6'>
+      <label for='id_email' class='form-label'>Email</label>
+      {{ form.email }}
+      {% if form.email.errors %}<div class='text-danger small'>{{ form.email.errors|striptags }}</div>{% endif %}
+    </div>
+    <div class='col-md-6'>
+      <label for='id_first_name' class='form-label'>First name</label>
+      {{ form.first_name }}
+      {% if form.first_name.errors %}<div class='text-danger small'>{{ form.first_name.errors|striptags }}</div>{% endif %}
+    </div>
+    <div class='col-md-6'>
+      <label for='id_last_name' class='form-label'>Last name</label>
+      {{ form.last_name }}
+      {% if form.last_name.errors %}<div class='text-danger small'>{{ form.last_name.errors|striptags }}</div>{% endif %}
+    </div>
+    <div class='col-md-6'>
+      <label for='id_phone' class='form-label'>Phone</label>
+      {{ form.phone }}
+      {% if form.phone.errors %}<div class='text-danger small'>{{ form.phone.errors|striptags }}</div>{% endif %}
+    </div>
+  </div>
+  {% if form.non_field_errors %}
+    <div class='text-danger mt-2'>{{ form.non_field_errors }}</div>
+  {% endif %}
+  <div class='mt-3'>
+    <button type='submit' name='profile_submit' value='1' class='btn btn-primary'>Save changes</button>
+    <a href='{% url 'home' %}' class='btn btn-outline-secondary ms-2'>Cancel</a>
+  </div>
+  <p class='text-muted mt-3'>To change your password use the Change Password option in the Account menu.</p>
+</form>
+
+<hr class='my-4'>
+
+<h4>Addresses</h4>
+
+{% if addresses %}
+  <div class='list-group mb-3'>
+    {% for a in addresses %}
+      <div class='list-group-item d-flex justify-content-between align-items-start'>
+        <div>
+          <div class='fw-semibold'>{{ a.street_address }}{% if a.apartment %}, {{ a.apartment }}{% endif %}</div>
+          <div class='text-muted small'>{{ a.city }} {{ a.postal_code }}</div>
+          {% if a.is_default %}<span class='badge bg-success mt-1'>Default</span>{% endif %}
+        </div>
+        <div class='ms-3'>
+          {% if not a.is_default %}
+          <form method='post' action='{% url 'set_default_address' a.pk %}' class='d-inline'>
+            {% csrf_token %}
+            <button type='submit' class='btn btn-sm btn-outline-primary'>Make default</button>
+          </form>
+          {% endif %}
+          <form method='post' action='{% url 'delete_address' a.pk %}' class='d-inline ms-2'>
+            {% csrf_token %}
+            <button type='submit' class='btn btn-sm btn-outline-danger'>Delete</button>
+          </form>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class='text-muted'>No addresses yet.</p>
+{% endif %}
+
+<h5>Add new address</h5>
+<form method='post' novalidate>
+  {% csrf_token %}
+  <div class='row g-3'>
+    <div class='col-md-8'>
+      <label for='id_street_address' class='form-label'>Street address</label>
+      {{ address_form.street_address }}
+    </div>
+    <div class='col-md-4'>
+      <label for='id_apartment' class='form-label'>Apartment</label>
+      {{ address_form.apartment }}
+    </div>
+    <div class='col-md-6'>
+      <label for='id_city' class='form-label'>City</label>
+      {{ address_form.city }}
+    </div>
+    <div class='col-md-6'>
+      <label for='id_postal_code' class='form-label'>Postal code</label>
+      {{ address_form.postal_code }}
+    </div>
+    <div class='col-12'>
+      <label for='id_delivery_instructions' class='form-label'>Delivery instructions</label>
+      {{ address_form.delivery_instructions }}
+    </div>
+    <div class='col-12 form-check'>
+      {{ address_form.is_default }}
+      <label class='form-check-label' for='id_is_default'>Set as default</label>
+    </div>
+  </div>
+  <div class='mt-3'>
+    <button type='submit' name='address_submit' value='1' class='btn btn-primary'>Add address</button>
+  </div>
+</form>
+{% endblock %}

@@ -1,6 +1,6 @@
 
 from django import forms
-from .models import Address, ContactMessage
+from .models import Address, ContactMessage, User
 
 class AddressForm(forms.ModelForm):
     class Meta:
@@ -48,3 +48,32 @@ class ContactForm(forms.ModelForm):
             'subject': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Subject (optional)'}),
             'message': forms.Textarea(attrs={'class': 'form-control', 'rows': 5, 'placeholder': 'Write your message...'}),
         }
+
+
+class ProfileForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'phone', 'first_name', 'last_name']
+        widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, user, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._current_user = user
+
+    def clean_username(self):
+        username = (self.cleaned_data.get('username') or '').strip()
+        if User.objects.filter(username__iexact=username).exclude(pk=self._current_user.pk).exists():
+            raise forms.ValidationError('Username already taken')
+        return username
+
+    def clean_email(self):
+        email = (self.cleaned_data.get('email') or '').strip()
+        if email and User.objects.filter(email__iexact=email).exclude(pk=self._current_user.pk).exists():
+            raise forms.ValidationError('Email address already in use')
+        return email

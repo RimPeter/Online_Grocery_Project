@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .forms import ConfirmPasswordForm, AddressForm, ContactForm
+from .forms import ConfirmPasswordForm, AddressForm, ContactForm, ProfileForm
 from django.core.mail import send_mail, EmailMessage
 from django.conf import settings
 from .utils import create_verification_code_for_user, send_verification_email
@@ -392,3 +392,35 @@ def contact_us(request):
 def contact_submitted(request):
     email = (request.user.email or '').strip()
     return render(request, 'accounts/contact_submitted.html', {'email': email})
+
+
+@login_required
+def profile_view(request):
+    profile_form = ProfileForm(request.user, instance=request.user)
+    address_form = AddressForm()
+
+    if request.method == 'POST':
+        # Distinguish which form was submitted
+        if request.POST.get('profile_submit') is not None:
+            profile_form = ProfileForm(request.user, data=request.POST, instance=request.user)
+            if profile_form.is_valid():
+                profile_form.save()
+                messages.success(request, 'Profile updated successfully.')
+                return redirect('profile')
+        elif request.POST.get('address_submit') is not None:
+            address_form = AddressForm(request.POST)
+            if address_form.is_valid():
+                addr = address_form.save(commit=False)
+                addr.user = request.user
+                addr.save()
+                if getattr(addr, 'is_default', False):
+                    Address.objects.filter(user=request.user).exclude(pk=addr.pk).update(is_default=False)
+                messages.success(request, 'Address added.')
+                return redirect('profile')
+
+    addresses = request.user.addresses.all().order_by('-is_default', 'city', 'street_address')
+    return render(request, 'accounts/profile.html', {
+        'form': profile_form,
+        'address_form': address_form,
+        'addresses': addresses,
+    })
