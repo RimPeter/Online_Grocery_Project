@@ -1,6 +1,6 @@
 
 from django import forms
-from .models import Address
+from .models import Address, ContactMessage
 
 class AddressForm(forms.ModelForm):
     class Meta:
@@ -38,3 +38,13 @@ class ConfirmPasswordForm(forms.Form):
         if not self.user.check_password(password):
             raise forms.ValidationError('Incorrect password. Please try again.')
         return password
+
+
+class ContactForm(forms.ModelForm):
+    class Meta:
+        model = ContactMessage
+        fields = ['subject', 'message']
+        widgets = {
+            'subject': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Subject (optional)'}),
+            'message': forms.Textarea(attrs={'class': 'form-control', 'rows': 5, 'placeholder': 'Write your message...'}),
+        }

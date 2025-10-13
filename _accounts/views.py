@@ -4,11 +4,11 @@ from django.urls import reverse
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .forms import ConfirmPasswordForm, AddressForm
+from .forms import ConfirmPasswordForm, AddressForm, ContactForm
 from django.core.mail import send_mail, EmailMessage
 from django.conf import settings
 from .utils import create_verification_code_for_user, send_verification_email
-from .models import VerificationCode, Address
+from .models import VerificationCode, Address, ContactMessage
 from django.utils.crypto import get_random_string
 import logging
 from smtplib import SMTPException, SMTPAuthenticationError
@@ -350,3 +350,45 @@ def forgot_password_view(request):
     return render(request, 'accounts/forgot_password.html')
 
     
+@login_required
+def contact_us(request):
+    if request.method == 'POST':
+        form = ContactForm(request.POST)
+        if form.is_valid():
+            cm = form.save(commit=False)
+            cm.user = request.user
+            cm.save()
+            # send confirmation email to the customer
+            try:
+                user_email = (request.user.email or '').strip()
+                if user_email:
+                    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or getattr(settings, 'EMAIL_HOST_USER', None) or 'no-reply@example.com'
+                    subject = 'We received your message'
+                    lines = [
+                        f'Hi {request.user.username},',
+                        '',
+                        'Thanks for contacting us. We have received your message and will get back to you soon.',
+                        '',
+                        'Summary:',
+                        f'Subject: {cm.subject or "(none)"}',
+                        '',
+                        cm.message,
+                        '',
+                        'Best regards,',
+                        'Customer Support'
+                    ]
+                    send_mail(subject, '\n'.join(lines), from_email, [user_email], fail_silently=True)
+            except Exception:
+                # do not block user flow on email issues
+                logger.exception('contact confirmation email failed')
+            messages.success(request, 'Thanks for reaching out. We will get back to you soon.')
+            return redirect('contact_submitted')
+    else:
+        form = ContactForm()
+    return render(request, 'accounts/contact.html', {'form': form})
+
+
+@login_required
+def contact_submitted(request):
+    email = (request.user.email or '').strip()
+    return render(request, 'accounts/contact_submitted.html', {'email': email})

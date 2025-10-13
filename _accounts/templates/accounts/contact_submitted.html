@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Message Sent{% endblock %}
+
+{% block content %}
+<h3>Thank you</h3>
+<p>Your message has been sent.</p>
+{% if email %}
+  <p>We have sent an automatic reply to <strong>{{ email }}</strong>.</p>
+{% else %}
+  <p>We have sent an automatic reply to your account email.</p>
+{% endif %}
+
+<a href='{% url 'home' %}' class='btn btn-primary'>Back to home</a>
+<a href='{% url 'contact_us' %}' class='btn btn-outline-secondary ms-2'>Send another message</a>
+{% endblock %}
