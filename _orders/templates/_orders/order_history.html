@@ -58,6 +58,12 @@
                 Pay
               </a>
             {% endif %}
+          <a 
+            href="{% url 'contact_us' %}?subject=Regarding%20order%20{{ order.id }}&message=Hi%2C%20I%20have%20a%20question%20about%20order%20{{ order.id }}."
+            class="btn btn-outline-secondary btn-sm ms-1"
+          >
+            Contact support
+          </a>
           <form 
             action="{% url 'order_delete' order.id %}" 
             method="POST" 

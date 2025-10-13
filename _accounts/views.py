@@ -384,7 +384,11 @@ def contact_us(request):
             messages.success(request, 'Thanks for reaching out. We will get back to you soon.')
             return redirect('contact_submitted')
     else:
-        form = ContactForm()
+        initial = {
+            'subject': request.GET.get('subject', ''),
+            'message': request.GET.get('message', ''),
+        }
+        form = ContactForm(initial=initial)
     return render(request, 'accounts/contact.html', {'form': form})
 
 
