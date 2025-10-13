@@ -67,6 +67,16 @@ class All_Products(models.Model):
     def is_bulk(self) -> bool:
         return self.pack_amount() > 1 
 
+    @property
+    def bulk_total_price(self):
+        """Total price for the full pack at RSP (rsp * pack_amount)."""
+        if self.rsp is None:
+            return None
+        try:
+            return self.rsp * self.pack_amount()
+        except Exception:
+            return None
+
     def __str__(self):
         return self.name
 

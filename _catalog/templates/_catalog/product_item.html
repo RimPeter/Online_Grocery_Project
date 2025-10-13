@@ -21,7 +21,12 @@
       {% if user.is_superuser %}
         <p class="card-text price">£{{ product.price }}</p>
       {% endif %}
+      {% if product.is_bulk %}
+      <p class="card-text price">£{{ product.rsp }}/item</p>
+      <p class="card-text"><small class="text-muted">Pack of {{ product.pack_amount }} — Total £{{ product.bulk_total_price|floatformat:2 }}</small></p>
+      {% else %}
       <p class="card-text price">£{{ product.rsp }}</p>
+      {% endif %}
 
       {% if product.promotion_end_date %}
         <p class="card-text text-danger">
