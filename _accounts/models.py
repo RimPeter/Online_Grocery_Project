@@ -173,6 +173,7 @@ class ContactMessage(models.Model):
     subject = models.CharField(max_length=200, blank=True)
     message = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+    archived = models.BooleanField(default=False, db_index=True)
 
     class Meta:
         ordering = ['-created_at']
@@ -180,3 +181,17 @@ class ContactMessage(models.Model):
     def __str__(self):
         subj = self.subject or 'No subject'
         return f'Contact from {self.user} - {subj}'
+
+
+class ContactMessageActive(ContactMessage):
+    class Meta:
+        proxy = True
+        verbose_name = 'Contact message (active)'
+        verbose_name_plural = 'Contact messages (active)'
+
+
+class ContactMessageArchived(ContactMessage):
+    class Meta:
+        proxy = True
+        verbose_name = 'Contact message (archive)'
+        verbose_name_plural = 'Contact messages (archive)'
