@@ -2,6 +2,7 @@ from django.contrib import admin, messages
 from django import forms
 from django.core.mail import send_mail
 from django.conf import settings
+from django.http import HttpResponseRedirect
 from .models import (
     User,
     Address,
@@ -44,6 +45,12 @@ class BaseContactAdmin(admin.ModelAdmin):
         text = obj.message or ''
         return (text[:60] + '…') if len(text) > 60 else text
     short_message.short_description = 'Message'
+
+    def changelist_view(self, request, extra_context=None):
+        if request.method == 'POST' and not request.POST.get('action'):
+            self.message_user(request, 'Please select an action to perform.', level=messages.ERROR)
+            return HttpResponseRedirect(request.get_full_path())
+        return super().changelist_view(request, extra_context=extra_context)
 
 
 @admin.register(ContactMessageActive)
