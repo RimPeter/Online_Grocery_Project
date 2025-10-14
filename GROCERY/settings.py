@@ -182,6 +182,15 @@ EMAIL_HOST_PASSWORD = _nospace(os.getenv("EMAIL_HOST_PASSWORD", ""))
 
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
+
+# Security hardening for cookies (effective when not DEBUG)
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    # Strict or Lax depends on app needs; Lax is a safe default for auth
+    CSRF_COOKIE_SAMESITE = 'Lax'
+    SESSION_COOKIE_SAMESITE = 'Lax'
 # Stripe settings
 
 STRIPE_PUBLIC_KEY = os.getenv("STRIPE_PUBLIC_KEY")

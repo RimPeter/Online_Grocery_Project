@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.urls import reverse
+from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -66,23 +67,62 @@ def delete_address(request, pk):
 
 
 def login_view(request):
-    """
-    Renders a login form and handles the login process.
-    """
-    if request.method == "POST":
-        username = request.POST.get('username')
-        password = request.POST.get('password')
+    """Login with rate limiting, remember me, and next support."""
+    logger = logging.getLogger(__name__)
+    LIMIT = 5
+    BLOCK_SECONDS = 600
+    now_ts = int(timezone.now().timestamp())
+    block_until = request.session.get('login_block_until') or 0
 
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
+    next_url = request.GET.get('next') or request.POST.get('next') or None
+
+    if request.method == 'POST':
+        # rate limit check
+        if now_ts < block_until:
+            remaining = block_until - now_ts
+            minutes = max(1, remaining // 60)
+            form = AuthenticationForm(request, data=request.POST)
+            form.add_error(None, f'Too many attempts. Try again in about {minutes} minute(s).')
+            return render(request, 'accounts/login.html', {'form': form, 'next': next_url})
+
+        form = AuthenticationForm(request, data=request.POST)
+        remember = bool(request.POST.get('remember_me'))
+        if form.is_valid():
+            user = form.get_user()
+            # successful login; clear counters
+            for k in ('login_attempt_count', 'login_block_until'):
+                request.session.pop(k, None)
             login(request, user)
-            return redirect('home')
+            # set session expiry
+            if remember:
+                request.session.set_expiry(60 * 60 * 24 * 14)  # 14 days
+            else:
+                request.session.set_expiry(0)  # browser session
+            logger.info('login success', extra={
+                'user_id': user.id,
+                'ip': request.META.get('REMOTE_ADDR'),
+            })
+            # safe redirect to next if present
+            return redirect(next_url or 'home')
         else:
-            context = {'error': 'Invalid username or password'}
-            return render(request, 'accounts/login.html', context)
+            attempts = int(request.session.get('login_attempt_count') or 0) + 1
+            request.session['login_attempt_count'] = attempts
+            if attempts >= LIMIT:
+                request.session['login_block_until'] = now_ts + BLOCK_SECONDS
+            logger.warning('login failed', extra={
+                'username': request.POST.get('username'),
+                'ip': request.META.get('REMOTE_ADDR'),
+                'attempts': attempts,
+            })
+            return render(request, 'accounts/login.html', {'form': form, 'next': next_url})
 
-    # GET: Render the login form
-    return render(request, 'accounts/login.html')
+    # GET
+    form = AuthenticationForm(request)
+    if now_ts < block_until:
+        remaining = block_until - now_ts
+        minutes = max(1, remaining // 60)
+        form.add_error(None, f'Login temporarily blocked. Try again in about {minutes} minute(s).')
+    return render(request, 'accounts/login.html', {'form': form, 'next': next_url})
 
 @login_required
 def logout_view(request):
