@@ -226,9 +226,10 @@ def delete_account(request):
     if request.method == 'POST':
         form = ConfirmPasswordForm(user=request.user, data=request.POST)
         if form.is_valid():
+            # capture user for any last operations, then delete and log out
             request.user.delete()
-            messages.success(request, "Your account has been deleted.")
-            return redirect('home')  # or wherever you want to redirect
+            logout(request)
+            return redirect('account_deleted')
         else:
             # Form not valid (password incorrect). The form will show an error message.
             return render(request, 'accounts/delete_account.html', {'form': form})
@@ -236,6 +237,11 @@ def delete_account(request):
         # GET request: Show the confirmation form
         form = ConfirmPasswordForm(user=request.user)
         return render(request, 'accounts/delete_account.html', {'form': form})
+
+
+def account_deleted(request):
+    """Render a static confirmation page after account deletion."""
+    return render(request, 'accounts/account_deleted.html')
     
 def send_welcome_email(request):
     # Suppose you already have the user email
