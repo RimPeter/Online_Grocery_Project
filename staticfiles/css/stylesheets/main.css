@@ -16,6 +16,25 @@ html {
   -webkit-text-size-adjust: 100%;
   /* 2 */ }
 
+/* Navbar dropdown on hover and edge handling */
+.navbar .dropdown:hover > .dropdown-menu {
+  display: block;
+}
+.navbar .dropdown-menu {
+  margin-top: 0; /* align dropdown flush under toggle */
+}
+
+/* Cart dropdown layout */
+.cart-menu .cart-body {
+  max-height: 260px;
+  overflow: auto;
+}
+.cart-menu .cart-footer {
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+}
+
 /* Sections
    ========================================================================== */
 /**

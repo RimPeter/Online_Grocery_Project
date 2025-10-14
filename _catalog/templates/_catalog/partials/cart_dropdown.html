@@ -1,0 +1,26 @@
+{% load static %}
+{% if items %}
+  <div style='min-width: 240px; max-width: 360px;'>
+    <div class='cart-body p-2 d-flex flex-wrap gap-2'>
+      {% for it in items|slice:":12" %}
+        <a href="{% url 'product_detail' it.product.pk %}" class='d-inline-block'>
+          {% if it.product.image_url %}
+            <img src='{{ it.product.image_url }}' alt='' class='rounded' style='width: 56px; height: 56px; object-fit: cover;'>
+          {% else %}
+            <img src="{% static 'images/default_product.jpg' %}" alt='' class='rounded' style='width: 56px; height: 56px; object-fit: cover;'>
+          {% endif %}
+        </a>
+      {% endfor %}
+    </div>
+    <div class='cart-footer p-2 border-top text-center bg-white'>
+      <a href="{% url 'cart_view' %}" class='btn btn-sm btn-primary w-100'>View cart</a>
+    </div>
+  </div>
+{% else %}
+  <div style='min-width: 220px; max-width: 280px;'>
+    <div class='p-2 text-center text-muted small'>No items yet</div>
+    <div class='cart-footer p-2 border-top text-center bg-white'>
+      <a href="{% url 'cart_view' %}" class='btn btn-sm btn-outline-primary w-100'>Go to cart</a>
+    </div>
+  </div>
+{% endif %}

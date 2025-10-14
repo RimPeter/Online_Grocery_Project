@@ -49,13 +49,18 @@
           <li class="nav-item">
             <a class="nav-link {% if url_name == 'product_list' %}active{% endif %}" {% if url_name == 'product_list' %}aria-current="page"{% endif %} href="{% url 'product_list' %}">Products</a>
           </li>
-          <li class="nav-item">
-            <a class="nav-link {% if url_name == 'cart_view' %}active{% endif %}" {% if url_name == 'cart_view' %}aria-current="page"{% endif %} href="{% url 'cart_view' %}">
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle {% if url_name == 'cart_view' %}active{% endif %}" {% if url_name == 'cart_view' %}aria-current="page"{% endif %}
+               href="{% url 'cart_view' %}" id="navbarCartDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               Cart
               {% with cart=request.session.cart %}
                 {% if cart %}<span class="badge bg-secondary ms-1">{{ cart|length }}</span>{% endif %}
               {% endwith %}
             </a>
+            <div class="dropdown-menu dropdown-menu-end p-0 cart-menu" aria-labelledby="navbarCartDropdown">
+              {% load cart_tags %}
+              {% cart_dropdown %}
+            </div>
           </li>
           {% if user.is_authenticated %}
 
