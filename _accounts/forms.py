@@ -40,6 +40,20 @@ class ConfirmPasswordForm(forms.Form):
         return password
 
 
+class DeleteAccountForm(ConfirmPasswordForm):
+    confirm = forms.CharField(
+        label='Type DELETE to confirm',
+        help_text='This is permanent. Orders are retained, login will be disabled.',
+        widget=forms.TextInput(attrs={'placeholder': 'DELETE', 'class': 'form-control'})
+    )
+
+    def clean_confirm(self):
+        val = (self.cleaned_data.get('confirm') or '').strip()
+        if val != 'DELETE':
+            raise forms.ValidationError('You must type DELETE to proceed')
+        return val
+
+
 class ContactForm(forms.ModelForm):
     class Meta:
         model = ContactMessage

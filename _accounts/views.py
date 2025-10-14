@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .forms import ConfirmPasswordForm, AddressForm, ContactForm, ProfileForm
+from .forms import ConfirmPasswordForm, AddressForm, ContactForm, ProfileForm, DeleteAccountForm
 from django.core.mail import send_mail, EmailMessage
 from django.conf import settings
 from .utils import create_verification_code_for_user, send_verification_email
@@ -224,7 +224,7 @@ def delete_account(request):
     Deletes the currently logged-in user's account, but requires password confirmation.
     """
     if request.method == 'POST':
-        form = ConfirmPasswordForm(user=request.user, data=request.POST)
+        form = DeleteAccountForm(user=request.user, data=request.POST)
         if form.is_valid():
             # capture user for any last operations, then delete and log out
             request.user.delete()
@@ -235,7 +235,7 @@ def delete_account(request):
             return render(request, 'accounts/delete_account.html', {'form': form})
     else:
         # GET request: Show the confirmation form
-        form = ConfirmPasswordForm(user=request.user)
+        form = DeleteAccountForm(user=request.user)
         return render(request, 'accounts/delete_account.html', {'form': form})
 
 

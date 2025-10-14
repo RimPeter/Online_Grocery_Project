@@ -5,9 +5,18 @@
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-6 text-center">
+  <div class="col-md-8">
     <h2>Delete Account</h2>
-    <p>This action cannot be undone. Please confirm with your password.</p>
+    <p class='text-danger'>This action cannot be undone.</p>
+    <div class='alert alert-warning'>
+      <strong>What happens if you delete your account</strong>
+      <ul class='mb-0'>
+        <li>Addresses will be removed</li>
+        <li>Contact messages will be removed</li>
+        <li>Orders and invoices are retained for compliance</li>
+        <li>Your login will be disabled immediately</li>
+      </ul>
+    </div>
 
     {# Show form errors (if any) #}
     {% if form.errors %}
@@ -16,12 +25,28 @@
       </div>
     {% endif %}
 
-    <form method="POST" novalidate>
+    <form method='POST' novalidate>
       {% csrf_token %}
-      {{ form.as_p }}
+      <div class='mb-3'>
+        <label for='id_password' class='form-label'>Confirm with your password</label>
+        {{ form.password }}
+        {% if form.password.errors %}
+          <div class='text-danger small'>{{ form.password.errors|striptags }}</div>
+        {% endif %}
+      </div>
+      <div class='mb-3'>
+        <label for='id_confirm' class='form-label'>Type DELETE to confirm</label>
+        {{ form.confirm }}
+        {% if form.confirm.errors %}
+          <div class='text-danger small'>{{ form.confirm.errors|striptags }}</div>
+        {% endif %}
+        {% if form.confirm.help_text %}
+          <div class='form-text'>{{ form.confirm.help_text }}</div>
+        {% endif %}
+      </div>
       
-      <button type="submit" class="btn btn-danger">Yes, Delete My Account</button>
-      <a class="btn btn-secondary" href="{% url 'home' %}">Cancel</a>
+      <button type='submit' class='btn btn-danger'>Yes, delete my account</button>
+      <a class='btn btn-secondary ms-2' href='{% url 'home' %}'>Cancel</a>
     </form>
   </div>
 </div>
