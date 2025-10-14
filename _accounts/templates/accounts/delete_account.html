@@ -21,7 +21,11 @@
     {# Show form errors (if any) #}
     {% if form.errors %}
       <div class="alert alert-danger">
-        Please correct the error(s) below.
+        {% if form.non_field_errors %}
+          {{ form.non_field_errors|striptags }}
+        {% else %}
+          Please correct the error(s) below.
+        {% endif %}
       </div>
     {% endif %}
 

@@ -223,19 +223,60 @@ def delete_account(request):
     """
     Deletes the currently logged-in user's account, but requires password confirmation.
     """
+    # simple session-based rate limiting
+    LIMIT = 5          # max failed attempts
+    BLOCK_SECONDS = 600  # 10 minutes
+    now_ts = int(timezone.now().timestamp())
+    block_until = request.session.get('delete_block_until') or 0
+
     if request.method == 'POST':
+        # If currently blocked, do not process
+        if now_ts < block_until:
+            remaining = block_until - now_ts
+            minutes = max(1, remaining // 60)
+            form = DeleteAccountForm(user=request.user, data=request.POST)
+            form.add_error(None, f'Too many attempts. Try again in about {minutes} minute(s).')
+            logger.warning('delete_account rate limited', extra={
+                'user_id': request.user.id,
+                'ip': request.META.get('REMOTE_ADDR'),
+                'remaining_seconds': remaining,
+            })
+            return render(request, 'accounts/delete_account.html', {'form': form})
+
         form = DeleteAccountForm(user=request.user, data=request.POST)
         if form.is_valid():
-            # capture user for any last operations, then delete and log out
+            # success: clear counters and log the event
+            for k in ('delete_attempt_count', 'delete_block_until'):
+                request.session.pop(k, None)
+            logger.info('account deleted', extra={
+                'user_id': request.user.id,
+                'email': request.user.email,
+                'ip': request.META.get('REMOTE_ADDR'),
+                'ts': now_ts,
+            })
             request.user.delete()
             logout(request)
             return redirect('account_deleted')
         else:
-            # Form not valid (password incorrect). The form will show an error message.
+            # failed attempt: increment counter and maybe block
+            attempts = int(request.session.get('delete_attempt_count') or 0) + 1
+            request.session['delete_attempt_count'] = attempts
+            if attempts >= LIMIT:
+                request.session['delete_block_until'] = now_ts + BLOCK_SECONDS
+                messages.error(request, 'Too many attempts. You are temporarily blocked from deleting your account.')
+            logger.warning('delete_account failed', extra={
+                'user_id': request.user.id,
+                'ip': request.META.get('REMOTE_ADDR'),
+                'attempts': attempts,
+            })
             return render(request, 'accounts/delete_account.html', {'form': form})
     else:
-        # GET request: Show the confirmation form
+        # GET request: Show the confirmation form, note if blocked
         form = DeleteAccountForm(user=request.user)
+        if now_ts < block_until:
+            remaining = block_until - now_ts
+            minutes = max(1, remaining // 60)
+            form.add_error(None, f'Deletion temporarily blocked. Try again in about {minutes} minute(s).')
         return render(request, 'accounts/delete_account.html', {'form': form})
 
 
