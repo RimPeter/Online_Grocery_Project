@@ -254,6 +254,23 @@ def delete_account(request):
                 'ip': request.META.get('REMOTE_ADDR'),
                 'ts': now_ts,
             })
+            # send confirmation email before deleting the user
+            try:
+                to_email = (request.user.email or '').strip()
+                if to_email:
+                    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or getattr(settings, 'EMAIL_HOST_USER', None) or 'no-reply@example.com'
+                    subject = 'Your account has been deleted'
+                    lines = [
+                        f'Hi {request.user.username},',
+                        '',
+                        'This is a confirmation that your account has been deleted and access has been disabled.',
+                        'Order and invoice records may be retained for compliance.',
+                        '',
+                        'If you did not request this action, please contact support immediately.',
+                    ]
+                    send_mail(subject, '\n'.join(lines), from_email, [to_email], fail_silently=True)
+            except Exception:
+                logger.exception('account deletion confirmation email failed')
             request.user.delete()
             logout(request)
             return redirect('account_deleted')
