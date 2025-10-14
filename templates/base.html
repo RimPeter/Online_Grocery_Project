@@ -40,22 +40,25 @@
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse" id="navbarNav">
+        {% with request.resolver_match.url_name as url_name %}
         <ul class="navbar-nav ms-auto">
           <!-- Bootstrap 5 uses ms-auto -->
-          <li class="nav-item active">
-            <a class="nav-link" href="{% url 'home' %}">Home</a>
+          <li class="nav-item">
+            <a class="nav-link {% if url_name == 'home' %}active{% endif %}" {% if url_name == 'home' %}aria-current="page"{% endif %} href="{% url 'home' %}">Home</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="{% url 'product_list' %}">Products</a>
+            <a class="nav-link {% if url_name == 'product_list' %}active{% endif %}" {% if url_name == 'product_list' %}aria-current="page"{% endif %} href="{% url 'product_list' %}">Products</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="{% url 'cart_view' %}">Cart</a>
+            <a class="nav-link {% if url_name == 'cart_view' %}active{% endif %}" {% if url_name == 'cart_view' %}aria-current="page"{% endif %} href="{% url 'cart_view' %}">
+              Cart
+              {% with cart=request.session.cart %}
+                {% if cart %}<span class="badge bg-secondary ms-1">{{ cart|length }}</span>{% endif %}
+              {% endwith %}
+            </a>
           </li>
           {% if user.is_authenticated %}
 
-          <li class="nav-item">
-            <span class="navbar-text"> Logged in as {{ user.username }} </span>
-          </li>
           <li class="nav-item dropdown">
             <a
               class="nav-link dropdown-toggle"
@@ -65,9 +68,9 @@
               data-bs-toggle="dropdown"
               aria-expanded="false"
             >
-              Account
+              {{ user.username|default:'Account' }}
             </a>
-            <ul class="dropdown-menu" aria-labelledby="navbarAccountDropdown">
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarAccountDropdown">
               <li>
                 <a class="dropdown-item" href="{% url 'manage_addresses' %}"
                   >Addresses</a
@@ -85,6 +88,12 @@
                   >Change Password</a
                 >
               </li>
+              {% if user.is_superuser %}
+              <li><hr class="dropdown-divider" /></li>
+              <li>
+                <a class="dropdown-item" href="{% url 'admin:index' %}">Admin</a>
+              </li>
+              {% endif %}
               <li>
                 <a
                   class="dropdown-item text-danger"
@@ -104,28 +113,16 @@
               </li>
             </ul>
           </li>
-
-          {% if user.is_superuser %}
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'admin:index' %}">Admin</a>
-          </li>
-          {% endif %}
-
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'order_history' %}">My Orders</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'logout' %}">Logout</a>
-          </li>
           {% else %}
           <li class="nav-item">
-            <a class="nav-link" href="{% url 'login' %}">Login</a>
+            <a class="nav-link {% if url_name == 'login' %}active{% endif %}" {% if url_name == 'login' %}aria-current="page"{% endif %} href="{% url 'login' %}">Login</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="{% url 'signup' %}">Sign Up</a>
+            <a class="nav-link {% if url_name == 'signup' %}active{% endif %}" {% if url_name == 'signup' %}aria-current="page"{% endif %} href="{% url 'signup' %}">Sign Up</a>
           </li>
           {% endif %}
         </ul>
+        {% endwith %}
       </div>
     </nav>
 
