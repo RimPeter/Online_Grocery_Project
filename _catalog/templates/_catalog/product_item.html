@@ -2,51 +2,50 @@
 <div class="col-lg-3 col-md-4 col-sm-6 col-6 d-flex align-items-stretch">
   <div class="card mb-4 shadow-sm h-100 position-relative">
     {% if product.is_bulk %}
-      <span class="position-absolute top-0 start-0 m-2 badge rounded-pill text-bg-warning" style="z-index:2;">
-        Bulk Item
-      </span>
+      <span class="position-absolute top-0 start-0 m-2 badge rounded-pill text-bg-warning" style="z-index:2;" aria-label="Bulk item" title="Bulk item">Bulk Item</span>
     {% endif %}
 
     {% if product.image_url %}
       <a href="{% url 'product_detail' product.pk %}">
-        <img src="{{ product.image_url }}" class="card-img-top" alt="{{ product.name }}">
+        <img src="{{ product.image_url }}" class="card-img-top" alt="{{ product.name }}" loading="lazy">
       </a>
     {% else %}
-      <img src="{% static 'images/default_product.jpg' %}" class="card-img-top" alt="No Image">
+      <img src="{% static 'images/default_product.jpg' %}" class="card-img-top" alt="No Image" loading="lazy">
     {% endif %}
 
     <div class="card-body d-flex flex-column">
-      <h6 class="card-title">{{ product.name }}</h6>
-      <p class="card-text">{{ product.variant|default:"No description available" }}</p>
+      <h6 class="card-title text-break"><a href="{% url 'product_detail' product.pk %}" class="text-decoration-none text-reset">{{ product.name }}</a></h6>
+      <p class="card-text text-muted text-truncate">{{ product.variant|default:"No description available" }}</p>
+
       {% if user.is_superuser %}
-        <p class="card-text price">£{{ product.price }}</p>
+        <p class="card-text text-muted small">Cost £{{ product.price|floatformat:2 }}</p>
       {% endif %}
-      {% if product.is_bulk %}
-      <p class="card-text price">£{{ product.rsp }}/item</p>
-      <p class="card-text"><small class="text-muted">Pack of {{ product.pack_amount }} — Total £{{ product.bulk_total_price|floatformat:2 }}</small></p>
+
+      {% if product.rsp != None %}
+        {% if product.is_bulk %}
+          <p class="card-text price">£{{ product.rsp|floatformat:2 }}/item</p>
+          <p class="card-text"><small class="text-muted">Pack of {{ product.pack_amount }} — Total £{{ product.bulk_total_price|floatformat:2 }}</small></p>
+        {% else %}
+          <p class="card-text price">£{{ product.rsp|floatformat:2 }}</p>
+        {% endif %}
       {% else %}
-      <p class="card-text price">£{{ product.rsp }}</p>
+        <p class="card-text text-muted">Price unavailable</p>
       {% endif %}
 
       {% if product.promotion_end_date %}
-        <p class="card-text text-danger">
-          <strong>Promotion ends on:</strong> {{ product.promotion_end_date }}
-        </p>
+        <p class="card-text text-danger"><strong>Promotion ends on:</strong> {{ product.promotion_end_date }}</p>
       {% endif %}
 
       <div class="mt-auto">
-        <a href="{% url 'product_detail' product.pk %}" class="btn btn-primary mb-2">View Details</a>
+        <a href="{% url 'product_detail' product.pk %}" class="btn btn-primary mb-2" aria-label="View details for {{ product.name }}">View Details</a>
 
         <!-- Add to Cart Form -->
-        <form method="POST"
-              action="{% url 'add_to_cart' product.id %}"
-              class="add-to-cart-form"
-              data-action-url="{% url 'add_to_cart' product.id %}">
+        <form method="POST" action="{% url 'add_to_cart' product.id %}" class="add-to-cart-form" data-action-url="{% url 'add_to_cart' product.id %}">
           {% csrf_token %}
           <input type="hidden" name="return_to" value="{{ request.get_full_path }}">
           <div class="input-group mb-2">
-            <input type="number" name="quantity" class="form-control" value="1" min="1">
-            <button type="submit" class="btn btn-primary">Add</button>
+            <input type="number" name="quantity" class="form-control" value="1" min="1" aria-label="Quantity for {{ product.name }}">
+            <button type="submit" class="btn btn-primary" aria-label="Add {{ product.name }} to cart">Add</button>
           </div>
         </form>
       </div>
