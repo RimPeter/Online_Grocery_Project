@@ -14,7 +14,9 @@
         <p class='lead text-muted mb-4'>Shop thousands of essentials at fair prices with convenient delivery windows.</p>
         <div class='d-flex gap-2'>
           <a href="{% url 'product_list' %}" class='btn btn-primary btn-lg'>Shop now</a>
+          {% if not user.is_authenticated %}
           <a href="{% url 'signup' %}" class='btn btn-outline-secondary btn-lg'>Create account</a>
+          {% endif %}
         </div>
       </div>
       <div class='col-lg-5'>
@@ -24,7 +26,7 @@
       </div>
     </div>
   </div>
-  </section>
+</section>
 
 <!-- Value pillars -->
 <section class='mb-5'>
@@ -32,7 +34,7 @@
     <div class='row text-center g-4'>
       <div class='col-12 col-md-4'>
         <div class='p-3 border rounded h-100'>
-          <div class='fw-semibold mb-1'>Same-day €‘day windows</div>
+          <div class='fw-semibold mb-1'>Same-day windows</div>
           <div class='text-muted small'>Pick a delivery time that fits your schedule</div>
         </div>
       </div>
@@ -55,27 +57,37 @@
 <!-- Category shortcuts -->
 <section class='mb-5'>
   <div class='container'>
-    <h2 class='h4 mb-3'>Shop popular categories</h2>
-    <div class='row g-3'>
-      {% for cat in 'Fresh produce,Bakery,Dairy & eggs,Snacks & drinks,Household,Personal care'.split(',') %}
-      <div class='col-6 col-md-4 col-lg-2'>
-        <a href="{% url 'product_list' %}?q={{ cat|urlencode }}" class='text-decoration-none'>
-          <div class='card h-100'>
-            <div class='ratio ratio-1x1'>
-              <img src="{% static 'images/default_product.jpg' %}" alt='' class='w-100 h-100 object-fit-cover'>
+    <div class='row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3'>
+      {% if subcats %}
+        {% for sc in subcats %}
+        <div class='col'>
+          <a href="{% url 'product_list' %}?l1={{ sc.l1|urlencode }}&l2={{ sc.l2|urlencode }}" class='text-decoration-none d-block h-100'>
+            <div class='card h-100'>
+              <div class='ratio ratio-1x1'>
+                {% if sc.image_url %}
+                  <img src="{{ sc.image_url }}" alt="{{ sc.name }}" class='w-100 h-100 object-fit-cover'>
+                {% else %}
+                  <img src="{% static 'images/default_product.jpg' %}" alt="{{ sc.name }}" class='w-100 h-100 object-fit-cover'>
+                {% endif %}
+              </div>
+              <div class='card-body p-2 text-center'>
+                <div class='small fw-semibold text-break'>{{ sc.l1 }} â€“ {{ sc.name }}</div>
+              </div>
             </div>
-            <div class='card-body p-2 text-center'>
-              <div class='small fw-semibold text-truncate'>{{ cat }}</div>
-            </div>
-          </div>
-        </a>
-      </div>
-      {% endfor %}
+          </a>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class='col-12'>
+          <p class='text-muted small'>Browse all categories or use search above.</p>
+        </div>
+      {% endif %}
     </div>
   </div>
 </section>
 
 <!-- Callout -->
+{% if not user.is_authenticated %}
 <section class='pb-2'>
   <div class='container'>
     <div class='alert alert-success d-flex justify-content-between align-items-center' role='status'>
@@ -84,6 +96,6 @@
     </div>
   </div>
 </section>
+{% endif %}
 
 {% endblock %}
-

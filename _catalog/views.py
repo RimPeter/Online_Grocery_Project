@@ -15,7 +15,38 @@ from django.utils.http import url_has_allowed_host_and_scheme
 
 
 def home(request):
-    return render(request, '_catalog/home.html')
+    # Build dynamic Category shortcuts from all categories and subcategories
+    subcats = []
+    try:
+        qs = (
+            All_Products.objects
+            .exclude(image_url__isnull=True)
+            .exclude(image_url='')
+            .exclude(image_url='/img/products/no-image.png')
+            .order_by('sub_category', 'sub_subcategory', 'id')
+        )
+        seen = set()
+        for p in qs:
+            l1 = (p.sub_category or '').strip() or 'Other'
+            l2 = (p.sub_subcategory or '').strip() or 'Other'
+            key = (l1.casefold(), l2.casefold())
+            if key in seen:
+                continue
+            seen.add(key)
+            subcats.append({
+                'name': l2,
+                'image_url': p.image_url,
+                'l1': l1,
+                'l2': l2,
+            })
+        # Sort by parent then child for tidy grouping
+        subcats.sort(key=lambda x: (x['l1'].casefold(), x['name'].casefold()))
+    except Exception:
+        subcats = []
+
+    return render(request, '_catalog/home_new.html', {
+        'subcats': subcats,
+    })
 
 def product_detail(request, pk):
     product = get_object_or_404(All_Products, pk=pk)
