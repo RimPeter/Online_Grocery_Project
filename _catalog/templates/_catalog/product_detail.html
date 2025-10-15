@@ -3,82 +3,75 @@
 
 {% block title %}{{ product.name }}{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/product_detail.css' %}">
+{% endblock %}
+
 {% block content %}
-<div id="main" class="main productpagenav">
-    <div class="inner">
-        <!-- Breadcrumb navigation -->
-        <div class="prodnav mobile">
-            <ul class="breadcrumb">
-                {% if product.sub_category %}
-                    <li><a href="{% url 'product_list' %}?l1={{ product.sub_category|urlencode }}">{{ product.sub_category }}</a></li>
-                {% endif %}
-                {% if product.sub_subcategory %}
-                    <li><a href="{% url 'product_list' %}?l1={{ product.sub_category|urlencode }}&l2={{ product.sub_subcategory|urlencode }}">{{ product.sub_subcategory }}</a></li>
-                {% endif %}
-                <li>{{ product.name }}</li>
-            </ul>
-        </div>
+<nav class="pd-breadcrumb" aria-label="Breadcrumb">
+  <ol>
+    <li><a href="{% url 'home' %}">Home</a></li>
+    {% if product.sub_category %}
+    <li><a href="{% url 'product_list' %}?l1={{ product.sub_category|urlencode }}">{{ product.sub_category }}</a></li>
+    {% endif %}
+    {% if product.sub_subcategory %}
+    <li><a href="{% url 'product_list' %}?l1={{ product.sub_category|urlencode }}&l2={{ product.sub_subcategory|urlencode }}">{{ product.sub_subcategory }}</a></li>
+    {% endif %}
+    <li aria-current="page">{{ product.name }}</li>
+  </ol>
+  {% if product.list_position %}
+    <span class="pd-meta">Shelf: {{ product.list_position }}</span>
+  {% endif %}
+  {% if product.variant %}
+    <span class="pd-meta">Pack: {{ product.variant }}</span>
+  {% endif %}
+  {% if product.vat_rate %}
+    <span class="pd-meta">VAT: {{ product.get_vat_rate_display }}</span>
+  {% endif %}
+  </nav>
 
-        <!-- Product details -->
-        <div class="shop-products productpagedetail" id="shop-products">
-            <div class="productpagedetail-inner">
-                <!-- Product Image -->
-                <div class="prodimage">
-                    <span class="prodimage-main">
-                        <img src="{% if product.image_url %}{{ product.image_url }}{% else %}{% static 'images/fresh_products.jpg' %}{% endif %}" alt="{{ product.name }}" id="prodimage" loading="lazy">
-                    </span>
-                </div>
-
-                <!-- Product Information -->
-                <div class="right">
-                    <h1 class="prodname">{{ product.name }}</h1>
-                    <p class="prodsize">&pound;{{ product.price|floatformat:2 }}{% if product.list_position %} - {{ product.list_position }}{% endif %}</p>
-                    <form method="POST" action="{% url 'add_to_cart' product.id %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="return_to" value="{{ request.get_full_path }}">
-                        <div class="input-group mb-2">
-                            <input
-                                type="number"
-                                name="quantity"
-                                class="form-control"
-                                value="1"
-                                min="1"
-                                step="1"
-                                aria-label="Quantity"
-                            />
-                            <button type="submit" class="btn btn-primary">Add</button>
-                        </div>
-                    </form>
-                    <div class="blueline">&nbsp;</div>
-                    {% if not user.is_authenticated %}
-                    <p class="prodlogin"><a href="{% url 'login' %}">Log in to buy</a></p>
-                    {% endif %}
-                    <div class="blueline">&nbsp;</div>
-                    <table class="prodtable">
-                        <tbody>
-                            <tr><th>Product:</th><td>{{ product.name }}</td></tr>
-                            <tr><th>RSP:</th><td>{% if product.rsp %}&pound;{{ product.rsp|floatformat:2 }}{% else %}N/A{% endif %}</td></tr>
-                            <tr><th>Promotion Ends:</th>
-                                <td>
-                                    {% if product.promotion_end_date %}{{ product.promotion_end_date|date:"d M Y" }}{% else %}N/A{% endif %}
-                                </td>
-                            </tr>
-                            <tr><th>VAT Rate:</th><td>{{ product.get_vat_rate_display }}</td></tr>
-                            <tr><th>Retail EAN:</th><td>{{ product.retail_EAN|default:"N/A" }}</td></tr>
-                            <tr><th>Main Category:</th><td>{{ product.main_category|default:"N/A" }}</td></tr>
-                            <tr><th>Sub Category:</th><td>{{ product.sub_category|default:"N/A" }}</td></tr>
-                            <tr><th>Sub-subcategory:</th><td>{{ product.sub_subcategory|default:"N/A" }}</td></tr>
-                            <tr><th>Variant:</th><td>{{ product.variant|default:"N/A" }}</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Disclaimer -->
-        <p class="disclaimer">
-            The image and product information have been prepared for illustration and information purposes only and may differ from that shown.
-        </p>
+<section class="pd-grid">
+  <div class="pd-gallery">
+    <div class="pd-image">
+      <img src="{% if product.image_url %}{{ product.image_url }}{% else %}{% static 'images/fresh_products.jpg' %}{% endif %}"
+           alt="{{ product.name }}"
+           loading="lazy">
     </div>
-</div>
+  </div>
+
+  <div class="pd-info">
+    <h1 class="pd-title">{{ product.name }}</h1>
+    <div class="pd-price-row">
+      <span class="pd-price">£{{ product.price|floatformat:2 }}</span>
+      {% if product.rsp %}
+      <span class="pd-rsp">RSP: £{{ product.rsp|floatformat:2 }}</span>
+      {% endif %}
+    </div>
+
+    <form method="POST" action="{% url 'add_to_cart' product.id %}" class="pd-buy">
+      {% csrf_token %}
+      <input type="hidden" name="return_to" value="{{ request.get_full_path }}">
+      <label for="qty" class="visually-hidden">Quantity</label>
+      <input id="qty" type="number" name="quantity" value="1" min="1" step="1">
+      <button type="submit" class="pd-btn">Add to cart</button>
+    </form>
+
+    {% if not user.is_authenticated %}
+    <p class="pd-login">Please <a href="{% url 'login' %}">log in</a> to complete purchase.</p>
+    {% endif %}
+
+    <div class="pd-specs">
+      <div><span>Retail EAN</span><strong>{{ product.retail_EAN|default:"N/A" }}</strong></div>
+      <div><span>Main Category</span><strong>{{ product.main_category|default:"N/A" }}</strong></div>
+      <div><span>Sub Category</span><strong>{{ product.sub_category|default:"N/A" }}</strong></div>
+      <div><span>Sub-subcategory</span><strong>{{ product.sub_subcategory|default:"N/A" }}</strong></div>
+      <div><span>Variant</span><strong>{{ product.variant|default:"N/A" }}</strong></div>
+      <div><span>Promotion Ends</span>
+        <strong>{% if product.promotion_end_date %}{{ product.promotion_end_date|date:"d M Y" }}{% else %}N/A{% endif %}</strong>
+      </div>
+    </div>
+
+    <p class="pd-disclaimer">Images and product information are for illustration only and may differ from the actual product.</p>
+  </div>
+</section>
 {% endblock %}
