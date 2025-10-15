@@ -36,14 +36,18 @@
                 <ul class="collapse ms-4 mt-2" id="cat-{{ forloop.counter }}" style="list-style-type: disc;">
                   {% for level2, _ in node.items %}
                     <li style="list-style-position: outside;">
-                      <a class="text-decoration-none" href="?l1={{ level1|urlencode }}&l2={{ level2|urlencode }}">
+                      <a class="text-decoration-none {% if request.GET.l1 == level1 and request.GET.l2 == level2 %}fw-bold{% endif %}"
+                         href="?l1={{ level1|urlencode }}&l2={{ level2|urlencode }}"
+                         {% if request.GET.l1 == level1 and request.GET.l2 == level2 %}aria-current="page"{% endif %}>
                         {{ level2 }}
                       </a>
                     </li>
                   {% endfor %}
                 </ul>
               {% else %}
-                <a class="text-decoration-none d-block" href="?l1={{ level1|urlencode }}">
+                <a class="text-decoration-none d-block {% if request.GET.l1 == level1 and not request.GET.l2 %}fw-bold{% endif %}"
+                   href="?l1={{ level1|urlencode }}"
+                   {% if request.GET.l1 == level1 and not request.GET.l2 %}aria-current="page"{% endif %}>
                   <strong>{{ level1 }}</strong>
                 </a>
               {% endif %}
@@ -89,20 +93,21 @@
       value="{{ request.GET.q }}"
       list="category-suggestions"
       autocomplete="off"
+      aria-label="Search products"
     />
-    <button class="btn btn-outline-secondary" type="submit">
+    <button class="btn btn-outline-secondary" type="submit" aria-label="Search">
       Search
     </button>
   </div>
 
-  {# As-you-type dropdown suggestions: Level-1, Level-2, and combined "L1 › L2" #}
+  {# As-you-type dropdown suggestions: Level-1, Level-2, and combined "L1 - L2" #}
   <datalist id="category-suggestions">
     {% for level1, node in category_tree.items %}
       <option value="{{ level1 }}"></option>
       {% if node.items %}
         {% for level2, _ in node.items %}
           <option value="{{ level2 }}"></option>
-          <option value="{{ level1 }} › {{ level2 }}"></option>
+          <option value="{{ level1 }} - {{ level2 }}"></option>
         {% endfor %}
       {% endif %}
     {% endfor %}
@@ -120,6 +125,12 @@
       <div class="row gy-4" id="product-container">
         {% for product in products %}
           {% include '_catalog/product_item.html' with product=product %}
+        {% empty %}
+          <div class="col-12">
+            <p class="text-muted">No products matched your filters.
+              <a href="{% url 'product_list' %}">Clear filters</a>
+            </p>
+          </div>
         {% endfor %}
       </div>
 
@@ -229,6 +240,26 @@
 </script>
 <script>
   document.addEventListener('DOMContentLoaded', function () {
+    var form = document.getElementById('search-form');
+    var input = document.getElementById('search-input');
+    var l1 = document.getElementById('l1-field');
+    var l2 = document.getElementById('l2-field');
+    if (form && input && l1 && l2) {
+      form.addEventListener('submit', function () {
+        var v = (input.value || '').trim();
+        var sep = ' - ';
+        if (v.indexOf(sep) !== -1) {
+          var parts = v.split(sep);
+          l1.value = (parts[0] || '').trim();
+          l2.value = (parts[1] || '').trim();
+          input.value = '';
+        }
+      });
+    }
+  });
+}</script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
     // Existing intersection observer code for infinite scroll ...
     
     // Show any Bootstrap toasts if there are messages
@@ -257,31 +288,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Combined "Level1 › Level2"
     if (v.includes('›')) {
       const [l1, l2] = v.split('›').map(s => s.trim());
-      if (l1 && l2) {
-        l1f.value = l1;
-        l2f.value = l2;
-        input.value = ''; // prevent fuzzy search; we want exact l1/l2
-        return;
-      }
-    }
-
-    // Exact Level-1 match -> use l1 param, clear q
-    const l1Hit = L1.find(x => fold(x) === fold(v));
-    if (l1Hit) {
-      l1f.value = l1Hit;
-      l2f.value = '';
-      input.value = ''; // no fuzzy search
-      return;
-    }
-
-    // Exact Level-2 match -> leave q as-is (server's exact-match logic will kick in)
-    const l2Hit = L2.find(x => fold(x) === fold(v));
-    if (l2Hit) {
-      // Keep input.value; do not set l1/l2 (let backend exact-match on q)
-      return;
-    }
-    l1f.value = '';
-    l2f.value = '';
+      if (L1 - L2f.value = '';
     // Otherwise: leave as free-text fuzzy search
   });
 });
@@ -367,3 +374,5 @@ document.addEventListener('submit', function (e) {
 
 
 {% endblock %}
+
+
