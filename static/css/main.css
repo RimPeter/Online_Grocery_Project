@@ -1,0 +1,23 @@
+.navbar-button {
+  margin-right: 0.5rem;
+  border: white 2px solid ;
+  border-radius: 14px;
+  background-color: #528941;
+}
+
+.pagecolor {
+  background-color: #528941;
+}
+
+.navbar2 {
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+  background-color: #1E3617;
+}
+
+.main-banner {
+  background-image: url('../images/banner.jpg');
+  background-size: cover;
+  background-position: center;
+  color: white;
+  background-color: #E1EDDE;
+}
