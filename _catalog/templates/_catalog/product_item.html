@@ -21,7 +21,15 @@
         <p class="card-text text-muted small">Cost £{{ product.price|floatformat:2 }}</p>
       {% endif %}
 
-      {% if product.rsp != None %}
+      {# Show price to superusers even if RSP is 0; users see price only if RSP > 0 #}
+      {% if user.is_superuser %}
+        {% if product.is_bulk %}
+          <p class="card-text price">£{{ product.rsp|floatformat:2 }}/item</p>
+          <p class="card-text"><small class="text-muted">Pack of {{ product.pack_amount }} — Total £{{ product.bulk_total_price|floatformat:2 }}</small></p>
+        {% else %}
+          <p class="card-text price">£{{ product.rsp|floatformat:2 }}</p>
+        {% endif %}
+      {% elif product.rsp and product.rsp > 0 %}
         {% if product.is_bulk %}
           <p class="card-text price">£{{ product.rsp|floatformat:2 }}/item</p>
           <p class="card-text"><small class="text-muted">Pack of {{ product.pack_amount }} — Total £{{ product.bulk_total_price|floatformat:2 }}</small></p>

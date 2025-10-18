@@ -88,3 +88,9 @@ class Product_Labels_For_Searchbar(models.Model):
         return f"Labels for {self.product.name}"
     
     
+class All_ProductsMissingRSP(All_Products):
+    """Proxy for listing products with missing/invalid RSP in admin."""
+    class Meta:
+        proxy = True
+        verbose_name = "Product with missing RSP"
+        verbose_name_plural = "Products with missing RSP"
