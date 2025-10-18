@@ -11,6 +11,7 @@ urlpatterns = [
     path('accounts/', include('_accounts.urls')),
     path('payments/', include('_payments.urls')),
     path('orders/', include('_orders.urls')),
+    path('leaflet/', include('_leaflet_creator.urls')),
     # Redirect browsers that request /favicon.ico to the static SVG
     path('favicon.ico', RedirectView.as_view(url=static_static('images/favicon.svg'), permanent=True)),
     
