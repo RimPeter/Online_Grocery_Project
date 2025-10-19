@@ -6,9 +6,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DL Size Leaflet</title>
   <link rel="stylesheet" href="{% static 'css/leaflet.css' %}">
+  {# All print/PDF styles live in static/css/leaflet.css now #}
 </head>
 <body>
   <!-- Controls outside the printable leaflet -->
+  {% if not pdf %}
   <div class="leaflet-toolbar">
     <a href="{% url 'home' %}" class="back-home" aria-label="Back to home">← Back home</a>
     <form class="lf-url-form" method="get" action="{% url '_leaflet_creator:dl' %}" aria-label="Set website address for QR code">
@@ -16,7 +18,9 @@
       <input id="site" name="site" type="url" placeholder="https://example.com" value="{{ request.GET.site }}" required>
       <button type="submit">Preview URL</button>
     </form>
+    <a class="back-home" href="{% url '_leaflet_creator:dl_pdf' %}?site={{ request.GET.site|urlencode }}" aria-label="Download PDF">Download PDF</a>
   </div>
+  {% endif %}
 
   <div class="leaflet">
     <header class="lf-header">
@@ -27,8 +31,8 @@
     <main class="lf-body">
       <!-- Replace placeholders with dynamic data when wiring to views -->
       <section class="deal">
-        <img src="{% static 'images/fresh_products.jpg' %}" alt="Item">
-        <div>
+        <img class="deal-img" src="{% static 'images/fresh_products.jpg' %}" alt="Item">
+        <div class="deal-info">
           <p class="name">Featured Item One</p>
           <p class="desc">Great quality at a fair price</p>
         </div>
@@ -36,8 +40,8 @@
       </section>
 
       <section class="deal">
-        <img src="{% static 'images/fresh_products.jpg' %}" alt="Item">
-        <div>
+        <img class="deal-img" src="{% static 'images/fresh_products.jpg' %}" alt="Item">
+        <div class="deal-info">
           <p class="name">Featured Item Two</p>
           <p class="desc">Everyday essential</p>
         </div>
@@ -45,20 +49,23 @@
       </section>
 
       <section class="deal">
-        <img src="{% static 'images/fresh_products.jpg' %}" alt="Item">
-        <div>
+        <img class="deal-img" src="{% static 'images/fresh_products.jpg' %}" alt="Item">
+        <div class="deal-info">
           <p class="name">Featured Item Three</p>
           <p class="desc">Limited time offer</p>
         </div>
         <div class="price">£0.99</div>
-        <div class="qr-wrap">
-        {% if request.GET.site %}
+      </section>
+
+      <div class="qr-wrap">
+        {% if pdf and qr_data_uri %}
+          <img class="qr" src="{{ qr_data_uri }}" alt="QR code">
+        {% elif request.GET.site %}
           <img class="qr" src="{% url '_leaflet_creator:qr' %}?site={{ request.GET.site|urlencode }}" alt="QR code" loading="lazy">
         {% else %}
           <span class="muted">Add a website URL above to render QR</span>
         {% endif %}
       </div>
-      </section>
     </main>
 
     <footer class="lf-footer">

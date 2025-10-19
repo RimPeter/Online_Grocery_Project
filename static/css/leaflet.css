@@ -1,113 +1,79 @@
-/* DL size is 99mm x 210mm */
-:root {
-  --dl-width: 99mm;
-  --dl-height: 210mm;
-  --fg: #1a1a1a;
-  --muted: #666;
-  --accent: #0d6efd;
-  --border: #e5e7eb;
-}
-
-@page {
-  size: var(--dl-width) var(--dl-height);
-  margin: 6mm;
-}
-
+/* DL size is 99mm x 210mm; simplified CSS compatible with xhtml2pdf */
 html, body {
   height: 100%;
   margin: 0;
   background: #f8f9fa;
-  color: var(--fg);
+  color: #1a1a1a;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
 }
 
+/* Ensure DL page size for print/PDF renderers */
+@page {
+  size: 99mm 210mm;
+  margin: 6mm;
+}
+
 .leaflet-toolbar {
-  width: var(--dl-width);
+  width: 99mm;
   margin: 16px auto 8px;
   background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,.04);
+  border: 1px solid #e5e7eb;
   padding: 8px 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
 }
 
 .leaflet {
-  width: var(--dl-width);
-  height: var(--dl-height);
+  width: 99mm;
+  height: 210mm;
   margin: 16px auto;
   background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0,0,0,.06);
-  display: grid;
-  grid-template-rows: auto 1fr auto;
+  border: 1px solid #e5e7eb;
   overflow: hidden;
 }
 
 .lf-header {
   padding: 12px 14px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .lf-title { margin: 0; font-size: 18px; font-weight: 700; }
-.lf-sub   { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+.lf-sub   { margin: 2px 0 0; color: #666; font-size: 12px; }
 
 .back-home {
   font-size: 12px;
   text-decoration: none;
-  color: var(--accent);
-  border: 1px solid var(--border);
+  color: #0d6efd;
+  border: 1px solid #e5e7eb;
   padding: 4px 8px;
-  border-radius: 4px;
   background: #f9fafb;
 }
 .back-home:hover { text-decoration: underline; }
 
-.lf-body {
-  padding: 12px 14px;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
-}
+.lf-body { padding: 12px 14px; }
 
-.deal {
-  display: grid;
-  grid-template-columns: 48px 1fr auto;
-  gap: 10px;
-  align-items: center;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 8px;
-}
-.deal img { width: 48px; height: 48px; object-fit: cover; border-radius: 4px; }
+/* Table-based deal layout for both HTML and PDF */
+.deal { display: table; width: 100%; table-layout: fixed; border: 1px solid #e5e7eb; padding: 8px; margin-bottom: 8px; }
+.deal .deal-img { display: table-cell; width: 12mm; vertical-align: middle; }
+.deal .deal-info { display: table-cell; vertical-align: middle; padding: 0 6px; }
 .deal .name { font-size: 13px; margin: 0; font-weight: 600; }
-.deal .desc { font-size: 11px; margin: 2px 0 0; color: var(--muted); }
-.deal .price { font-size: 14px; font-weight: 700; color: var(--accent); margin-left: 8px; white-space: nowrap; }
+.deal .desc { font-size: 11px; margin: 2px 0 0; color: #666; }
+.deal .price { display: table-cell; width: 18mm; font-size: 14px; font-weight: 700; color: #0d6efd; text-align: right; vertical-align: middle; white-space: nowrap; }
 
 .lf-footer {
   padding: 10px 14px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid #e5e7eb;
   font-size: 10px;
-  color: var(--muted);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
+  color: #666;
 }
 
-.lf-url-form { margin-top: 6px; display: flex; gap: 6px; align-items: center; }
-.lf-url-form input[type="url"] { font-size: 12px; padding: 4px 6px; width: 100%; }
-.lf-url-form button { font-size: 12px; padding: 4px 8px; }
+.qr-wrap { margin-top: 6px; text-align: right; }
+img.qr { width: 28mm; height: 28mm; border: 1px solid #e5e7eb; background: #fff; }
 
-.qr-wrap { display: flex; align-items: center; }
-img.qr { width: 28mm; height: 28mm; object-fit: contain; border: 1px solid var(--border); border-radius: 4px; background: #fff; }
+.lf-url-form { margin-top: 6px; }
+.lf-url-form input[type="url"] { font-size: 12px; padding: 4px 6px; width: 70%; }
+.lf-url-form button { font-size: 12px; padding: 4px 8px; }
 
 @media print {
   html, body { background: #fff; }
-  .leaflet { margin: 0; box-shadow: none; border: 0; border-radius: 0; }
+  .leaflet { margin: 0; border: 0; }
   .leaflet-toolbar { display: none !important; }
 }
