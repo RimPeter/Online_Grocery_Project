@@ -61,6 +61,21 @@ class All_Products(models.Model):
                     return int(m.group(0))
                 except ValueError:
                     pass
+        # Fallbacks: support '×' and uppercase 'X', and generic second-integer capture
+        parts2 = re.split(r"\s*[xX×\-]\s*", s, maxsplit=2)
+        if len(parts2) >= 2:
+            m2 = re.search(r"\d+", parts2[1])
+            if m2:
+                try:
+                    return int(m2.group(0))
+                except ValueError:
+                    pass
+        nums = re.findall(r"\d+", s)
+        if len(nums) >= 2:
+            try:
+                return int(nums[1])
+            except ValueError:
+                pass
         return 1
 
     @property

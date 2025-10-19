@@ -27,7 +27,11 @@
   <body class="pagecolor">
     <!-- Navigation Bar -->
     <nav class="navbar navbar2 navbar-expand-lg navbar-dark">
-      <a class="navbar-brand" href="{% url 'home' %}">Online Grocery</a>
+      <a class="navbar-brand" href="{% url 'home' %}" aria-label="Online Grocery Home">
+        <img src="{% static 'images/Kingston_Online_Grocery_logo.png' %}"
+             alt="Online Grocery"
+             class="navbar-logo"/>
+      </a>
       <button
         class="navbar-toggler"
         type="button"

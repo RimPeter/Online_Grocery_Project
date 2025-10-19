@@ -27,3 +27,23 @@
   color: white;
   border-top: 20px solid #528941;
 }
+
+/* Navbar brand logo */
+.navbar .navbar-brand {
+  height: 100%;
+  width: auto;
+  display: block;
+}
+
+.navbar-logo {
+  height: 38px;
+  width: auto;
+  border-radius: 5px;
+  padding-top: 0px;
+  padding-bottom: 0px;
+}
+
+/* Ensure navbar has a consistent height to size the logo correctly */
+.navbar.navbar2 {
+  min-height: 56px;
+}
