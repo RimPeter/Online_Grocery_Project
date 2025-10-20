@@ -4,68 +4,94 @@
 {% block title %}Order Summary{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-  <h1>Order Summary</h1>
+<div class="container my-4">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h1 class="h3 mb-0">Order Summary</h1>
+      <div class="text-muted">Order #{{ order.id }}</div>
+    </div>
+    <a href="{% url 'cart_view' %}" class="btn btn-outline-secondary">Back to Cart</a>
+  </div>
 
-  <!-- Customer's Details -->
-  <div class="mb-4">
-    <h3>Customer Details</h3>
-    <p><strong>Name:</strong> {{ request.user.get_full_name }}</p>
-    <p><strong>Email:</strong> {{ request.user.email }}</p>
-    {% if request.user.addresses.all %}
-      {% if default_address %}
-     <p><strong>Address:</strong>
-       {{ default_address.street_address }}{% if default_address.apartment %}, {{ default_address.apartment }}{% endif %},
-       {{ default_address.city }}, {{ default_address.postal_code }}
-     </p>
-   {% endif %}
-    {% endif %}
-  </div>
-<!-- Delivery Slot Details -->
-  <div class="mb-4">
-    <h3>Delivery Slot</h3>
-    <p><strong>Date:</strong> {{ order.delivery_date }}</p>
-    <p><strong>Time:</strong> {{ order.delivery_time }}</p>
-  </div>
-  <!-- Order Items and Prices -->
-  <div class="mb-4">
-    <h3>Order Items</h3>
-    <ul class="list-group">
-      {% for item in order_items %}
-        <li class="list-group-item">
-          <div class="row">
-            <strong><div class="col-md-6">{{ item.product.name }}</div></strong>
-            
-            <div class="col-md-6">
-              <a href="{% url 'product_detail' item.product.pk %}">
-              <img src="{{ item.product.image_url }}" alt="{{ item.product.name }}" style="max-width: 100px; max-height: 100px;">
+  <div class="row g-4">
+    <!-- Items -->
+    <div class="col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-header bg-white"><strong>Items</strong></div>
+        <ul class="list-group list-group-flush">
+          {% for item in order_items %}
+          <li class="list-group-item">
+            <div class="d-flex align-items-center gap-3">
+              <a href="{% url 'product_detail' item.product.pk %}" class="flex-shrink-0">
+                <img src="{{ item.product.image_url }}" alt="{{ item.product.name }}" class="rounded" style="width:80px;height:80px;object-fit:cover;">
               </a>
+              <div class="flex-grow-1">
+                <div class="fw-semibold">{{ item.product.name }}</div>
+                {% if item.product.variant %}
+                  <div class="text-muted small">{{ item.product.variant }}</div>
+                {% endif %}
+                <div class="text-muted small">Qty: {{ item.quantity }} × £{{ item.price|floatformat:2 }}</div>
+              </div>
+              <div class="ms-auto text-end fw-semibold">£{{ item.subtotal|floatformat:2 }}</div>
             </div>
-            <div class="col-md-2">Quantity: {{ item.quantity }}</div>
-            <div class="col-md-2">Price: £{{ item.price }}</div>
-            <div class="col-md-2">Subtotal: £{{ item.subtotal }}</div>
+          </li>
+          {% empty %}
+          <li class="list-group-item text-muted">No items in this order.</li>
+          {% endfor %}
+        </ul>
+        <div class="card-footer bg-white d-flex justify-content-between">
+          <div class="fw-semibold">Total</div>
+          <div class="fw-bold">£{{ total|floatformat:2 }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="col-lg-4">
+      <div class="card shadow-sm mb-3">
+        <div class="card-header bg-white"><strong>Delivery</strong></div>
+        <div class="card-body">
+          {% if order.delivery_date or order.delivery_time %}
+            <div class="d-flex justify-content-between"><span class="text-muted">Date</span><span>{{ order.delivery_date }}</span></div>
+            <div class="d-flex justify-content-between"><span class="text-muted">Time</span><span>{{ order.delivery_time }}</span></div>
+          {% else %}
+            <div class="text-muted">No slot selected</div>
+          {% endif %}
+          <div class="mt-3 d-flex gap-2">
+            <a href="{% url 'delivery_slots' %}?order_id={{ order.id }}" class="btn btn-outline-primary btn-sm">Change slot</a>
           </div>
-        </li>
-      {% endfor %}
-    </ul>
-    <h4 class="mt-3">Total: £{{ total }}</h4>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-3">
+        <div class="card-header bg-white"><strong>Customer</strong></div>
+        <div class="card-body">
+          <div class="mb-1"><span class="text-muted">Name</span><div>{{ request.user.get_full_name|default:request.user.username }}</div></div>
+          <div class="mb-1"><span class="text-muted">Email</span><div>{{ request.user.email }}</div></div>
+          {% if default_address %}
+          <div class="mb-0"><span class="text-muted">Address</span>
+            <div>
+              {{ default_address.street_address }}{% if default_address.apartment %}, {{ default_address.apartment }}{% endif %},
+              {{ default_address.city }}, {{ default_address.postal_code }}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="d-grid gap-2">
+        {% if order.status == 'paid' %}
+          <a href="{% url 'invoice_page' order.id %}" class="btn btn-secondary">View invoice</a>
+          <form method="post" action="{% url 'invoice_email' order.id %}">
+            {% csrf_token %}
+            <button class="btn btn-outline-secondary" type="submit">Email invoice</button>
+          </form>
+        {% else %}
+          <a href="{% url 'checkout' order.id %}" class="btn btn-success">Proceed to Checkout</a>
+        {% endif %}
+      </div>
+    </div>
   </div>
-
-  <!-- Link to Proceed to Pay -->
-<div class="d-flex justify-content-end mt-3">
-  {% if order.status == 'paid' %}
-    <a href="{% url 'invoice_page' order.id %}" class="btn btn-secondary btn-lg">
-      Email invoice
-    </a>
-  {% else %}
-    <a href="{% url 'checkout' order.id %}" class="btn btn-primary btn-lg">
-      Proceed to Checkout
-    </a>
-  {% endif %}
 </div>
-
-
-  <!-- Link to Proceed to Pay -->
-  {% comment %} <a href="{% url 'checkout' order_id=order.id %}" class="btn btn-primary">Proceed to Pay</a>
-</div> {% endcomment %}
 {% endblock %}
+
