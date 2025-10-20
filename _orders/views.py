@@ -3,6 +3,8 @@ from django.contrib.auth.decorators import login_required
 from .models import Order, OrderItem
 from _accounts.models import Address, Company   
 from _catalog.models import All_Products
+from decimal import Decimal
+from datetime import date, timedelta
 from django.contrib import messages
 from io import BytesIO
 from django.conf import settings
@@ -50,6 +52,36 @@ def order_summery_view(request, order_id):
 def delivery_slots_view(request):
     order_id = request.GET.get('order_id')
 
+    # Enforce minimum order total before allowing checkout
+    try:
+        MIN_ORDER_TOTAL = Decimal('40.00')
+    except Exception:
+        MIN_ORDER_TOTAL = Decimal('40.00')
+
+    # Compute current cart total from session
+    cart = request.session.get('cart', {})
+    total_price = Decimal('0.00')
+    if cart:
+        product_ids = list(cart.keys())
+        products = All_Products.objects.filter(pk__in=product_ids)
+        price_by_id = {str(p.pk): Decimal(str(p.price)) for p in products}
+        for pid, qty in cart.items():
+            price = price_by_id.get(str(pid))
+            if price is not None:
+                try:
+                    q = int(qty)
+                except (TypeError, ValueError):
+                    q = 0
+                total_price += price * q
+
+    if total_price < MIN_ORDER_TOTAL:
+        shortfall = (MIN_ORDER_TOTAL - total_price).quantize(Decimal('0.01'))
+        messages.error(
+            request,
+            f"Minimum order is £{MIN_ORDER_TOTAL:.2f}. Add £{shortfall:.2f} more to proceed."
+        )
+        return redirect('cart_view')
+
     # Try to get an order by ID, or get the latest pending order
     if order_id:
         try:
@@ -93,21 +125,42 @@ def delivery_slots_view(request):
             )
 
     # Now proceed with delivery slot selection
+    # Compute max date constraint (today + 14 days)
+    today = date.today()
+    max_date = today + timedelta(days=14)
+    max_date_str = max_date.strftime('%Y-%m-%d')
+
     if request.method == 'POST':
-        delivery_date = request.POST.get('delivery_date')
+        delivery_date_str = request.POST.get('delivery_date')
         delivery_time = request.POST.get('delivery_time')
-        if delivery_date and delivery_time:
-            order.delivery_date = delivery_date
-            order.delivery_time = delivery_time
-            order.save()
+        if delivery_date_str and delivery_time:
+            try:
+                # Parse and validate date range
+                year, month, day = map(int, delivery_date_str.split('-'))
+                dd = date(year, month, day)
+            except Exception:
+                dd = None
 
-            messages.success(request, f"Delivery slot saved for Order #{order.id}!")
-            return redirect('order_summery', order_id=order.id)
-        else:
+            if not dd:
+                messages.error(request, "Invalid delivery date format.")
+            elif dd < today:
+                messages.error(request, "Delivery date cannot be in the past.")
+            elif dd > max_date:
+                messages.error(request, "Delivery date cannot be more than 2 weeks from today.")
+            else:
+                # Save using validated values
+                order.delivery_date = dd
+                order.delivery_time = delivery_time
+                order.save()
+
+                messages.success(request, f"Delivery slot saved for Order #{order.id}!")
+                return redirect('order_summery', order_id=order.id)
+
+        if not delivery_date_str or not delivery_time:
             messages.error(request, "Please provide both a valid delivery date and time.")
-            return render(request, '_orders/delivery_slots.html', {'order': order})
+        return render(request, '_orders/delivery_slots.html', {'order': order, 'max_date': max_date_str})
 
-    return render(request, '_orders/delivery_slots.html', {'order': order})
+    return render(request, '_orders/delivery_slots.html', {'order': order, 'max_date': max_date_str})
 
 @login_required
 def delete_order_view(request, order_id):

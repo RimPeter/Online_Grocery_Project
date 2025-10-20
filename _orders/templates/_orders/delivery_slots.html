@@ -3,10 +3,16 @@
 
 {% block title %}Select Delivery Slot{% endblock %}
 
+{% block extra_css %}{% endblock %}
+
 {% block content %}
 {% now 'Y-m-d' as today %}
 <div class="container mt-4">
-  <h1>Select Your Delivery Slot</h1>
+  <div class="d-flex align-items-center gap-2 mb-2">
+    <h1 class="mb-0">Choose Your Delivery Slot</h1>
+    <span class="badge text-bg-success">3‑hour window</span>
+  </div>
+  <p class="helper mb-4 p-color">We aim to deliver within the selected window on your chosen day.</p>
 
   {% if messages %}
     {% for message in messages %}
@@ -27,8 +33,8 @@
     {% csrf_token %}
     <input type="hidden" name="next" value="{{ request.GET.next|default:'' }}">
 
-    <div class="mb-3">
-      <label for="delivery_date" class="form-label">Delivery Date</label>
+    <div class="mb-4">
+      <label for="delivery_date" class="form-label fw-semibold">Delivery Date</label>
       {% if form and form.delivery_date %}
         {{ form.delivery_date }}
         {% if form.delivery_date.errors %}
@@ -42,6 +48,7 @@
           class="form-control"
           value="{{ request.POST.delivery_date|default:'' }}"
           min="{{ today }}"
+          {% if max_date %}max="{{ max_date }}"{% endif %}
           aria-describedby="delivery_date_help"
           required
         >
@@ -49,35 +56,76 @@
       {% endif %}
     </div>
 
-    <div class="mb-3">
-      <label for="delivery_time_select" class="form-label">Delivery Time</label>
+    <div class="mb-4">
+      <div class="d-flex justify-content-between align-items-end">
+        <label class="form-label fw-semibold mb-2">Delivery Time Window</label>
+        <small class="helper">Tap a slot to select</small>
+      </div>
+
       {% if form and form.delivery_time %}
         {{ form.delivery_time }}
         {% if form.delivery_time.errors %}
-          <div class="text-danger small" id="delivery_time_help">{{ form.delivery_time.errors }}</div>
+          <div class="text-danger small">{{ form.delivery_time.errors }}</div>
         {% endif %}
       {% else %}
-        <select id="delivery_time_select" name="delivery_time" class="form-select" aria-describedby="delivery_time_help" required>
-          <option value="">Select a time slot</option>
-          <option value="09:00" {% if request.POST.delivery_time == "09:00" %}selected{% endif %}>9am - 12pm</option>
-          <option value="10:00" {% if request.POST.delivery_time == "10:00" %}selected{% endif %}>10am - 13pm</option>
-          <option value="11:00" {% if request.POST.delivery_time == "11:00" %}selected{% endif %}>11am - 14pm</option>
-          <option value="12:00" {% if request.POST.delivery_time == "12:00" %}selected{% endif %}>12pm - 15pm</option>
-          <option value="13:00" {% if request.POST.delivery_time == "13:00" %}selected{% endif %}>13pm - 16pm</option>
-          <option value="14:00" {% if request.POST.delivery_time == "14:00" %}selected{% endif %}>14pm - 17pm</option>
-          <option value="15:00" {% if request.POST.delivery_time == "15:00" %}selected{% endif %}>15pm - 18pm</option>
-          <option value="16:00" {% if request.POST.delivery_time == "16:00" %}selected{% endif %}>16pm - 19pm</option>
-          <option value="17:00" {% if request.POST.delivery_time == "17:00" %}selected{% endif %}>17pm - 20pm</option>
-          <option value="18:00" {% if request.POST.delivery_time == "18:00" %}selected{% endif %}>18pm - 21pm</option>
-          <option value="19:00" {% if request.POST.delivery_time == "19:00" %}selected{% endif %}>19pm - 22pm</option>
-        </select>
-        <div id="delivery_time_help" class="form-text">Select one of the available delivery slots.</div>
+        <div class="slot-grid" role="radiogroup" aria-label="Delivery time window">
+          <input type="radio" class="btn-check" name="delivery_time" id="slot-0900" value="09:00" required {% if request.POST.delivery_time == '09:00' %}checked{% endif %}>
+          <label class="btn btn-outline-primary w-100 py-3 slot-card time-window" for="slot-0900"><span class="fw-semibold">9am - 12pm</span></label>
+
+          <input type="radio" class="btn-check" name="delivery_time" id="slot-1000" value="10:00" required {% if request.POST.delivery_time == '10:00' %}checked{% endif %}>
+          <label class="btn btn-outline-primary w-100 py-3 slot-card time-window" for="slot-1000"><span class="fw-semibold">10am - 13pm</span></label>
+
+          <input type="radio" class="btn-check" name="delivery_time" id="slot-1100" value="11:00" required {% if request.POST.delivery_time == '11:00' %}checked{% endif %}>
+          <label class="btn btn-outline-primary w-100 py-3 slot-card time-window" for="slot-1100"><span class="fw-semibold">11am - 14pm</span></label>
+
+          <input type="radio" class="btn-check" name="delivery_time" id="slot-1200" value="12:00" required {% if request.POST.delivery_time == '12:00' %}checked{% endif %}>
+          <label class="btn btn-outline-primary w-100 py-3 slot-card time-window" for="slot-1200"><span class="fw-semibold">12pm - 15pm</span></label>
+
+          <input type="radio" class="btn-check" name="delivery_time" id="slot-1300" value="13:00" required {% if request.POST.delivery_time == '13:00' %}checked{% endif %}>
+          <label class="btn btn-outline-primary w-100 py-3 slot-card time-window" for="slot-1300"><span class="fw-semibold">13pm - 16pm</span></label>
+
+          <input type="radio" class="btn-check" name="delivery_time" id="slot-1400" value="14:00" required {% if request.POST.delivery_time == '14:00' %}checked{% endif %}>
+          <label class="btn btn-outline-primary w-100 py-3 slot-card time-window" for="slot-1400"><span class="fw-semibold">14pm - 17pm</span></label>
+
+          <input type="radio" class="btn-check" name="delivery_time" id="slot-1500" value="15:00" required {% if request.POST.delivery_time == '15:00' %}checked{% endif %}>
+          <label class="btn btn-outline-primary w-100 py-3 slot-card time-window" for="slot-1500"><span class="fw-semibold">15pm - 18pm</span></label>
+
+          <input type="radio" class="btn-check" name="delivery_time" id="slot-1600" value="16:00" required {% if request.POST.delivery_time == '16:00' %}checked{% endif %}>
+          <label class="btn btn-outline-primary w-100 py-3 slot-card time-window" for="slot-1600"><span class="fw-semibold">16pm - 19pm</span></label>
+
+          <input type="radio" class="btn-check" name="delivery_time" id="slot-1700" value="17:00" required {% if request.POST.delivery_time == '17:00' %}checked{% endif %}>
+          <label class="btn btn-outline-primary w-100 py-3 slot-card time-window" for="slot-1700"><span class="fw-semibold">17pm - 20pm</span></label>
+
+          <input type="radio" class="btn-check" name="delivery_time" id="slot-1800" value="18:00" required {% if request.POST.delivery_time == '18:00' %}checked{% endif %}>
+          <label class="btn btn-outline-primary w-100 py-3 slot-card time-window" for="slot-1800"><span class="fw-semibold">18pm - 21pm</span></label>
+
+          <input type="radio" class="btn-check" name="delivery_time" id="slot-1900" value="19:00" required {% if request.POST.delivery_time == '19:00' %}checked{% endif %}>
+          <label class="btn btn-outline-primary w-100 py-3 slot-card time-window" for="slot-1900"><span class="fw-semibold">19pm - 22pm</span></label>
+        </div>
+        <div class="form-text mt-2">You can change your slot later if available.</div>
       {% endif %}
     </div>
 
-    <button type="submit" class="btn btn-success">Confirm Delivery Slot</button>
-    <a href="{% url 'cart_view' %}" class="btn btn-secondary">Back to Cart</a>
+    <div class="d-flex gap-2">
+      <a href="{% url 'cart_view' %}" class="btn btn-outline-light">Back to Cart</a>
+      <button type="submit" class="btn btn-success">Confirm Slot</button>
+    </div>
   </form>
+  
+  <div class="row mt-4">
+    <div class="col-lg-6">
+      <div class="alert sticky-note">
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge text-bg-success">Heads up</span>
+          <span>Drivers aim to arrive within your selected window.</span>
+        </div>
+        <ul class="mb-0 mt-2 small helper">
+          <li>We will text you when your order is on the way.</li>
+          <li>Need to change your slot? You can update it from Order Summary.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
 </div>
 
 {# No extra JS needed; using fixed time slots #}

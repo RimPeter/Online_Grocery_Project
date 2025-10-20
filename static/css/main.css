@@ -43,7 +43,36 @@
   padding-bottom: 0px;
 }
 
+.p-color {
+  color: white;
+}
+
+/* Delivery slot buttons: apply to the visible label, not the hidden radio */
+.btn.time-window {
+  border-color: #ffffff;
+  color: #ffffff;
+}
+.btn-check:checked + .btn.time-window {
+  background-color: #ffffff;
+  color: #0d6efd;
+  border-color: #ffffff;
+}
+
 /* Ensure navbar has a consistent height to size the logo correctly */
 .navbar.navbar2 {
   min-height: 56px;
 }
+
+/* Delivery Slots Layout */
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+.slot-card { transition: all .15s ease-in-out; }
+.slot-card:hover { transform: translateY(-2px); }
+.helper { color: #6c757d; }
+.sticky-note { background: #fff; border-left: 4px solid #198754; }
+
+/* Ensure p-color wins when combined with helper */
+.helper.p-color { color: #ffffff; }
