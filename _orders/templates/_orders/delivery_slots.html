@@ -4,6 +4,7 @@
 {% block title %}Select Delivery Slot{% endblock %}
 
 {% block content %}
+{% now 'Y-m-d' as today %}
 <div class="container mt-4">
   <h1>Select Your Delivery Slot</h1>
 
@@ -15,32 +16,69 @@
     {% endfor %}
   {% endif %}
 
+  {# Optional Django form errors #}
+  {% if form and form.non_field_errors %}
+    <div class="alert alert-danger" role="alert">
+      {{ form.non_field_errors }}
+    </div>
+  {% endif %}
+
   <form method="POST" action="">
     {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.GET.next|default:'' }}">
+
     <div class="mb-3">
       <label for="delivery_date" class="form-label">Delivery Date</label>
-      <input 
-        type="date"
-        id="delivery_date"
-        name="delivery_date"
-        class="form-control"
-        required
-      >
+      {% if form and form.delivery_date %}
+        {{ form.delivery_date }}
+        {% if form.delivery_date.errors %}
+          <div class="text-danger small" id="delivery_date_help">{{ form.delivery_date.errors }}</div>
+        {% endif %}
+      {% else %}
+        <input 
+          type="date"
+          id="delivery_date"
+          name="delivery_date"
+          class="form-control"
+          value="{{ request.POST.delivery_date|default:'' }}"
+          min="{{ today }}"
+          aria-describedby="delivery_date_help"
+          required
+        >
+        <div id="delivery_date_help" class="form-text">Choose a date from today within the next 14 days.</div>
+      {% endif %}
     </div>
 
     <div class="mb-3">
-      <label for="delivery_time" class="form-label">Delivery Time</label>
-      <input
-        type="time"
-        id="delivery_time"
-        name="delivery_time"
-        class="form-control"
-        required
-      >
+      <label for="delivery_time_select" class="form-label">Delivery Time</label>
+      {% if form and form.delivery_time %}
+        {{ form.delivery_time }}
+        {% if form.delivery_time.errors %}
+          <div class="text-danger small" id="delivery_time_help">{{ form.delivery_time.errors }}</div>
+        {% endif %}
+      {% else %}
+        <select id="delivery_time_select" name="delivery_time" class="form-select" aria-describedby="delivery_time_help" required>
+          <option value="">Select a time slot</option>
+          <option value="09:00" {% if request.POST.delivery_time == "09:00" %}selected{% endif %}>9am - 12pm</option>
+          <option value="10:00" {% if request.POST.delivery_time == "10:00" %}selected{% endif %}>10am - 13pm</option>
+          <option value="11:00" {% if request.POST.delivery_time == "11:00" %}selected{% endif %}>11am - 14pm</option>
+          <option value="12:00" {% if request.POST.delivery_time == "12:00" %}selected{% endif %}>12pm - 15pm</option>
+          <option value="13:00" {% if request.POST.delivery_time == "13:00" %}selected{% endif %}>13pm - 16pm</option>
+          <option value="14:00" {% if request.POST.delivery_time == "14:00" %}selected{% endif %}>14pm - 17pm</option>
+          <option value="15:00" {% if request.POST.delivery_time == "15:00" %}selected{% endif %}>15pm - 18pm</option>
+          <option value="16:00" {% if request.POST.delivery_time == "16:00" %}selected{% endif %}>16pm - 19pm</option>
+          <option value="17:00" {% if request.POST.delivery_time == "17:00" %}selected{% endif %}>17pm - 20pm</option>
+          <option value="18:00" {% if request.POST.delivery_time == "18:00" %}selected{% endif %}>18pm - 21pm</option>
+          <option value="19:00" {% if request.POST.delivery_time == "19:00" %}selected{% endif %}>19pm - 22pm</option>
+        </select>
+        <div id="delivery_time_help" class="form-text">Select one of the available delivery slots.</div>
+      {% endif %}
     </div>
 
     <button type="submit" class="btn btn-success">Confirm Delivery Slot</button>
     <a href="{% url 'cart_view' %}" class="btn btn-secondary">Back to Cart</a>
   </form>
 </div>
+
+{# No extra JS needed; using fixed time slots #}
 {% endblock %}
