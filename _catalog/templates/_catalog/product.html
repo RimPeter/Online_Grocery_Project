@@ -62,21 +62,6 @@
 
     <!-- Right Column: Search Form & Product Listing -->
     <div class="col-md-9">
-      <!-- Search Form -->
-      {% comment %} <form method="GET" action="" class="mb-3">
-        <div class="input-group">
-          <input
-            type="text"
-            name="q"
-            class="form-control"
-            placeholder="Search for products..."
-            value="{{ request.GET.q }}"
-          />
-          <button class="btn btn-outline-secondary" type="submit">
-            Search
-          </button>
-        </div>
-      </form> {% endcomment %}
 
 <form method="GET" action="" class="mb-3" id="search-form">
   {# preserve current filters when searching #}
@@ -95,9 +80,6 @@
       autocomplete="off"
       aria-label="Search products"
     />
-    <button class="btn btn-outline-secondary" type="submit" aria-label="Search">
-      Search
-    </button>
   </div>
 
   {# As-you-type dropdown suggestions: Level-1, Level-2, and combined "L1 - L2" #}
@@ -113,6 +95,36 @@
     {% endfor %}
   </datalist>
 </form>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('search-form');
+    const input = document.getElementById('search-input');
+    const datalist = document.getElementById('category-suggestions');
+
+    if (!form || !input || !datalist) return;
+
+    const allowed = new Set(Array.from(datalist.options).map(o => o.value));
+
+    // Submit when a datalist option is selected
+    input.addEventListener('change', function () {
+      const val = input.value.trim();
+      if (allowed.has(val)) {
+        form.submit();
+      }
+    });
+
+    // Prevent Enter submit unless value matches a suggestion
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        const val = input.value.trim();
+        if (!allowed.has(val)) {
+          e.preventDefault();
+        }
+      }
+    });
+  });
+  </script>
 
 {# Safe JSON payloads for exact-matching on submit #}
 {{ level1_names|json_script:"level1-names" }}
