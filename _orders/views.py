@@ -15,12 +15,19 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from django.urls import reverse
 
 @login_required
 def order_history_view(request):
-    orders = Order.objects.filter(user=request.user,
-                                  status__in= ('paid', 'processed', 'delivered')
-                                  ).order_by('-created_at')
+    orders = (
+        Order.objects
+        .filter(
+            user=request.user,
+            status__in=('paid', 'processed', 'delivered')
+        )
+        .prefetch_related('items__product')
+        .order_by('-created_at')
+    )
     return render(request, '_orders/order_history.html', {'orders': orders})
 
 @login_required
@@ -399,4 +406,37 @@ def _build_invoice_pdf_bytes(request, order):
     pdf = buffer.getvalue()
     buffer.close()
     return pdf
+
+
+@login_required
+def reorder_order_view(request, order_id):
+    """Add all items from a past order back into the session cart."""
+    if request.method != 'POST':
+        messages.error(request, "Invalid request method.")
+        return redirect('order_history')
+
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+
+    cart = request.session.get('cart', {})
+    added_count = 0
+    for item in order.items.select_related('product'):
+        pid = str(item.product_id)
+        current = int(cart.get(pid, 0))
+        try:
+            qty = int(item.quantity)
+        except (TypeError, ValueError):
+            qty = 1
+        cart[pid] = current + max(1, qty)
+        added_count += 1
+
+    request.session['cart'] = cart
+
+    if added_count:
+        messages.success(request, f"Added {added_count} item(s) from Order #{order.id} to your cart.")
+    else:
+        messages.info(request, "No items to reorder from that order.")
+
+    # redirect back to history by default
+    return_to = request.POST.get('return_to') or reverse('order_history')
+    return redirect(return_to)
 

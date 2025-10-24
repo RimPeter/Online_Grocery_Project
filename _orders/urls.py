@@ -10,4 +10,5 @@ urlpatterns = [
     path('orders/<int:order_id>/invoice/', views.invoice_page_view, name='invoice_page'),
     path('orders/<int:order_id>/invoice/pdf/', views.invoice_pdf_view, name='invoice_pdf'),
     path('orders/<int:order_id>/invoice/email/', views.email_invoice_view, name='invoice_email'),
+    path('reorder/<int:order_id>/', views.reorder_order_view, name='order_reorder'),
 ]
