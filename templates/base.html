@@ -53,6 +53,38 @@
           <li class="nav-item">
             <a class="nav-link navbar-button {% if url_name == 'product_list' %}active{% endif %}" {% if url_name == 'product_list' %}aria-current="page"{% endif %} href="{% url 'product_list' %}">Products</a>
           </li>
+          {% if user.is_superuser %}
+          <li class="nav-item dropdown">
+            <a
+              class="nav-link dropdown-toggle navbar-button"
+              href="#"
+              id="navbarPMDropdown"
+              role="button"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+            >
+              Product Management
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarPMDropdown">
+              <li>
+                <a class="dropdown-item" href="{% url '_product_management:dl' %}">Leaflet DL</a>
+              </li>
+              <li>
+                <a class="dropdown-item" href="{% url '_product_management:active_orders' %}">Active Orders</a>
+              </li>
+              <li>
+                <a class="dropdown-item" href="{% url '_product_management:completed_orders' %}">Completed Orders</a>
+              </li>
+              <li>
+                <a class="dropdown-item" href="{% url '_product_management:items_to_order' %}">Items To Order</a>
+              </li>
+              <li><hr class="dropdown-divider" /></li>
+              <li>
+                <a class="dropdown-item" href="{% url 'admin:index' %}">Admin</a>
+              </li>
+            </ul>
+          </li>
+          {% endif %}
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle navbar-button {% if url_name == 'cart_view' %}active{% endif %}" {% if url_name == 'cart_view' %}aria-current="page"{% endif %}
                href="{% url 'cart_view' %}" id="navbarCartDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -98,24 +130,7 @@
                   >Change Password</a
                 >
               </li>
-              {% if user.is_superuser %}
-              <li><hr class="dropdown-divider" /></li>
-              <li>
-                <a class="dropdown-item" href="{% url 'admin:index' %}">Admin</a>
-              </li>
-              <li>
-                <a class="dropdown-item" href="{% url '_product_management:dl' %}">Leaflet DL</a>
-              </li>
-              <li>
-                <a class="dropdown-item" href="{% url '_product_management:active_orders' %}">Active Orders</a>
-              </li>
-              <li>
-                <a class="dropdown-item" href="{% url '_product_management:completed_orders' %}">Completed Orders</a>
-              </li>
-              <li>
-                <a class="dropdown-item" href="{% url '_product_management:items_to_order' %}">Items To Order</a>
-              </li>
-              {% endif %}
+              {# Admin link moved into Product Management dropdown #}
               <li>
                 <a
                   class="dropdown-item text-danger"
