@@ -9,12 +9,14 @@ from django.conf import settings
 from django.contrib.staticfiles import finders
 from xhtml2pdf import pisa
 
-# Optional better CSS renderer
-try:
-    from weasyprint import HTML as WPHTML, CSS as WPCSS  # type: ignore
-except Exception:  # pragma: no cover
-    WPHTML = None
-    WPCSS = None
+# Lazy import of WeasyPrint to avoid noisy import errors at startup on systems
+# where native libraries (cairo/pango/etc.) are not available.
+def _get_weasy():
+    try:  # pragma: no cover
+        from weasyprint import HTML as WPHTML, CSS as WPCSS  # type: ignore
+        return WPHTML, WPCSS
+    except Exception:
+        return None, None
 import os
 
 
@@ -111,10 +113,12 @@ def _choose_renderer():
     mode = getattr(settings, 'LEAFLET_PDF_RENDERER', 'auto')
     mode = (mode or 'auto').lower()
     if mode == 'weasyprint':
+        WPHTML, WPCSS = _get_weasy()
         return 'weasyprint' if WPHTML is not None and WPCSS is not None else 'xhtml2pdf'
     if mode == 'xhtml2pdf':
         return 'xhtml2pdf'
     # auto
+    WPHTML, WPCSS = _get_weasy()
     return 'weasyprint' if WPHTML is not None and WPCSS is not None else 'xhtml2pdf'
 
 
@@ -150,6 +154,7 @@ def dl_leaflet_pdf(request):
     # Prefer WeasyPrint if chosen/available for CSS parity
     if _choose_renderer() == 'weasyprint':
         try:
+            WPHTML, WPCSS = _get_weasy()
             css_path = finders.find("css/leaflet.css")
             stylesheets = [WPCSS(filename=css_path)] if css_path else None
             pdf_bytes = WPHTML(string=html, base_url=str(settings.BASE_DIR)).write_pdf(stylesheets=stylesheets)
@@ -170,7 +175,11 @@ def dl_leaflet_pdf(request):
 def leaflet_status(request):
     """Simple status page showing which PDF renderer is configured and available."""
     configured = getattr(settings, 'LEAFLET_PDF_RENDERER', 'auto')
-    weasy_available = WPHTML is not None and WPCSS is not None
+    # Only probe WeasyPrint availability when not explicitly forced to xhtml2pdf
+    weasy_available = False
+    if str(configured).lower() != 'xhtml2pdf':
+        WPHTML, WPCSS = _get_weasy()
+        weasy_available = WPHTML is not None and WPCSS is not None
     active = _choose_renderer()
     body = (
         f"Configured: {configured}\n"
