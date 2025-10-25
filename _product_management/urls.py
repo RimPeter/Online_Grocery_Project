@@ -16,4 +16,5 @@ urlpatterns = [
     path("orders/complete-all/", views.mark_all_orders_completed, name="mark_all_orders_completed"),
     path("orders/<int:order_id>/activate/", views.mark_order_active, name="mark_order_active"),
     path("items-to-order/", views.items_to_order, name="items_to_order"),
+    path("orders/<int:order_id>/delivery/", views.set_delivery_slot, name="set_delivery_slot"),
 ]

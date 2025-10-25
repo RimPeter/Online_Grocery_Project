@@ -50,7 +50,9 @@
                   {{ o.items.all|length }}
                 {% endif %}
               </td>
-              <td>&pound;{{ o.total }}</td>
+              <td>
+                {% if o.computed_total %}&pound;{{ o.computed_total }}{% else %}&pound;{{ o.total }}{% endif %}
+              </td>
               <td>{{ o.created_at|date:"Y-m-d H:i" }}</td>
               <td>
                 {% if o.delivery_date or o.delivery_time %}
@@ -87,7 +89,8 @@
                   </ul>
 
                   <div class="mt-3 text-end">
-                    <strong>Total:</strong> &pound;{{ o.total }}
+                    <strong>Total:</strong>
+                    {% if o.computed_total %}&pound;{{ o.computed_total }}{% else %}&pound;{{ o.total }}{% endif %}
                   </div>
                 </div>
               </td>

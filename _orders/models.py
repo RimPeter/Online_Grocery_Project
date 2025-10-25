@@ -1,8 +1,9 @@
 from django.db import models
 from django.conf import settings
 from _catalog.models import All_Products
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+from django.db.models import Sum, F, DecimalField, ExpressionWrapper
 
 class Order(models.Model):
     STATUS_CHOICES = [
@@ -62,3 +63,25 @@ def set_order_status_processed_if_all_completed(sender, instance, **kwargs):
         if order.status != 'processed':
             order.status = 'processed'
             order.save()
+
+
+def _recalc_order_total(order: Order):
+    try:
+        amount_expr = ExpressionWrapper(F('price') * F('quantity'), output_field=DecimalField(max_digits=12, decimal_places=2))
+        total = order.items.aggregate(total=Sum(amount_expr)).get('total') or 0
+        if order.total != total:
+            order.total = total
+            order.save(update_fields=['total'])
+    except Exception:
+        # Best-effort; avoid breaking save cycles if something goes wrong
+        pass
+
+
+@receiver(post_save, sender=OrderItem)
+def recalc_total_on_item_save(sender, instance, **kwargs):
+    _recalc_order_total(instance.order)
+
+
+@receiver(post_delete, sender=OrderItem)
+def recalc_total_on_item_delete(sender, instance, **kwargs):
+    _recalc_order_total(instance.order)

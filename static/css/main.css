@@ -69,6 +69,9 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 12px;
+  background-color: #528941; /* site green */
+  padding: 12px;
+  border-radius: 8px;
 }
 .slot-card { transition: all .15s ease-in-out; }
 .slot-card:hover { transform: translateY(-2px); }

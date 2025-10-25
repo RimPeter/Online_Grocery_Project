@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Set Delivery Slot{% endblock %}
+
+{% block content %}
+{% now 'Y-m-d' as today %}
+<div class="row">
+  <div class="col-12 col-md-8 col-lg-6">
+    <h1 class="mb-4">Set Delivery Slot</h1>
+
+    <div class="card">
+      <div class="card-body">
+        <div class="mb-3">
+          <div class="fw-semibold">Order</div>
+          <div>#{{ order.id }} for {% firstof order.user.get_full_name order.user.username %} &mdash; {{ order.user.email }}</div>
+        </div>
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="delivery_date" class="form-label">Delivery Date</label>
+            <input id="delivery_date" name="delivery_date" type="date" class="form-control"
+                   min="{{ today }}" max="{{ max_date }}"
+                   value="{{ order.delivery_date|date:'Y-m-d' }}" required>
+            <div class="form-text">Pick a date within the next two weeks.</div>
+          </div>
+
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-end">
+              <label class="form-label fw-semibold mb-2">Delivery Time Window</label>
+              <small class="helper">Tap a slot to select</small>
+            </div>
+            <div class="slot-grid" role="radiogroup" aria-label="Delivery time window">
+              {% with sel=request.POST.delivery_time|default:order.delivery_time|time:'H:i' %}
+              <input type="radio" class="btn-check" name="delivery_time" id="slot-0900" value="09:00" required {% if sel == '09:00' %}checked{% endif %}>
+              <label class="btn btn-outline-primary w-100 py-3 slot-card time-window" for="slot-0900"><span class="fw-semibold">9am - 12pm</span></label>
+
+              <input type="radio" class="btn-check" name="delivery_time" id="slot-1000" value="10:00" required {% if sel == '10:00' %}checked{% endif %}>
+              <label class="btn btn-outline-primary w-100 py-3 slot-card time-window" for="slot-1000"><span class="fw-semibold">10am - 1pm</span></label>
+
+              <input type="radio" class="btn-check" name="delivery_time" id="slot-1100" value="11:00" required {% if sel == '11:00' %}checked{% endif %}>
+              <label class="btn btn-outline-primary w-100 py-3 slot-card time-window" for="slot-1100"><span class="fw-semibold">11am - 2pm</span></label>
+
+              <input type="radio" class="btn-check" name="delivery_time" id="slot-1200" value="12:00" required {% if sel == '12:00' %}checked{% endif %}>
+              <label class="btn btn-outline-primary w-100 py-3 slot-card time-window" for="slot-1200"><span class="fw-semibold">12pm - 3pm</span></label>
+
+              <input type="radio" class="btn-check" name="delivery_time" id="slot-1300" value="13:00" required {% if sel == '13:00' %}checked{% endif %}>
+              <label class="btn btn-outline-primary w-100 py-3 slot-card time-window" for="slot-1300"><span class="fw-semibold">1pm - 4pm</span></label>
+
+              <input type="radio" class="btn-check" name="delivery_time" id="slot-1400" value="14:00" required {% if sel == '14:00' %}checked{% endif %}>
+              <label class="btn btn-outline-primary w-100 py-3 slot-card time-window" for="slot-1400"><span class="fw-semibold">2pm - 5pm</span></label>
+
+              <input type="radio" class="btn-check" name="delivery_time" id="slot-1500" value="15:00" required {% if sel == '15:00' %}checked{% endif %}>
+              <label class="btn btn-outline-primary w-100 py-3 slot-card time-window" for="slot-1500"><span class="fw-semibold">3pm - 6pm</span></label>
+
+              <input type="radio" class="btn-check" name="delivery_time" id="slot-1600" value="16:00" required {% if sel == '16:00' %}checked{% endif %}>
+              <label class="btn btn-outline-primary w-100 py-3 slot-card time-window" for="slot-1600"><span class="fw-semibold">4pm - 7pm</span></label>
+
+              <input type="radio" class="btn-check" name="delivery_time" id="slot-1700" value="17:00" required {% if sel == '17:00' %}checked{% endif %}>
+              <label class="btn btn-outline-primary w-100 py-3 slot-card time-window" for="slot-1700"><span class="fw-semibold">5pm - 8pm</span></label>
+
+              <input type="radio" class="btn-check" name="delivery_time" id="slot-1800" value="18:00" required {% if sel == '18:00' %}checked{% endif %}>
+              <label class="btn btn-outline-primary w-100 py-3 slot-card time-window" for="slot-1800"><span class="fw-semibold">6pm - 9pm</span></label>
+
+              <input type="radio" class="btn-check" name="delivery_time" id="slot-1900" value="19:00" required {% if sel == '19:00' %}checked{% endif %}>
+              <label class="btn btn-outline-primary w-100 py-3 slot-card time-window" for="slot-1900"><span class="fw-semibold">7pm - 10pm</span></label>
+              {% endwith %}
+            </div>
+            <div class="form-text mt-2">You can change this slot later if available.</div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">Save Slot</button>
+            <a class="btn btn-outline-secondary" href="{% url '_product_management:active_orders' %}">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -9,7 +9,9 @@ from django.conf import settings
 from django.contrib.staticfiles import finders
 from xhtml2pdf import pisa
 from django.contrib.admin.views.decorators import staff_member_required
-from django.db.models import Count, Sum
+from django.db.models import Count, Sum, F, DecimalField, Value
+from django.db.models.functions import Coalesce, Cast
+from datetime import date, timedelta
 from _orders.models import Order, OrderItem
 from django.contrib import messages
 
@@ -199,12 +201,17 @@ def leaflet_status(request):
 @staff_member_required
 def active_orders(request):
     active_statuses = ('pending', 'paid', 'processed')
+    dec = DecimalField(max_digits=12, decimal_places=2)
+    amount_expr = F('items__price') * Cast('items__quantity', output_field=dec)
     orders = (
         Order.objects
         .filter(status__in=active_statuses)
         .select_related('user')
-        .prefetch_related('items__product')
-        .annotate(items_count=Count('items'))
+        .prefetch_related('items__product', 'user__addresses')
+        .annotate(
+            items_count=Count('items'),
+            computed_total=Coalesce(Sum(amount_expr), Value(0, output_field=dec))
+        )
         .order_by('-created_at')
     )
     return render(request, '_product_management/active_orders.html', {'orders': orders})
@@ -212,12 +219,17 @@ def active_orders(request):
 
 @staff_member_required
 def completed_orders(request):
+    dec = DecimalField(max_digits=12, decimal_places=2)
+    amount_expr = F('items__price') * Cast('items__quantity', output_field=dec)
     orders = (
         Order.objects
         .filter(status='delivered')
         .select_related('user')
         .prefetch_related('items__product')
-        .annotate(items_count=Count('items'))
+        .annotate(
+            items_count=Count('items'),
+            computed_total=Coalesce(Sum(amount_expr), Value(0, output_field=dec))
+        )
         .order_by('-created_at')
     )
     return render(request, '_product_management/completed_orders.html', {'orders': orders})
@@ -290,3 +302,42 @@ def items_to_order(request):
     )
     context = { 'items': items }
     return render(request, '_product_management/items_to_order.html', context)
+
+
+@staff_member_required
+def set_delivery_slot(request, order_id: int):
+    order = get_object_or_404(Order.objects.select_related('user'), id=order_id)
+    today = date.today()
+    max_date = today + timedelta(days=14)
+    max_date_str = max_date.strftime('%Y-%m-%d')
+
+    if request.method == 'POST':
+        delivery_date_str = request.POST.get('delivery_date')
+        delivery_time = request.POST.get('delivery_time')
+
+        if not delivery_date_str or not delivery_time:
+            messages.error(request, 'Please provide both a delivery date and time.')
+        else:
+            try:
+                y, m, d = map(int, delivery_date_str.split('-'))
+                dd = date(y, m, d)
+            except Exception:
+                dd = None
+            if not dd:
+                messages.error(request, 'Invalid delivery date.')
+            elif dd < today:
+                messages.error(request, 'Delivery date cannot be in the past.')
+            elif dd > max_date:
+                messages.error(request, 'Delivery date cannot be more than 2 weeks from today.')
+            else:
+                order.delivery_date = dd
+                order.delivery_time = delivery_time
+                order.save(update_fields=['delivery_date', 'delivery_time'])
+                messages.success(request, f'Delivery slot saved for Order #{order.id}.')
+                return redirect('_product_management:active_orders')
+
+    return render(
+        request,
+        '_product_management/set_delivery_slot.html',
+        {'order': order, 'max_date': max_date_str}
+    )
