@@ -42,7 +42,7 @@ INSTALLED_APPS = [
     '_scheduling',
     '_suppliers',
     '_payments',
-    '_leaflet_creator',
+    '_product_management',
     ]
 
 LOGIN_URL = '/accounts/login/'  

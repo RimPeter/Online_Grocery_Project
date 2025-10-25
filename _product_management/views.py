@@ -22,13 +22,13 @@ import os
 
 
 def index(request):
-    return HttpResponse("Leaflet Creator app is installed")
+    return HttpResponse("Product Management app is installed")
 
 
 def dl_leaflet(request):
     return render(
         request,
-        "_leaflet_creator/DL_size_leaflet.html",
+        "_product_management/DL_size_leaflet.html",
         {"pdf": False},
     )
 
@@ -147,7 +147,7 @@ def dl_leaflet_pdf(request):
             )
             qr_data_uri = f"data:image/png;base64,{placeholder}"
 
-    template = get_template("_leaflet_creator/DL_size_leaflet.html")
+    template = get_template("_product_management/DL_size_leaflet.html")
     context = {"pdf": True, "qr_data_uri": qr_data_uri, "request": request}
     html = template.render(context)
 
@@ -190,3 +190,4 @@ def leaflet_status(request):
 
 
 # dl_leaflet_jpg feature removed per request
+

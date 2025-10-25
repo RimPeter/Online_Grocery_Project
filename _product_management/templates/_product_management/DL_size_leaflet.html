@@ -7,18 +7,18 @@
   <title>DL Size Leaflet</title>
   <link rel="stylesheet" href="{% static 'css/leaflet.css' %}">
   {# All print/PDF styles live in static/css/leaflet.css now #}
-</head>
+  </head>
 <body>
   <!-- Controls outside the printable leaflet -->
   {% if not pdf %}
   <div class="leaflet-toolbar">
-    <a href="{% url 'home' %}" class="back-home" aria-label="Back to home">← Back home</a>
-    <form class="lf-url-form" method="get" action="{% url '_leaflet_creator:dl' %}" aria-label="Set website address for QR code">
+    <a href="{% url 'home' %}" class="back-home" aria-label="Back to home">↩ Back home</a>
+    <form class="lf-url-form" method="get" action="{% url '_product_management:dl' %}" aria-label="Set website address for QR code">
       <label for="site" class="visually-hidden">Website URL</label>
       <input id="site" name="site" type="url" placeholder="https://example.com" value="{{ request.GET.site }}" required>
       <button type="submit">Preview URL</button>
     </form>
-    <a class="back-home" href="{% url '_leaflet_creator:dl_pdf' %}?site={{ request.GET.site|urlencode }}" aria-label="Download PDF">Download PDF</a>
+    <a class="back-home" href="{% url '_product_management:dl_pdf' %}?site={{ request.GET.site|urlencode }}" aria-label="Download PDF">Download PDF</a>
   </div>
   {% endif %}
 
@@ -61,7 +61,7 @@
         {% if pdf and qr_data_uri %}
           <img class="qr" src="{{ qr_data_uri }}" alt="QR code">
         {% elif request.GET.site %}
-          <img class="qr" src="{% url '_leaflet_creator:qr' %}?site={{ request.GET.site|urlencode }}" alt="QR code" loading="lazy">
+          <img class="qr" src="{% url '_product_management:qr' %}?site={{ request.GET.site|urlencode }}" alt="QR code" loading="lazy">
         {% else %}
           <span class="muted">Add a website URL above to render QR</span>
         {% endif %}
@@ -73,8 +73,8 @@
         Images for illustration only. While stocks last.
         {% if request.GET.site %}<div class="muted">URL: {{ request.GET.site }}</div>{% endif %}
       </div>
-      
     </footer>
   </div>
 </body>
 </html>
+
