@@ -12,6 +12,8 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Count, Sum, F, DecimalField, Value
 from django.db.models.functions import Coalesce, Cast
 from datetime import date, timedelta
+from django.views.decorators.http import require_http_methods
+import threading
 from _orders.models import Order, OrderItem
 from django.contrib import messages
 
@@ -384,3 +386,52 @@ def set_delivery_slot(request, order_id: int):
         '_product_management/set_delivery_slot.html',
         {'order': order, 'max_date': max_date_str}
     )
+
+
+@staff_member_required
+@require_http_methods(["GET", "POST"])
+def commands(request):
+    """Simple admin page to trigger management commands like datajob.
+
+    Runs datajob in a background thread so the request does not block.
+    """
+    if request.method == 'POST':
+        run_all = bool(request.POST.get('all'))
+        run_scrape = bool(request.POST.get('scrape')) or run_all
+        if request.POST.get('no_scrape'):
+            run_scrape = False
+        run_variants = bool(request.POST.get('variants')) or run_all
+        run_vat = bool(request.POST.get('vat')) or run_all
+        run_home = bool(request.POST.get('home_subcats')) or run_all
+        variants_limit = int(request.POST.get('variants_limit') or 0)
+        variants_dry = bool(request.POST.get('variants_dry_run'))
+        home_active = not bool(request.POST.get('home_inactive'))
+        verbosity = int(request.POST.get('verbosity') or 1)
+
+        def _run_datajob():
+            try:
+                from django.core.management import call_command
+                call_command(
+                    'datajob',
+                    **{
+                        'all': run_all,
+                        'scrape': (not run_all and run_scrape),
+                        'no_scrape': (not run_all and not run_scrape and bool(request.POST.get('no_scrape'))),
+                        'variants': (not run_all and run_variants),
+                        'variants_limit': variants_limit,
+                        'variants_dry_run': variants_dry,
+                        'vat': (not run_all and run_vat),
+                        'home_subcats': (not run_all and run_home),
+                        'home_inactive': (not home_active),
+                        'verbosity': verbosity,
+                    }
+                )
+            except Exception:
+                # Intentionally swallow to avoid crashing the thread; errors will appear in server logs
+                pass
+
+        threading.Thread(target=_run_datajob, daemon=True).start()
+        messages.success(request, 'Data job started in background. Refresh later to see results.')
+        return redirect('_product_management:commands')
+
+    return render(request, '_product_management/commands.html')
