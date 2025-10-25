@@ -305,6 +305,49 @@ def items_to_order(request):
 
 
 @staff_member_required
+def items_to_order_pdf(request):
+    """Generate a PDF of the aggregated items to order (active orders only)."""
+    active_statuses = ('pending', 'paid', 'processed')
+    items = (
+        OrderItem.objects
+        .filter(order__status__in=active_statuses)
+        .values(
+            'product_id',
+            'product__name',
+            'product__sku',
+            'product__variant',
+        )
+        .annotate(
+            total_qty=Sum('quantity'),
+            orders_count=Count('order', distinct=True),
+        )
+        .order_by('product__name')
+    )
+
+    template = get_template('_product_management/items_to_order_pdf.html')
+    html = template.render({'items': items})
+
+    if _choose_renderer() == 'weasyprint':
+        try:
+            WPHTML, WPCSS = _get_weasy()
+            css_main = finders.find('css/main.css')
+            stylesheets = [WPCSS(filename=css_main)] if css_main else None
+            pdf_bytes = WPHTML(string=html, base_url=str(settings.BASE_DIR)).write_pdf(stylesheets=stylesheets)
+            resp = HttpResponse(pdf_bytes, content_type='application/pdf')
+            resp['Content-Disposition'] = 'attachment; filename=items-to-order.pdf'
+            return resp
+        except Exception:
+            pass
+
+    # Fallback to xhtml2pdf
+    out = BytesIO()
+    pisa.CreatePDF(html, dest=out, link_callback=_static_link_callback)
+    resp = HttpResponse(out.getvalue(), content_type='application/pdf')
+    resp['Content-Disposition'] = 'attachment; filename=items-to-order.pdf'
+    return resp
+
+
+@staff_member_required
 def set_delivery_slot(request, order_id: int):
     order = get_object_or_404(Order.objects.select_related('user'), id=order_id)
     today = date.today()
