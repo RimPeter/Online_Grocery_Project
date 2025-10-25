@@ -11,6 +11,7 @@ from _orders.models import Order, OrderItem
 from django.contrib.auth.decorators import login_required
 from pathlib import Path
 from django.urls import reverse
+from decimal import Decimal
 from django.utils.http import url_has_allowed_host_and_scheme
 
 
@@ -174,7 +175,7 @@ def cart_view(request):
 
     # Build cart items and calculate the total price from session data.
     cart_items = []
-    total_price = 0
+    total_price = Decimal('0.00')
     products_by_id = {}
     if cart:
         product_ids = list(cart.keys())
@@ -183,11 +184,14 @@ def cart_view(request):
         for pid, quantity in cart.items():
             product = products_by_id.get(str(pid))
             if product:
-                item_total = product.price * quantity
+                # ensure Decimal math
+                item_price = Decimal(str(product.price))
+                qty = int(quantity)
+                item_total = item_price * qty
                 total_price += item_total
                 cart_items.append({
                     'product': product,
-                    'quantity': quantity,
+                    'quantity': qty,
                     'item_total': item_total,
                 })
 
@@ -205,9 +209,15 @@ def cart_view(request):
                 price=product.price
             )
 
+    # Fixed delivery charge applied on cart totals display
+    delivery_charge = Decimal('1.50') if cart_items else Decimal('0.00')
+    grand_total = (total_price + delivery_charge).quantize(Decimal('0.01'))
+
     context = {
         'cart_items': cart_items,
-        'total_price': total_price,
+        'total_price': total_price.quantize(Decimal('0.01')),
+        'delivery_charge': delivery_charge,
+        'grand_total': grand_total,
         'order': order,  # This order now has updated OrderItems.
         'created_new': created_new,
     }

@@ -77,3 +77,33 @@
 
 /* Ensure p-color wins when combined with helper */
 .helper.p-color { color: #ffffff; }
+
+/* Cart page responsive fixes for list-group overflow */
+.cart-page .list-group-item img {
+  max-width: 100%;
+  height: auto;
+}
+.cart-page .list-group .row > [class*='col-'] {
+  min-width: 0; /* allow flex items to shrink */
+}
+.cart-page h6.price,
+.cart-page .price,
+.cart-page .col-md-3 {
+  overflow-wrap: anywhere; /* handle long product names/variants */
+}
+.cart-page .input-group { width: 100%; }
+
+@media (max-width: 780px) {
+  /* Stack columns to avoid horizontal overflow just above Bootstrap md */
+  .cart-page .list-group .row {
+    row-gap: 12px;
+  }
+  .cart-page .list-group .row > [class*='col-'] {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  /* Keep the product image reasonably sized when stacked */
+  .cart-page .position-relative {
+    max-width: 180px;
+  }
+}
