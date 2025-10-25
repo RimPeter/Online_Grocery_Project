@@ -106,6 +106,15 @@
               <li>
                 <a class="dropdown-item" href="{% url '_product_management:dl' %}">Leaflet DL</a>
               </li>
+              <li>
+                <a class="dropdown-item" href="{% url '_product_management:active_orders' %}">Active Orders</a>
+              </li>
+              <li>
+                <a class="dropdown-item" href="{% url '_product_management:completed_orders' %}">Completed Orders</a>
+              </li>
+              <li>
+                <a class="dropdown-item" href="{% url '_product_management:items_to_order' %}">Items To Order</a>
+              </li>
               {% endif %}
               <li>
                 <a

@@ -1,5 +1,5 @@
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseServerError
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from urllib.parse import urlparse, quote_plus
 from io import BytesIO
 import base64
@@ -8,6 +8,10 @@ from django.template.loader import get_template
 from django.conf import settings
 from django.contrib.staticfiles import finders
 from xhtml2pdf import pisa
+from django.contrib.admin.views.decorators import staff_member_required
+from django.db.models import Count, Sum
+from _orders.models import Order, OrderItem
+from django.contrib import messages
 
 # Lazy import of WeasyPrint to avoid noisy import errors at startup on systems
 # where native libraries (cairo/pango/etc.) are not available.
@@ -191,3 +195,98 @@ def leaflet_status(request):
 
 # dl_leaflet_jpg feature removed per request
 
+
+@staff_member_required
+def active_orders(request):
+    active_statuses = ('pending', 'paid', 'processed')
+    orders = (
+        Order.objects
+        .filter(status__in=active_statuses)
+        .select_related('user')
+        .prefetch_related('items__product')
+        .annotate(items_count=Count('items'))
+        .order_by('-created_at')
+    )
+    return render(request, '_product_management/active_orders.html', {'orders': orders})
+
+
+@staff_member_required
+def completed_orders(request):
+    orders = (
+        Order.objects
+        .filter(status='delivered')
+        .select_related('user')
+        .prefetch_related('items__product')
+        .annotate(items_count=Count('items'))
+        .order_by('-created_at')
+    )
+    return render(request, '_product_management/completed_orders.html', {'orders': orders})
+
+
+@staff_member_required
+def mark_order_completed(request, order_id: int):
+    if request.method != 'POST':
+        return HttpResponseBadRequest('Invalid method')
+
+    order = get_object_or_404(Order, id=order_id)
+    if order.status in ('pending', 'paid', 'processed'):
+        order.status = 'delivered'
+        order.save(update_fields=['status'])
+        messages.success(request, f'Order #{order.id} marked as completed.')
+    else:
+        messages.info(request, f'Order #{order.id} is already {order.get_status_display().lower()}.')
+
+    return redirect('_product_management:active_orders')
+
+
+@staff_member_required
+def mark_all_orders_completed(request):
+    if request.method != 'POST':
+        return HttpResponseBadRequest('Invalid method')
+
+    active_statuses = ('pending', 'paid', 'processed')
+    qs = Order.objects.filter(status__in=active_statuses)
+    updated = qs.update(status='delivered')
+    if updated:
+        messages.success(request, f'Marked {updated} order(s) as completed.')
+    else:
+        messages.info(request, 'No active orders to complete.')
+    return redirect('_product_management:active_orders')
+
+
+@staff_member_required
+def mark_order_active(request, order_id: int):
+    if request.method != 'POST':
+        return HttpResponseBadRequest('Invalid method')
+
+    order = get_object_or_404(Order, id=order_id)
+    if order.status == 'delivered':
+        order.status = 'processed'
+        order.save(update_fields=['status'])
+        messages.success(request, f'Order #{order.id} moved back to Active.')
+    else:
+        messages.info(request, f'Order #{order.id} is {order.get_status_display().lower()}, not completed.')
+
+    return redirect('_product_management:completed_orders')
+
+
+@staff_member_required
+def items_to_order(request):
+    active_statuses = ('pending', 'paid', 'processed')
+    items = (
+        OrderItem.objects
+        .filter(order__status__in=active_statuses)
+        .values(
+            'product_id',
+            'product__name',
+            'product__sku',
+            'product__variant',
+        )
+        .annotate(
+            total_qty=Sum('quantity'),
+            orders_count=Count('order', distinct=True),
+        )
+        .order_by('product__name')
+    )
+    context = { 'items': items }
+    return render(request, '_product_management/items_to_order.html', context)

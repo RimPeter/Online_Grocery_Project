@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Completed Orders{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="mb-0">Completed Orders</h1>
+      <a class="btn btn-outline-secondary" href="{% url '_product_management:active_orders' %}">Back To Active</a>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-striped table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th scope="col"></th>
+            <th scope="col">ID</th>
+            <th scope="col">Customer</th>
+            <th scope="col">Status</th>
+            <th scope="col">Items</th>
+            <th scope="col">Total</th>
+            <th scope="col">Created</th>
+            <th scope="col">Delivery</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="ordersCompletedBody">
+          {% for o in orders %}
+            <!-- Summary row -->
+            <tr>
+              <td style="width: 36px;">
+                <button class="btn btn-sm btn-outline-secondary"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#orderc-{{ o.id }}"
+                        aria-expanded="false"
+                        aria-controls="orderc-{{ o.id }}">
+                  +
+                </button>
+              </td>
+              <td>#{{ o.id }}</td>
+              <td>{{ o.user }}</td>
+              <td><span class="badge bg-success">{{ o.get_status_display }}</span></td>
+              <td>
+                {% if o.items_count %}
+                  {{ o.items_count }}
+                {% else %}
+                  {{ o.items.all|length }}
+                {% endif %}
+              </td>
+              <td>&pound;{{ o.total }}</td>
+              <td>{{ o.created_at|date:"Y-m-d H:i" }}</td>
+              <td>
+                {% if o.delivery_date or o.delivery_time %}
+                  {{ o.delivery_date|default:"-" }} {{ o.delivery_time|default:"" }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td class="d-flex gap-2">
+                <a class="btn btn-sm btn-outline-primary" href="{% url 'admin:_orders_order_change' o.id %}">Open in Admin</a>
+                <form method="post" action="{% url '_product_management:mark_order_active' o.id %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-warning">Back To Active</button>
+                </form>
+              </td>
+            </tr>
+
+            <!-- Detail row (collapsible) -->
+            <tr id="orderc-{{ o.id }}" class="collapse" data-bs-parent="#ordersCompletedBody">
+              <td colspan="9">
+                <div class="p-2">
+                  <div class="mb-2 fw-semibold">Order Items</div>
+                  <ul class="list-group">
+                    {% for item in o.items.all %}
+                      <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                          <div class="fw-semibold">{{ item.product.name }}</div>
+                          <div class="text-muted small">&pound;{{ item.price }} x {{ item.quantity }}</div>
+                        </div>
+                      </li>
+                    {% empty %}
+                      <li class="list-group-item text-muted">No items in this order.</li>
+                    {% endfor %}
+                  </ul>
+
+                  <div class="mt-3 text-end">
+                    <strong>Total:</strong> &pound;{{ o.total }}
+                  </div>
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="9" class="text-center text-muted py-4">No completed orders found.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mt-3">
+      <a class="btn btn-link" href="{% url '_product_management:active_orders' %}">Back To Active</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
