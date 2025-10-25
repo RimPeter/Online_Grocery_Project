@@ -14,6 +14,7 @@ from django.db.models.functions import Coalesce, Cast
 from datetime import date, timedelta
 from django.views.decorators.http import require_http_methods
 import threading
+from _catalog.models import All_Products
 from _orders.models import Order, OrderItem
 from django.contrib import messages
 
@@ -395,43 +396,75 @@ def commands(request):
 
     Runs datajob in a background thread so the request does not block.
     """
+    product_count = All_Products.objects.count()
+
     if request.method == 'POST':
-        run_all = bool(request.POST.get('all'))
-        run_scrape = bool(request.POST.get('scrape')) or run_all
-        if request.POST.get('no_scrape'):
-            run_scrape = False
-        run_variants = bool(request.POST.get('variants')) or run_all
-        run_vat = bool(request.POST.get('vat')) or run_all
-        run_home = bool(request.POST.get('home_subcats')) or run_all
-        variants_limit = int(request.POST.get('variants_limit') or 0)
-        variants_dry = bool(request.POST.get('variants_dry_run'))
-        home_active = not bool(request.POST.get('home_inactive'))
-        verbosity = int(request.POST.get('verbosity') or 1)
+        action = request.POST.get('action') or 'datajob'
 
-        def _run_datajob():
-            try:
-                from django.core.management import call_command
-                call_command(
-                    'datajob',
-                    **{
-                        'all': run_all,
-                        'scrape': (not run_all and run_scrape),
-                        'no_scrape': (not run_all and not run_scrape and bool(request.POST.get('no_scrape'))),
-                        'variants': (not run_all and run_variants),
-                        'variants_limit': variants_limit,
-                        'variants_dry_run': variants_dry,
-                        'vat': (not run_all and run_vat),
-                        'home_subcats': (not run_all and run_home),
-                        'home_inactive': (not home_active),
-                        'verbosity': verbosity,
-                    }
-                )
-            except Exception:
-                # Intentionally swallow to avoid crashing the thread; errors will appear in server logs
-                pass
+        if action == 'datajob':
+            run_all = bool(request.POST.get('all'))
+            run_scrape = bool(request.POST.get('scrape')) or run_all
+            if request.POST.get('no_scrape'):
+                run_scrape = False
+            run_variants = bool(request.POST.get('variants')) or run_all
+            run_vat = bool(request.POST.get('vat')) or run_all
+            run_home = bool(request.POST.get('home_subcats')) or run_all
+            variants_limit = int(request.POST.get('variants_limit') or 0)
+            variants_dry = bool(request.POST.get('variants_dry_run'))
+            home_active = not bool(request.POST.get('home_inactive'))
+            verbosity = int(request.POST.get('verbosity') or 1)
 
-        threading.Thread(target=_run_datajob, daemon=True).start()
-        messages.success(request, 'Data job started in background. Refresh later to see results.')
-        return redirect('_product_management:commands')
+            def _run_datajob():
+                try:
+                    from django.core.management import call_command
+                    call_command(
+                        'datajob',
+                        **{
+                            'all': run_all,
+                            'scrape': (not run_all and run_scrape),
+                            'no_scrape': (not run_all and not run_scrape and bool(request.POST.get('no_scrape'))),
+                            'variants': (not run_all and run_variants),
+                            'variants_limit': variants_limit,
+                            'variants_dry_run': variants_dry,
+                            'vat': (not run_all and run_vat),
+                            'home_subcats': (not run_all and run_home),
+                            'home_inactive': (not home_active),
+                            'verbosity': verbosity,
+                        }
+                    )
+                except Exception:
+                    # Intentionally swallow to avoid crashing the thread; errors will appear in server logs
+                    pass
 
-    return render(request, '_product_management/commands.html')
+            threading.Thread(target=_run_datajob, daemon=True).start()
+            messages.success(request, 'Data job started in background. Refresh later to see results.')
+            return redirect('_product_management:commands')
+
+        elif action == 'clear_all_products':
+            # Extra safety: only superusers may execute
+            if not request.user.is_superuser:
+                messages.error(request, 'Only superusers may clear all products.')
+                return redirect('_product_management:commands')
+
+            ack = bool(request.POST.get('ack'))
+            phrase = (request.POST.get('confirm_phrase') or '').strip()
+            count_match = (request.POST.get('confirm_count') or '').strip()
+            expected_phrase = 'DELETE ALL PRODUCTS'
+            expected_count = str(product_count)
+
+            if not ack or phrase != expected_phrase or count_match != expected_count:
+                messages.error(request, 'Confirmation failed. Please follow the exact steps to proceed.')
+                return redirect('_product_management:commands')
+
+            def _run_clear():
+                try:
+                    from django.core.management import call_command
+                    call_command('clear_all_products', verbosity=1)
+                except Exception:
+                    pass
+
+            threading.Thread(target=_run_clear, daemon=True).start()
+            messages.success(request, 'Clear all products started. This is destructive; check logs for progress.')
+            return redirect('_product_management:commands')
+
+    return render(request, '_product_management/commands.html', {'product_count': product_count})
