@@ -2,9 +2,18 @@
 html, body {
   height: 100%;
   margin: 0;
-  background: #f8f9fa;
+  background: #56b6ee;
   color: #1a1a1a;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+/* A11y utility for off-screen labels (PDF-friendly) */
+.visually-hidden {
+  position: absolute !important;
+  height: 1px; width: 1px;
+  overflow: hidden;
+  clip: rect(1px, 1px, 1px, 1px);
+  white-space: nowrap;
 }
 
 /* Ensure DL page size for print/PDF renderers */
@@ -47,16 +56,68 @@ html, body {
   background: #f9fafb;
 }
 .back-home:hover { text-decoration: underline; }
+.back-home.disabled {
+  color: #9aa4b2;
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+  pointer-events: none;
+}
 
-.lf-body { padding: 12px 14px; }
+.stack-inner { height: fit-content;}
+.lf-body { padding: 12px 14px; height: 100%; box-sizing: border-box;
+background-color: rgb(60, 233, 60); }
+
+/* Table layout inside leaflet body to manage vertical space */
+.lf-body .lf-table { display: table; width: 100%; height: 100%; }
+.lf-body .lf-table .row { display: table-row; }
+.lf-body .lf-table .stack .stack-inner { display: table-cell; }
+.lf-body .lf-table .qr-row { height: 100%; }
+.lf-body .lf-table .qr-row .qr-row-cell { display: table-cell; vertical-align: bottom; height: 100%; }
+.lf-body .lf-table .qr-row .seg-qr { width: 100%; margin: 0; padding: 0; border: 0; }
+.lf-body .lf-table { display: table; width: 100%; height: 100%; }
+.lf-body .lf-table .row { display: table-row; }
+.lf-body .lf-table .stack .stack-inner { display: table-cell; }
+.lf-body .lf-table .qr-row { height: 100%; }
+.lf-body .lf-table .qr-row .seg-qr { height: 100%; display: table; width: 100%; }
 
 /* Table-based deal layout for both HTML and PDF */
 .deal { display: table; width: 100%; table-layout: fixed; border: 1px solid #e5e7eb; padding: 8px; margin-bottom: 8px; }
 .deal .deal-img { display: table-cell; width: 12mm; vertical-align: middle; }
+.deal .deal-img img { max-width: 100%; height: auto; display: block; }
 .deal .deal-info { display: table-cell; vertical-align: middle; padding: 0 6px; }
 .deal .name { font-size: 13px; margin: 0; font-weight: 600; }
 .deal .desc { font-size: 11px; margin: 2px 0 0; color: #666; }
 .deal .price { display: table-cell; width: 18mm; font-size: 14px; font-weight: 700; color: #0d6efd; text-align: right; vertical-align: middle; white-space: nowrap; }
+
+/* Segmented layout for the recreated leaflet */
+.seg { border: 1px solid #e5e7eb; background: #fff; margin-bottom: 8px; padding: 8px; }
+.seg-banner { display: table; width: 100%; table-layout: fixed;
+padding: 0; border: 0; background: transparent; }
+.seg-banner .banner-logo { display: table-cell; width: 22mm; vertical-align: middle; }
+.seg-banner .banner-logo img { width: 100%; height: auto; display: block; }
+.seg-banner .banner-text { display: table-cell; vertical-align: middle; padding-left: 8px; }
+.banner-text { width: auto;}
+.seg-banner .company-name { margin: 0; font-weight: 700; font-size: 16px; }
+.seg-banner .company-tag { margin: 2px 0 0; color: #666; font-size: 12px; }
+
+.seg-slogans .headline { margin: 0 0 6px; font-weight: 700; font-size: 14px; }
+.seg-slogans .bullets { margin: 0; padding-left: 16px; font-size: 12px; }
+.seg-slogans .bullets li { margin: 2px 0; }
+
+.seg-cta { text-align: center; border: 1px dashed #cbd5e1; background: #f8fafc; height: max-content ;}
+.seg-cta .cta-title { margin: 0; font-weight: 700; font-size: 15px; }
+.seg-cta .cta-sub { margin: 4px 0 0; color: #555; font-size: 12px; }
+
+.seg-qr { display: table; width: 100%; text-align: center; margin: 0; padding: 0; border: 0; }
+
+.seg-qr .qr-cell { display: table-cell; vertical-align: middle; }
+.seg-qr .qr-wrap { margin-top: 0; width: 100%; height: 100%; display: block; }
+.seg-qr img.qr { width: 35mm; height: 35mm; display: block; margin: 0 auto; }
+.lf-body .lf-table .qr-row .qr-cell { height: 100%; }
+.lf-body .lf-table .qr-row .qr-wrap { height: 100%; }
+/* Full-width hero image segment */
+.seg-hero { padding: 0; border: 0; background: transparent; }
+.seg-hero .hero-img { width: 100%; height: auto; display: block; }
 
 .lf-footer {
   padding: 10px 14px;
@@ -65,12 +126,15 @@ html, body {
   color: #666;
 }
 
-.qr-wrap { margin-top: 6px; text-align: right; }
-img.qr { width: 28mm; height: 28mm; border: 1px solid #e5e7eb; background: #fff; }
+
+/* .qr-wrap { margin-top: 6px; text-align: right; padding: 10px; padding-top: 60px;} */
+img.qr { width: 32mm; height: 32mm; border: 1px solid #e5e7eb; background: #fff; }
 
 .lf-url-form { margin-top: 6px; }
 .lf-url-form input[type="url"] { font-size: 12px; padding: 4px 6px; width: 70%; }
 .lf-url-form button { font-size: 12px; padding: 4px 8px; }
+
+.muted { color: #666; opacity: 0.9; }
 
 @media print {
   html, body { background: #fff; }

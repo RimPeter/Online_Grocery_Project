@@ -21,8 +21,13 @@ from django.contrib import messages
 # Lazy import of WeasyPrint to avoid noisy import errors at startup on systems
 # where native libraries (cairo/pango/etc.) are not available.
 def _get_weasy():
+    # Attempt to import WeasyPrint quietly; if native deps are missing,
+    # the import may print guidance to stderr — suppress that in 'auto' mode.
     try:  # pragma: no cover
-        from weasyprint import HTML as WPHTML, CSS as WPCSS  # type: ignore
+        import contextlib, io as _io
+        buf = _io.StringIO()
+        with contextlib.redirect_stderr(buf):
+            from weasyprint import HTML as WPHTML, CSS as WPCSS  # type: ignore
         return WPHTML, WPCSS
     except Exception:
         return None, None
@@ -35,10 +40,13 @@ def index(request):
 
 
 def dl_leaflet(request):
+    # Choose QR image kind to mirror PDF renderer capabilities for visual parity
+    active_renderer = _choose_renderer()
+    qr_kind = "svg" if active_renderer == "weasyprint" else "png"
     return render(
         request,
         "_product_management/DL_size_leaflet.html",
-        {"pdf": False},
+        {"pdf": False, "qr_kind": qr_kind},
     )
 
 
@@ -58,6 +66,7 @@ def qr_svg(request):
         return HttpResponseBadRequest("Missing site parameter")
 
     site = _ensure_scheme(site)
+    kind = request.GET.get("kind", "svg").strip().lower() or "svg"
 
     try:
         import segno  # type: ignore
@@ -70,8 +79,12 @@ def qr_svg(request):
     try:
         qr = segno.make(site)
         buf = BytesIO()
-        qr.save(buf, kind="svg", scale=3)
-        return HttpResponse(buf.getvalue(), content_type="image/svg+xml")
+        if kind == "png":
+            qr.save(buf, kind="png", scale=6)
+            return HttpResponse(buf.getvalue(), content_type="image/png")
+        else:
+            qr.save(buf, kind="svg", scale=6)
+            return HttpResponse(buf.getvalue(), content_type="image/svg+xml")
     except Exception as exc:
         return HttpResponseServerError(f"Failed to generate QR: {exc}")
 
@@ -137,14 +150,22 @@ def dl_leaflet_pdf(request):
     site = _ensure_scheme(site) if site else ""
 
     qr_data_uri = None
+    active_renderer = _choose_renderer()
     if site:
         try:
             import segno  # type: ignore
             qr = segno.make(site)
-            buf = BytesIO()
-            qr.save(buf, kind="png", scale=6)
-            b64 = base64.b64encode(buf.getvalue()).decode("ascii")
-            qr_data_uri = f"data:image/png;base64,{b64}"
+            if active_renderer == "weasyprint":
+                # Embed SVG for better fidelity
+                buf = BytesIO()
+                qr.save(buf, kind="svg", scale=3)
+                b64 = base64.b64encode(buf.getvalue()).decode("ascii")
+                qr_data_uri = f"data:image/svg+xml;base64,{b64}"
+            else:
+                buf = BytesIO()
+                qr.save(buf, kind="png", scale=6)
+                b64 = base64.b64encode(buf.getvalue()).decode("ascii")
+                qr_data_uri = f"data:image/png;base64,{b64}"
         except Exception:
             # Fallback placeholder if QR can't be generated locally
             placeholder = (
@@ -161,7 +182,7 @@ def dl_leaflet_pdf(request):
     html = template.render(context)
 
     # Prefer WeasyPrint if chosen/available for CSS parity
-    if _choose_renderer() == 'weasyprint':
+    if active_renderer == 'weasyprint':
         try:
             WPHTML, WPCSS = _get_weasy()
             css_path = finders.find("css/leaflet.css")

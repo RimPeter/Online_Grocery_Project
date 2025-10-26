@@ -12,69 +12,72 @@
   <!-- Controls outside the printable leaflet -->
   {% if not pdf %}
   <div class="leaflet-toolbar">
-    <a href="{% url 'home' %}" class="back-home" aria-label="Back to home">↩ Back home</a>
+    <a href="{% url 'home' %}" class="back-home" aria-label="Back to home">Back home</a>
     <form class="lf-url-form" method="get" action="{% url '_product_management:dl' %}" aria-label="Set website address for QR code">
       <label for="site" class="visually-hidden">Website URL</label>
       <input id="site" name="site" type="url" placeholder="https://example.com" value="{{ request.GET.site }}" required>
       <button type="submit">Preview URL</button>
     </form>
-    <a class="back-home" href="{% url '_product_management:dl_pdf' %}?site={{ request.GET.site|urlencode }}" aria-label="Download PDF">Download PDF</a>
+    {% if request.GET.site %}
+      <a class="back-home" href="{% url '_product_management:dl_pdf' %}?site={{ request.GET.site|urlencode }}" aria-label="Download PDF">Download PDF</a>
+    {% else %}
+      <span class="back-home disabled" aria-disabled="true">Download PDF</span>
+    {% endif %}
   </div>
   {% endif %}
 
   <div class="leaflet">
-    <header class="lf-header">
-      <h1 class="lf-title">Weekly Specials</h1>
-      <p class="lf-sub">Compact DL leaflet template 99 × 210 mm</p>
-    </header>
-
     <main class="lf-body">
-      <!-- Replace placeholders with dynamic data when wiring to views -->
-      <section class="deal">
-        <img class="deal-img" src="{% static 'images/fresh_products.jpg' %}" alt="Item">
-        <div class="deal-info">
-          <p class="name">Featured Item One</p>
-          <p class="desc">Great quality at a fair price</p>
-        </div>
-        <div class="price">£1.99</div>
-      </section>
+      <div class="lf-table">
+        <div class="row stack"><div class="stack-inner">
+          
+        <!-- 1) Company banner: logo + company name -->
+        <section class="seg seg-banner">
+            <div class="banner-logo"><img src="{% static 'images/Kingston_Online_Grocery_logo.png' %}" alt="Kingston Online Grocery logo"></div>
+            <div class="banner-text">
+              <p class="company-name">Kingston Online Grocery</p>
+              <p class="company-tag">Fresh. Local. Delivered.</p>
+            </div>
+          </section>
 
-      <section class="deal">
-        <img class="deal-img" src="{% static 'images/fresh_products.jpg' %}" alt="Item">
-        <div class="deal-info">
-          <p class="name">Featured Item Two</p>
-          <p class="desc">Everyday essential</p>
-        </div>
-        <div class="price">£2.49</div>
-      </section>
+        
+          <!-- Hero image section -->
+        
+          <section class="seg seg-hero">
+          <img class="hero-img" src="{% static 'images/fresh_products.jpg' %}" alt="Fresh products">
+        </section>
 
-      <section class="deal">
-        <img class="deal-img" src="{% static 'images/fresh_products.jpg' %}" alt="Item">
-        <div class="deal-info">
-          <p class="name">Featured Item Three</p>
-          <p class="desc">Limited time offer</p>
-        </div>
-        <div class="price">£0.99</div>
-      </section>
+        <!-- 2) Marketing slogans / deals -->
+        <section class="seg seg-slogans">
+          <p class="headline">Weekly Specials You’ll Love</p>
+          <ul class="bullets">
+            <li>Hand-picked fresh produce every day</li>
+            <li>Great value essentials and pantry staples</li>
+            <li>Fast local delivery to your door</li>
+          </ul>
+        </section>
 
-      <div class="qr-wrap">
-        {% if pdf and qr_data_uri %}
-          <img class="qr" src="{{ qr_data_uri }}" alt="QR code">
-        {% elif request.GET.site %}
-          <img class="qr" src="{% url '_product_management:qr' %}?site={{ request.GET.site|urlencode }}" alt="QR code" loading="lazy">
-        {% else %}
-          <span class="muted">Add a website URL above to render QR</span>
-        {% endif %}
+        <!-- 3) Call to action for QR scan -->
+        <section class="seg seg-cta">
+          <p class="cta-title">Scan to Shop Online</p>
+          <p class="cta-sub">Browse, order, and schedule delivery in minutes.</p>
+        </section>
+
+        <!-- 4) QR code section anchored to bottom via table layout -->
+        <section class="seg seg-qr">
+            <div class="qr-wrap" aria-live="polite">
+              {% if pdf and qr_data_uri %}
+                <img class="qr" src="{{ qr_data_uri }}" alt="QR code linking to {{ request.GET.site }}">
+              {% elif request.GET.site %}
+                <img class="qr" src="{% url '_product_management:qr' %}?site={{ request.GET.site|urlencode }}{% if qr_kind %}&kind={{ qr_kind }}{% endif %}" alt="QR code linking to {{ request.GET.site }}" loading="lazy">
+              {% else %}
+                <span class="muted">Add a website URL above to render QR</span>
+              {% endif %}
+            </div>
+            {% if request.GET.site %}<div class="qr-url muted">{{ request.GET.site }}</div>{% endif %}
+          </section>
       </div>
     </main>
-
-    <footer class="lf-footer">
-      <div>
-        Images for illustration only. While stocks last.
-        {% if request.GET.site %}<div class="muted">URL: {{ request.GET.site }}</div>{% endif %}
-      </div>
-    </footer>
   </div>
 </body>
 </html>
-
