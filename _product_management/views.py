@@ -9,7 +9,7 @@ from django.conf import settings
 from django.contrib.staticfiles import finders
 from xhtml2pdf import pisa
 from django.contrib.admin.views.decorators import staff_member_required
-from django.db.models import Count, Sum, F, DecimalField, Value
+from django.db.models import Count, Sum, F, DecimalField, Value, ExpressionWrapper, Q
 from django.db.models.functions import Coalesce, Cast
 from datetime import date, timedelta
 from django.views.decorators.http import require_http_methods
@@ -396,7 +396,7 @@ def mark_order_active(request, order_id: int):
 @staff_member_required
 def items_to_order(request):
     active_statuses = ('pending', 'paid', 'processed')
-    items = (
+    items_qs = (
         OrderItem.objects
         .filter(order__status__in=active_statuses)
         .values(
@@ -404,6 +404,9 @@ def items_to_order(request):
             'product__name',
             'product__sku',
             'product__variant',
+            'product__price',
+            'product__rsp',
+            'product__vat_rate',
         )
         .annotate(
             total_qty=Sum('quantity'),
@@ -411,7 +414,144 @@ def items_to_order(request):
         )
         .order_by('product__name')
     )
-    context = { 'items': items }
+    # Enrich items to adjust RSP for bulk items (use bulk pack price instead of per-item RSP)
+    items = list(items_qs)
+    if items:
+        prod_ids = [it['product_id'] for it in items]
+        products_map = {p.id: p for p in All_Products.objects.filter(id__in=prod_ids)}
+        from decimal import Decimal
+        # Running totals built from the same logic used for per-row display
+        sum_cost_net = Decimal('0')
+        sum_cost_gross = Decimal('0')
+        sum_rsp_gross = Decimal('0')
+        sum_rsp_net = Decimal('0')
+        sum_net_profit = Decimal('0')
+
+        for it in items:
+            p = products_map.get(it['product_id'])
+            display_rsp = None
+            if p and p.rsp is not None:
+                try:
+                    display_rsp = p.bulk_total_price if p.is_bulk else p.rsp
+                except Exception:
+                    display_rsp = p.rsp
+            it['display_rsp'] = display_rsp
+            if p:
+                try:
+                    it['vat_rate_display'] = p.get_vat_rate_display()
+                except Exception:
+                    it['vat_rate_display'] = it.get('product__vat_rate')
+            # Compute per-item gross supplier cost (price incl. VAT when standard)
+            try:
+                if p and p.price is not None:
+                    factor = Decimal('1.20') if getattr(p, 'vat_rate', None) == 'standard' else Decimal('1.00')
+                    it['gross_price'] = p.price * factor
+                else:
+                    it['gross_price'] = None
+            except Exception:
+                it['gross_price'] = None
+            # Compute RSP Net = RSP * 5/6 (remove 20% VAT); respect bulk display_rsp when present
+            try:
+                gross_rsp = display_rsp if display_rsp is not None else (p.rsp if p and p.rsp is not None else None)
+                if gross_rsp is not None:
+                    it['rsp_net'] = (gross_rsp * Decimal('5')) / Decimal('6')
+                else:
+                    it['rsp_net'] = None
+            except Exception:
+                it['rsp_net'] = None
+            # Compute Net Profit per item = RSP Net - Cost (price)
+            try:
+                if p and p.price is not None and it.get('rsp_net') is not None:
+                    it['net_profit'] = it['rsp_net'] - p.price
+                else:
+                    it['net_profit'] = None
+            except Exception:
+                it['net_profit'] = None
+
+            # Accumulate totals using pack-aware logic
+            try:
+                qty = int(it.get('total_qty') or 0)
+            except Exception:
+                qty = 0
+            pack_mult = 1
+            try:
+                if p and p.is_bulk:
+                    pack_mult = int(p.pack_amount()) or 1
+            except Exception:
+                pack_mult = 1
+
+            # Cost (net) per ordered unit/pack
+            price_net = p.price if (p and p.price is not None) else Decimal('0')
+            cost_net_line = price_net * Decimal(pack_mult) * Decimal(qty)
+
+            # Cost (gross) adds VAT for 'standard' only
+            if p and getattr(p, 'vat_rate', None) == 'standard':
+                cost_gross_line = cost_net_line * Decimal('1.20')
+            else:
+                cost_gross_line = cost_net_line
+
+            # RSP gross per displayed logic (pack total if bulk)
+            rsp_gross_unit = None
+            if display_rsp is not None:
+                rsp_gross_unit = Decimal(display_rsp)
+            elif p and p.rsp is not None:
+                rsp_gross_unit = Decimal(p.rsp)
+            else:
+                rsp_gross_unit = Decimal('0')
+            rsp_gross_line = rsp_gross_unit * Decimal(qty)
+            rsp_net_line = (rsp_gross_line * Decimal('5')) / Decimal('6') if rsp_gross_line else Decimal('0')
+            net_profit_line = rsp_net_line - cost_net_line
+
+            sum_cost_net += cost_net_line
+            sum_cost_gross += cost_gross_line
+            sum_rsp_gross += rsp_gross_line
+            sum_rsp_net += rsp_net_line
+            sum_net_profit += net_profit_line
+
+        # Stash totals on request cycle
+        request._ito_totals = {
+            'sum_cost_net': sum_cost_net,
+            'sum_cost_gross': sum_cost_gross,
+            'sum_rsp_gross': sum_rsp_gross,
+            'sum_rsp_net': sum_rsp_net,
+            'sum_net_profit': sum_net_profit,
+        }
+    # Compute aggregate totals using the pack-aware sums above
+    VAT_RATE = Decimal('0.20')
+    totals_map = getattr(request, '_ito_totals', None) or {}
+    total_purchase = totals_map.get('sum_cost_net') or Decimal('0')
+    total_price = totals_map.get('sum_cost_gross') or Decimal('0')
+    total_rsp = totals_map.get('sum_rsp_gross') or Decimal('0')
+    total_rsp_net = totals_map.get('sum_rsp_net') or Decimal('0')
+    total_net_profit = totals_map.get('sum_net_profit') or Decimal('0')
+    # VAT contents from gross
+    def vat_content(gross):
+        try:
+            gross = gross or Decimal('0')
+            return (gross * VAT_RATE / (Decimal('1.00') + VAT_RATE))
+        except Exception:
+            return Decimal('0')
+    # Purchase VAT content only for standard-rated items approximated from difference gross - net
+    vat_purchase = total_price - total_purchase
+    vat_sale = vat_content(total_rsp)
+    gross_profit = total_rsp - total_purchase
+    net_profit = total_net_profit
+    grand_qty = sum(int(it.get('total_qty') or 0) for it in items) if items else 0
+
+    context = {
+        'items': items,
+        'total_purchase': total_purchase,
+        'vat_purchase': vat_purchase,
+        'total_sale': total_rsp,  # backwards-compat alias
+        'vat_sale': vat_sale,
+        'gross_profit': gross_profit,
+        'net_profit': net_profit,
+        'total_price': total_price,
+        'total_rsp': total_rsp,
+        'total_rsp_net': total_rsp_net,
+        'total_net_profit': total_net_profit,
+        'grand_qty': grand_qty,
+    }
     return render(request, '_product_management/items_to_order.html', context)
 
 
