@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static sum_tags %}
 
 {% block title %}Items To Order{% endblock %}
 
@@ -66,10 +66,41 @@
               <td colspan="11" class="text-center text-muted py-4">No items found across active orders.</td>
             </tr>
           {% endfor %}
-        </tbody>
+
+                </tbody>
+        {% if items %}
+        <tfoot class="table-light fw-bold">
+  <tr>
+    <td>Total</td>
+    <td>-</td>
+    <td>-</td>
+    <td>
+      &pound;{{ items|sum_attr:"product__price"|floatformat:2 }}
+    </td>
+    <td>
+      &pound;{{ items|sum_attr:"gross_price"|floatformat:2 }}
+    </td>
+    <td>
+      &pound;{{ items|sum_coalesce:"display_rsp,product__rsp"|floatformat:2 }}
+    </td>
+    <td>
+      &pound;{{ items|sum_attr:"rsp_net"|floatformat:2 }}
+    </td>
+    <td>
+      &pound;{{ items|sum_attr:"net_profit"|floatformat:2 }}
+    </td>
+    <td>-</td>
+    <td>{{ items|sum_attr:"total_qty" }}</td>
+    <td>{{ items|sum_attr:"orders_count" }}</td>
+  </tr>
+</tfoot>
+        {% endif %}
+
         
       </table>
     </div>
 </div>
  </div>
 {% endblock %}
+
+
