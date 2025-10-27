@@ -29,6 +29,7 @@
   <div class="leaflet">
     <main class="lf-body">
       <div class="lf-table">
+        <!-- Top stack: auto height content -->
         <div class="row stack"><div class="stack-inner">
           
         <!-- 1) Company banner: logo + company name -->
@@ -63,19 +64,23 @@
           <p class="cta-sub">Browse, order, and schedule delivery in minutes.</p>
         </section>
 
-        <!-- 4) QR code section anchored to bottom via table layout -->
-        <section class="seg seg-qr">
-            <div class="qr-wrap" aria-live="polite">
-              {% if pdf and qr_data_uri %}
-                <img class="qr" src="{{ qr_data_uri }}" alt="QR code linking to {{ request.GET.site }}">
-              {% elif request.GET.site %}
-                <img class="qr" src="{% url '_product_management:qr' %}?site={{ request.GET.site|urlencode }}{% if qr_kind %}&kind={{ qr_kind }}{% endif %}" alt="QR code linking to {{ request.GET.site }}" loading="lazy">
-              {% else %}
-                <span class="muted">Add a website URL above to render QR</span>
-              {% endif %}
-            </div>
-            {% if request.GET.site %}<div class="qr-url muted">{{ request.GET.site }}</div>{% endif %}
-          </section>
+        </div></div>
+
+        <!-- Bottom row: expands to remaining height; QR anchored to bottom -->
+        <div class="row qr-row"><div class="qr-row-cell">
+          <section class="seg seg-qr">
+              <div class="qr-wrap" aria-live="polite">
+                {% if pdf and qr_data_uri %}
+                  <img class="qr" src="{{ qr_data_uri }}" alt="QR code linking to {{ request.GET.site }}">
+                {% elif request.GET.site %}
+                  <img class="qr" src="{% url '_product_management:qr' %}?site={{ request.GET.site|urlencode }}{% if qr_kind %}&kind={{ qr_kind }}{% endif %}" alt="QR code linking to {{ request.GET.site }}" loading="lazy">
+                {% else %}
+                  <span class="muted">Add a website URL above to render QR</span>
+                {% endif %}
+              </div>
+              {% if request.GET.site %}<div class="qr-url muted">{{ request.GET.site }}</div>{% endif %}
+            </section>
+        </div></div>
       </div>
     </main>
   </div>

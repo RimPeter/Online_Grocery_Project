@@ -33,6 +33,99 @@ def _get_weasy():
         return None, None
 import os
 
+"""PDF rendering helpers using Playwright (Chromium).
+
+We replace WeasyPrint with Playwright for HTML -> PDF rendering. We keep
+xhtml2pdf as a fallback so existing flows continue to work when Chromium
+is not available in the runtime environment.
+"""
+
+def _has_playwright() -> bool:
+    try:
+        from playwright.sync_api import sync_playwright  # type: ignore  # noqa: F401
+        return True
+    except Exception:
+        return False
+
+
+def _inline_css(html: str, css_subpath: str) -> str:
+    """Inline a static CSS file into the document <head>.
+
+    Looks up the CSS via staticfiles finders using the subpath relative to
+    STATIC_ROOT (e.g., 'css/leaflet.css'). If not found, returns the HTML
+    unchanged.
+    """
+    try:
+        css_path = finders.find(css_subpath)
+        if not css_path:
+            return html
+        with open(css_path, 'r', encoding='utf-8') as fh:
+            css = fh.read()
+        inject = f"\n<style>{css}</style>\n"
+        lower = html.lower()
+        pos = lower.find('<head>')
+        if pos != -1:
+            insert_at = pos + len('<head>')
+            return html[:insert_at] + inject + html[insert_at:]
+        pos = lower.find('</head>')
+        if pos != -1:
+            return html[:pos] + inject + html[pos:]
+        return inject + html
+    except Exception:
+        return html
+
+
+def _render_pdf_playwright(html: str, request) -> bytes:
+    """Render HTML to PDF using Playwright/Chromium.
+
+    - Inlines key CSS for reliable print styling.
+    - Adds a <base> tag so relative URLs (e.g., /static/...) resolve.
+    - Prints backgrounds and removes margins to allow full-bleed designs.
+    """
+    from playwright.sync_api import sync_playwright  # type: ignore
+
+    # Inline primary CSS files used by our templates
+    if 'DL_size_leaflet' in html:
+        html = _inline_css(html, 'css/leaflet.css')
+    if 'Items To Order' in html or 'items-to-order' in html:
+        html = _inline_css(html, 'css/main.css')
+
+    # Ensure relative URLs resolve (static, images)
+    try:
+        base_href = request.build_absolute_uri('/')
+    except Exception:
+        base_href = '/'
+    base_tag = f"<base href=\"{base_href}\">\n"
+    lower = html.lower()
+    pos = lower.find('<head>')
+    if pos != -1:
+        insert_at = pos + len('<head>')
+        html = html[:insert_at] + base_tag + html[insert_at:]
+    else:
+        pos = lower.find('</head>')
+        if pos != -1:
+            html = html[:pos] + base_tag + html[pos:]
+        else:
+            html = base_tag + html
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context()
+        page = context.new_page()
+        page.set_content(html, wait_until='networkidle')
+        pdf_bytes = page.pdf(
+            print_background=True,
+            prefer_css_page_size=True,
+        )
+        context.close()
+        browser.close()
+        return pdf_bytes
+
+
+# Backstop: ensure any lingering calls to _get_weasy() don't try to import.
+def _get_weasy():  # pragma: no cover
+    return None, None
+
 
 
 def index(request):
@@ -42,7 +135,7 @@ def index(request):
 def dl_leaflet(request):
     # Choose QR image kind to mirror PDF renderer capabilities for visual parity
     active_renderer = _choose_renderer()
-    qr_kind = "svg" if active_renderer == "weasyprint" else "png"
+    qr_kind = "svg" if active_renderer == "playwright" else "png"
     return render(
         request,
         "_product_management/DL_size_leaflet.html",
@@ -131,17 +224,18 @@ def _static_link_callback(uri, rel):
 
 
 def _choose_renderer():
-    """Return 'weasyprint' if available and configured, otherwise 'xhtml2pdf'."""
+    """Return 'playwright' if available/configured, otherwise 'xhtml2pdf'."""
     mode = getattr(settings, 'LEAFLET_PDF_RENDERER', 'auto')
     mode = (mode or 'auto').lower()
+    # Back-compat: treat legacy 'weasyprint' as 'playwright'
     if mode == 'weasyprint':
-        WPHTML, WPCSS = _get_weasy()
-        return 'weasyprint' if WPHTML is not None and WPCSS is not None else 'xhtml2pdf'
+        mode = 'playwright'
+    if mode == 'playwright':
+        return 'playwright' if _has_playwright() else 'xhtml2pdf'
     if mode == 'xhtml2pdf':
         return 'xhtml2pdf'
     # auto
-    WPHTML, WPCSS = _get_weasy()
-    return 'weasyprint' if WPHTML is not None and WPCSS is not None else 'xhtml2pdf'
+    return 'playwright' if _has_playwright() else 'xhtml2pdf'
 
 
 def dl_leaflet_pdf(request):
@@ -155,7 +249,7 @@ def dl_leaflet_pdf(request):
         try:
             import segno  # type: ignore
             qr = segno.make(site)
-            if active_renderer == "weasyprint":
+            if active_renderer == "playwright":
                 # Embed SVG for better fidelity
                 buf = BytesIO()
                 qr.save(buf, kind="svg", scale=3)
@@ -181,13 +275,10 @@ def dl_leaflet_pdf(request):
     context = {"pdf": True, "qr_data_uri": qr_data_uri, "request": request}
     html = template.render(context)
 
-    # Prefer WeasyPrint if chosen/available for CSS parity
-    if active_renderer == 'weasyprint':
+    # Prefer Playwright if available for best CSS fidelity
+    if active_renderer == 'playwright':
         try:
-            WPHTML, WPCSS = _get_weasy()
-            css_path = finders.find("css/leaflet.css")
-            stylesheets = [WPCSS(filename=css_path)] if css_path else None
-            pdf_bytes = WPHTML(string=html, base_url=str(settings.BASE_DIR)).write_pdf(stylesheets=stylesheets)
+            pdf_bytes = _render_pdf_playwright(html, request)
             response = HttpResponse(pdf_bytes, content_type="application/pdf")
             response["Content-Disposition"] = "attachment; filename=leaflet-dl.pdf"
             return response
@@ -205,15 +296,11 @@ def dl_leaflet_pdf(request):
 def leaflet_status(request):
     """Simple status page showing which PDF renderer is configured and available."""
     configured = getattr(settings, 'LEAFLET_PDF_RENDERER', 'auto')
-    # Only probe WeasyPrint availability when not explicitly forced to xhtml2pdf
-    weasy_available = False
-    if str(configured).lower() != 'xhtml2pdf':
-        WPHTML, WPCSS = _get_weasy()
-        weasy_available = WPHTML is not None and WPCSS is not None
+    pw_available = _has_playwright() if str(configured).lower() != 'xhtml2pdf' else False
     active = _choose_renderer()
     body = (
         f"Configured: {configured}\n"
-        f"WeasyPrint available: {weasy_available}\n"
+        f"Playwright available: {pw_available}\n"
         f"Active renderer: {active}\n"
     )
     return HttpResponse(body, content_type='text/plain')
@@ -351,12 +438,9 @@ def items_to_order_pdf(request):
     template = get_template('_product_management/items_to_order_pdf.html')
     html = template.render({'items': items})
 
-    if _choose_renderer() == 'weasyprint':
+    if _choose_renderer() == 'playwright':
         try:
-            WPHTML, WPCSS = _get_weasy()
-            css_main = finders.find('css/main.css')
-            stylesheets = [WPCSS(filename=css_main)] if css_main else None
-            pdf_bytes = WPHTML(string=html, base_url=str(settings.BASE_DIR)).write_pdf(stylesheets=stylesheets)
+            pdf_bytes = _render_pdf_playwright(html, request)
             resp = HttpResponse(pdf_bytes, content_type='application/pdf')
             resp['Content-Disposition'] = 'attachment; filename=items-to-order.pdf'
             return resp

@@ -5,6 +5,8 @@ html, body {
   background: #56b6ee;
   color: #1a1a1a;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 
 /* A11y utility for off-screen labels (PDF-friendly) */
@@ -64,8 +66,8 @@ html, body {
 }
 
 .stack-inner { height: fit-content;}
-.lf-body { padding: 12px 14px; height: 100%; box-sizing: border-box;
-background-color: rgb(60, 233, 60); }
+.lf-body { padding: 12px 14px; height: 100%; min-height: 100%; box-sizing: border-box;
+background-color: rgb(60, 233, 60); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
 /* Table layout inside leaflet body to manage vertical space */
 .lf-body .lf-table { display: table; width: 100%; height: 100%; }
@@ -73,12 +75,7 @@ background-color: rgb(60, 233, 60); }
 .lf-body .lf-table .stack .stack-inner { display: table-cell; }
 .lf-body .lf-table .qr-row { height: 100%; }
 .lf-body .lf-table .qr-row .qr-row-cell { display: table-cell; vertical-align: bottom; height: 100%; }
-.lf-body .lf-table .qr-row .seg-qr { width: 100%; margin: 0; padding: 0; border: 0; }
-.lf-body .lf-table { display: table; width: 100%; height: 100%; }
-.lf-body .lf-table .row { display: table-row; }
-.lf-body .lf-table .stack .stack-inner { display: table-cell; }
-.lf-body .lf-table .qr-row { height: 100%; }
-.lf-body .lf-table .qr-row .seg-qr { height: 100%; display: table; width: 100%; }
+.lf-body .lf-table .qr-row .seg-qr { height: 100%; display: table; width: 100%; margin: 0; padding: 0; border: 0; }
 
 /* Table-based deal layout for both HTML and PDF */
 .deal { display: table; width: 100%; table-layout: fixed; border: 1px solid #e5e7eb; padding: 8px; margin-bottom: 8px; }
@@ -112,7 +109,7 @@ padding: 0; border: 0; background: transparent; }
 
 .seg-qr .qr-cell { display: table-cell; vertical-align: middle; }
 .seg-qr .qr-wrap { margin-top: 0; width: 100%; height: 100%; display: block; }
-.seg-qr img.qr { width: 35mm; height: 35mm; display: block; margin: 0 auto; }
+.seg-qr img.qr { width: 85mm; height: 85mm; display: block; margin: 0 auto; }
 .lf-body .lf-table .qr-row .qr-cell { height: 100%; }
 .lf-body .lf-table .qr-row .qr-wrap { height: 100%; }
 /* Full-width hero image segment */
@@ -128,7 +125,7 @@ padding: 0; border: 0; background: transparent; }
 
 
 /* .qr-wrap { margin-top: 6px; text-align: right; padding: 10px; padding-top: 60px;} */
-img.qr { width: 32mm; height: 32mm; border: 1px solid #e5e7eb; background: #fff; }
+img.qr { width: 100%; height: 100%; border: 1px solid #e5e7eb; background: #fff; }
 
 .lf-url-form { margin-top: 6px; }
 .lf-url-form input[type="url"] { font-size: 12px; padding: 4px 6px; width: 70%; }
@@ -137,7 +134,7 @@ img.qr { width: 32mm; height: 32mm; border: 1px solid #e5e7eb; background: #fff;
 .muted { color: #666; opacity: 0.9; }
 
 @media print {
-  html, body { background: #fff; }
+  html, body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .leaflet { margin: 0; border: 0; }
   .leaflet-toolbar { display: none !important; }
 }
