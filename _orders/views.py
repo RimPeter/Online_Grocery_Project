@@ -16,18 +16,19 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from django.urls import reverse
+from django.db.models import Sum, F, DecimalField, ExpressionWrapper
 
 # Statuses that permit invoice access/download/email
 ALLOWED_INVOICE_STATUSES = ('paid', 'processed', 'delivered')
 
 @login_required
 def order_history_view(request):
+    # Annotate with a computed total from items to avoid stale stored totals
+    amount_expr = ExpressionWrapper(F('items__price') * F('items__quantity'), output_field=DecimalField(max_digits=12, decimal_places=2))
     orders = (
         Order.objects
-        .filter(
-            user=request.user,
-            status__in=('paid', 'processed', 'delivered')
-        )
+        .filter(user=request.user, status__in=('paid', 'processed', 'delivered'))
+        .annotate(computed_total=Sum(amount_expr))
         .prefetch_related('items__product')
         .order_by('-created_at')
     )

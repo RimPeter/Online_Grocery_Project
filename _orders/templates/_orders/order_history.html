@@ -34,7 +34,7 @@
             </div>
             <div class="text-end">
               <span class="badge {% if order.status == 'paid' %}bg-success{% elif order.status == 'processed' %}bg-info text-dark{% elif order.status == 'delivered' %}bg-primary{% else %}bg-secondary{% endif %} me-2">{{ order.get_status_display }}</span>
-              <span class="fw-semibold">£{{ order.total }}</span>
+              <span class="fw-semibold">£{{ order.computed_total|default:order.total|floatformat:2 }}</span>
             </div>
           </div>
         </button>
