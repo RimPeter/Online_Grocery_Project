@@ -473,6 +473,15 @@ def items_to_order(request):
                 qty = int(it.get('total_qty') or 0)
             except Exception:
                 qty = 0
+            # Per-row displayed net profit should reflect quantity
+            try:
+                if it.get('net_profit') is not None and qty:
+                    # Displayed net profit multiplied by total qty (per requirements)
+                    it['net_profit_total'] = it['net_profit'] * Decimal(qty)
+                else:
+                    it['net_profit_total'] = it.get('net_profit')
+            except Exception:
+                it['net_profit_total'] = it.get('net_profit')
             pack_mult = 1
             try:
                 if p and p.is_bulk:

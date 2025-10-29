@@ -19,17 +19,17 @@
       <table class="table table-striped table-hover align-middle">
         <thead class="table-light">
           <tr>
-            <th scope="col">Product</th>
-            <th scope="col">Variant</th>
-            <th scope="col">SKU</th>
-            <th scope="col">Cost (Price)</th>
-            <th scope="col">Gross Price</th>
-            <th scope="col">RSP</th>
-            <th scope="col">RSP Net</th>
-            <th scope="col">Net Profit</th>
-            <th scope="col">VAT Rate</th>
-            <th scope="col">Total Qty</th>
-            <th scope="col">Orders Count</th>
+            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Product name.">Product</th>
+            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Product variant (e.g., size or flavour).">Variant</th>
+            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="SKU (stock keeping unit) identifier.">SKU</th>
+            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Supplier cost per unit, net of VAT.">Cost (Price)</th>
+            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Supplier cost including VAT where applicable.">Gross Price</th>
+            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Recommended selling price (gross). Uses bulk pack price when applicable.">RSP</th>
+            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="RSP excluding VAT (net).">RSP Net</th>
+            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Line net profit = (RSP Net − Cost) × Total Qty.">Net Profit</th>
+            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Product VAT rate (e.g., standard, zero).">VAT Rate</th>
+            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Total quantity ordered across active orders.">Total Qty</th>
+            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Number of distinct active orders containing this item.">Orders Count</th>
           </tr>
         </thead>
         <tbody>
@@ -55,7 +55,7 @@
                 {% if it.rsp_net %}&pound;{{ it.rsp_net|floatformat:2 }}{% else %}-{% endif %}
               </td>
               <td>
-                {% if it.net_profit %}&pound;{{ it.net_profit|floatformat:2 }}{% else %}-{% endif %}
+                {% if it.net_profit_total %}&pound;{{ it.net_profit_total|floatformat:2 }}{% elif it.net_profit %}&pound;{{ it.net_profit|floatformat:2 }}{% else %}-{% endif %}
               </td>
               <td>{{ it.vat_rate_display|default:it.product__vat_rate|default:"-" }}</td>
               <td>{{ it.total_qty }}</td>
@@ -87,7 +87,7 @@
       &pound;{{ items|sum_attr:"rsp_net"|floatformat:2 }}
     </td>
     <td>
-      &pound;{{ items|sum_attr:"net_profit"|floatformat:2 }}
+      &pound;{{ items|sum_attr:"net_profit_total"|floatformat:2 }}
     </td>
     <td>-</td>
     <td>{{ items|sum_attr:"total_qty" }}</td>
@@ -101,6 +101,17 @@
     </div>
 </div>
  </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.forEach(function (el) {
+      new bootstrap.Tooltip(el, {container: 'body'});
+    });
+  })();
+  </script>
 {% endblock %}
 
 
