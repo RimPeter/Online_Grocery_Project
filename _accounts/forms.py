@@ -1,6 +1,7 @@
 
 from django import forms
-from .models import Address, ContactMessage, User
+from .models import Address, ContactMessage, User, Company
+from django.utils.text import slugify
 
 class AddressForm(forms.ModelForm):
     class Meta:
@@ -91,3 +92,49 @@ class ProfileForm(forms.ModelForm):
         if email and User.objects.filter(email__iexact=email).exclude(pk=self._current_user.pk).exists():
             raise forms.ValidationError('Email address already in use')
         return email
+
+
+class CompanyForm(forms.ModelForm):
+    class Meta:
+        model = Company
+        fields = [
+            'name', 'legal_name', 'slug',
+            'email', 'support_email', 'phone', 'website',
+            'company_number', 'vat_number', 'tax_id',
+            'address_line1', 'address_line2', 'city', 'region', 'postal_code', 'country',
+            'logo',
+            'currency_code', 'timezone', 'invoice_prefix', 'invoice_footer',
+            'notes', 'is_default',
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'legal_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'slug': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'support_email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'website': forms.URLInput(attrs={'class': 'form-control'}),
+            'company_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'vat_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'tax_id': forms.TextInput(attrs={'class': 'form-control'}),
+            'address_line1': forms.TextInput(attrs={'class': 'form-control'}),
+            'address_line2': forms.TextInput(attrs={'class': 'form-control'}),
+            'city': forms.TextInput(attrs={'class': 'form-control'}),
+            'region': forms.TextInput(attrs={'class': 'form-control'}),
+            'postal_code': forms.TextInput(attrs={'class': 'form-control'}),
+            'country': forms.TextInput(attrs={'class': 'form-control'}),
+            'logo': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'currency_code': forms.TextInput(attrs={'class': 'form-control', 'maxlength': 3}),
+            'timezone': forms.TextInput(attrs={'class': 'form-control'}),
+            'invoice_prefix': forms.TextInput(attrs={'class': 'form-control'}),
+            'invoice_footer': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'is_default': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+    def clean_slug(self):
+        slug = (self.cleaned_data.get('slug') or '').strip()
+        name = (self.cleaned_data.get('name') or '').strip()
+        if not slug and name:
+            slug = slugify(name)[:150]
+        return slug

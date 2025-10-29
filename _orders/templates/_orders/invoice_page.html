@@ -146,7 +146,7 @@
   <div class="actions no-print">
     {% comment %} Update this URL name if yours differs {% endcomment %}
     <a class="btn secondary" href="{% url 'order_summery' order.id %}">Back to order</a>
-    {% if order.status == 'paid' %}
+    {% if order.status == 'paid' or order.status == 'processed' or order.status == 'delivered' %}
       <a class="btn" href="{% url 'invoice_pdf' order.id %}">Download PDF</a>
       <form action="{% url 'invoice_email' order.id %}" method="post" style="display:inline;">
       {% csrf_token %}

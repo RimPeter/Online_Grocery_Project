@@ -3,13 +3,13 @@ from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.urls import reverse
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.hashers import make_password
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
-from .forms import ConfirmPasswordForm, AddressForm, ContactForm, ProfileForm, DeleteAccountForm
+from .forms import ConfirmPasswordForm, AddressForm, ContactForm, ProfileForm, DeleteAccountForm, CompanyForm
 from django.core.mail import send_mail, EmailMessage
 from django.conf import settings
 from .utils import create_verification_code_for_user, send_verification_email
-from .models import VerificationCode, Address, ContactMessage
+from .models import VerificationCode, Address, ContactMessage, Company
 from django.utils.crypto import get_random_string
 import logging
 from smtplib import SMTPException, SMTPAuthenticationError
@@ -531,4 +531,29 @@ def profile_view(request):
         'form': profile_form,
         'address_form': address_form,
         'addresses': addresses,
+    })
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def company_settings(request):
+    """View and edit the default Company settings (superuser only)."""
+    company = Company.get_default() or Company.objects.first()
+
+    if request.method == 'POST':
+        form = CompanyForm(request.POST, request.FILES, instance=company)
+        if form.is_valid():
+            obj = form.save(commit=False)
+            obj.save()
+            # Ensure only one default company is active at a time
+            if obj.is_default:
+                Company.objects.exclude(pk=obj.pk).update(is_default=False)
+            messages.success(request, 'Company settings saved.')
+            return redirect('company_settings')
+    else:
+        form = CompanyForm(instance=company)
+
+    return render(request, 'accounts/company_settings.html', {
+        'form': form,
+        'company': company,
     })

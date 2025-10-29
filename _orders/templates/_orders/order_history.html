@@ -60,6 +60,9 @@
             </div>
             <div class="col-md-8 text-md-end">
               <a href="{% url 'order_summery' order.id %}" class="btn btn-outline-secondary me-2">View</a>
+              {% if order.status == 'paid' or order.status == 'processed' or order.status == 'delivered' %}
+                <a href="{% url 'invoice_page' order.id %}" class="btn btn-outline-secondary me-2">Invoice</a>
+              {% endif %}
               {% if order.status == 'pending' %}
                 <a href="{% url 'checkout' %}?order_id={{ order.id }}" class="btn btn-success me-2">Pay</a>
               {% endif %}

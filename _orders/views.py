@@ -17,6 +17,9 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from django.urls import reverse
 
+# Statuses that permit invoice access/download/email
+ALLOWED_INVOICE_STATUSES = ('paid', 'processed', 'delivered')
+
 @login_required
 def order_history_view(request):
     orders = (
@@ -211,8 +214,8 @@ def pending_order_view(request):
 def invoice_page_view(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
 
-    # Optional: only allow invoices for paid orders
-    if order.status != 'paid':
+    # Only allow invoices for paid/processed/delivered orders
+    if order.status not in ALLOWED_INVOICE_STATUSES:
         messages.error(request, "Invoice is available after payment.")
         return redirect('order_summery', order_id=order.id)
 
@@ -248,7 +251,7 @@ def invoice_page_view(request, order_id):
 def invoice_pdf_view(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
 
-    if order.status != 'paid':
+    if order.status not in ALLOWED_INVOICE_STATUSES:
         messages.error(request, "Invoice is available after payment.")
         return redirect('order_summery', order_id=order.id)
 
@@ -264,7 +267,7 @@ def email_invoice_view(request, order_id):
         return redirect('invoice_page', order_id=order_id)
 
     order = get_object_or_404(Order, id=order_id, user=request.user)
-    if order.status != 'paid':
+    if order.status not in ALLOWED_INVOICE_STATUSES:
         messages.error(request, "Invoice can be emailed after payment.")
         return redirect('order_summery', order_id=order.id)
 
@@ -439,4 +442,5 @@ def reorder_order_view(request, order_id):
     # redirect back to history by default
     return_to = request.POST.get('return_to') or reverse('order_history')
     return redirect(return_to)
+
 

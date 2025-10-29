@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Company Settings{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h3 mb-0">Company Settings</h1>
+      <div class="text-muted small">Manage company identity, contact, tax and invoice details</div>
+    </div>
+    {% if company %}
+      <span class="badge bg-secondary">ID #{{ company.id }}</span>
+    {% endif %}
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <form method="post" enctype="multipart/form-data" class="card shadow-sm">
+        <div class="card-body">
+          {% csrf_token %}
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Name</label>
+              {{ form.name }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Legal Name</label>
+              {{ form.legal_name }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Slug</label>
+              {{ form.slug }}
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              {{ form.email }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Support Email</label>
+              {{ form.support_email }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Phone</label>
+              {{ form.phone }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Website</label>
+              {{ form.website }}
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Company Number</label>
+              {{ form.company_number }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">VAT Number</label>
+              {{ form.vat_number }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Tax ID</label>
+              {{ form.tax_id }}
+            </div>
+
+            <div class="col-md-8">
+              <label class="form-label">Address Line 1</label>
+              {{ form.address_line1 }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Address Line 2</label>
+              {{ form.address_line2 }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">City</label>
+              {{ form.city }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Region</label>
+              {{ form.region }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Postal Code</label>
+              {{ form.postal_code }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Country</label>
+              {{ form.country }}
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Logo</label>
+              {{ form.logo }}
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Currency (ISO 4217)</label>
+              {{ form.currency_code }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Timezone</label>
+              {{ form.timezone }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Invoice Prefix</label>
+              {{ form.invoice_prefix }}
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">Invoice Footer</label>
+              {{ form.invoice_footer }}
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">Notes</label>
+              {{ form.notes }}
+            </div>
+
+            <div class="col-12 form-check mt-2">
+              {{ form.is_default }}
+              <label class="form-check-label">Set as default company</label>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer d-flex justify-content-end">
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h2 class="h6">Current</h2>
+          {% if company %}
+            <div class="mb-2"><strong>{{ company.name }}</strong></div>
+            <div class="text-muted small mb-2">Slug: {{ company.slug }}</div>
+            {% if company and company.logo %}
+              <img src="{{ company.logo.url }}" alt="Logo" class="img-fluid rounded mb-2" />
+            {% else %}
+              <img src="/company_logos/Kingston_Online_Grocery_logo.png" alt="Logo" class="img-fluid rounded mb-2" />
+            {% endif %}
+            <div class="text-muted small">Updated: {{ company.updated_at }}</div>
+            <div class="text-muted small">Default: {{ company.is_default }}</div>
+          {% else %}
+            <em>No company record yet. Fill the form to create one.</em>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

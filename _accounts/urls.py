@@ -33,6 +33,7 @@ urlpatterns = [
     path('contact/', views.contact_us, name='contact_us'),
     path('contact/submitted/', views.contact_submitted, name='contact_submitted'),
     path('profile/', views.profile_view, name='profile'),
+    path('company/', views.company_settings, name='company_settings'),
     # _accounts/urls.py
     path('addresses/', views.manage_addresses, name='manage_addresses'),
     path('addresses/<int:pk>/default/', views.set_default_address, name='set_default_address'),
