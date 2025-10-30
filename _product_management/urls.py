@@ -12,6 +12,7 @@ urlpatterns = [
     path("status/", views.leaflet_status, name="status"),
     path("active-orders/", views.active_orders, name="active_orders"),
     path("completed-orders/", views.completed_orders, name="completed_orders"),
+    path("delivered-orders/", views.delivered_orders, name="delivered_orders"),
     path("orders/<int:order_id>/complete/", views.mark_order_completed, name="mark_order_completed"),
     path("orders/complete-all/", views.mark_all_orders_completed, name="mark_all_orders_completed"),
     path("orders/<int:order_id>/activate/", views.mark_order_active, name="mark_order_active"),

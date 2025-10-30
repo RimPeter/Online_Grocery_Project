@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Processed Orders{% endblock %}
+{% block title %}Delivered Orders{% endblock %}
 
 {% block content %}
 <div class="row">
   <div class="col-12">
     <div class="d-flex justify-content-between align-items-center mb-4">
-      <h1 class="mb-0">Processed Orders</h1>
+      <h1 class="mb-0">Delivered Orders</h1>
       <a class="btn btn-outline-secondary" href="{% url '_product_management:active_orders' %}">Back To Paid</a>
     </div>
 
@@ -26,7 +26,7 @@
             <th scope="col">Actions</th>
           </tr>
         </thead>
-        <tbody id="ordersCompletedBody">
+        <tbody id="ordersDeliveredBody">
           {% for o in orders %}
             <!-- Summary row -->
             <tr>
@@ -34,9 +34,9 @@
                 <button class="btn btn-sm btn-outline-secondary"
                         type="button"
                         data-bs-toggle="collapse"
-                        data-bs-target="#orderc-{{ o.id }}"
+                        data-bs-target="#orderd-{{ o.id }}"
                         aria-expanded="false"
-                        aria-controls="orderc-{{ o.id }}">
+                        aria-controls="orderd-{{ o.id }}">
                   +
                 </button>
               </td>
@@ -71,7 +71,7 @@
             </tr>
 
             <!-- Detail row (collapsible) -->
-            <tr id="orderc-{{ o.id }}" class="collapse" data-bs-parent="#ordersCompletedBody">
+            <tr id="orderd-{{ o.id }}" class="collapse" data-bs-parent="#ordersDeliveredBody">
               <td colspan="9">
                 <div class="p-2">
                   <div class="mb-2 fw-semibold">Order Items</div>
@@ -97,7 +97,7 @@
             </tr>
           {% empty %}
             <tr>
-              <td colspan="9" class="text-center text-muted py-4">No processed orders found.</td>
+              <td colspan="9" class="text-center text-muted py-4">No delivered orders found.</td>
             </tr>
           {% endfor %}
         </tbody>
@@ -106,8 +106,8 @@
 
     <div class="mt-3 d-flex gap-2">
       <a class="btn btn-link" href="{% url '_product_management:active_orders' %}">Back To Paid</a>
-      <a class="btn btn-link" href="{% url '_product_management:delivered_orders' %}">View Delivered Orders</a>
+      <a class="btn btn-link" href="{% url '_product_management:completed_orders' %}">View Processed Orders</a>
     </div>
   </div>
-</div>
+  </div>
 {% endblock %}

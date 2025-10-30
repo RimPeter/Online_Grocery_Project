@@ -311,12 +311,11 @@ def leaflet_status(request):
 
 @staff_member_required
 def active_orders(request):
-    active_statuses = ('pending', 'paid', 'processed')
     dec = DecimalField(max_digits=12, decimal_places=2)
     amount_expr = F('items__price') * Cast('items__quantity', output_field=dec)
     orders = (
         Order.objects
-        .filter(status__in=active_statuses)
+        .filter(status='paid')
         .select_related('user')
         .prefetch_related('items__product', 'user__addresses')
         .annotate(
@@ -334,7 +333,7 @@ def completed_orders(request):
     amount_expr = F('items__price') * Cast('items__quantity', output_field=dec)
     orders = (
         Order.objects
-        .filter(status='delivered')
+        .filter(status='processed')
         .select_related('user')
         .prefetch_related('items__product')
         .annotate(
@@ -344,6 +343,24 @@ def completed_orders(request):
         .order_by('-created_at')
     )
     return render(request, '_product_management/completed_orders.html', {'orders': orders})
+
+
+@staff_member_required
+def delivered_orders(request):
+    dec = DecimalField(max_digits=12, decimal_places=2)
+    amount_expr = F('items__price') * Cast('items__quantity', output_field=dec)
+    orders = (
+        Order.objects
+        .filter(status='delivered')
+        .select_related('user')
+        .prefetch_related('items__product')
+        .annotate(
+            items_count=Count('items'),
+            computed_total=Coalesce(Sum(amount_expr), Value(0, output_field=dec))
+        )
+        .order_by('-created_at')
+    )
+    return render(request, '_product_management/delivered_orders.html', {'orders': orders})
 
 
 @staff_member_required
