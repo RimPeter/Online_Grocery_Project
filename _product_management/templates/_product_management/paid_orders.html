@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load sum_tags %}
 
 {% block title %}Paid Orders{% endblock %}
 
@@ -25,7 +26,7 @@
                 <span>Actions</span>
                 <form method="post" action="{% url '_product_management:mark_all_orders_completed' %}">
                   {% csrf_token %}
-                  <button type="submit" class="btn btn-sm btn-success">Complete All</button>
+                  <button type="submit" class="btn btn-sm btn-success">Process All</button>
                 </form>
               </div>
             </th>
@@ -56,12 +57,12 @@
                 {% endif %}
               </td>
               <td>
-                {% if o.computed_total %}&pound;{{ o.computed_total }}{% else %}&pound;{{ o.total }}{% endif %}
+                {% if o.computed_total %}&pound;{{ o.computed_total|floatformat:2 }}{% else %}&pound;{{ o.total|floatformat:2 }}{% endif %}
               </td>
               <td>{{ o.created_at|date:"Y-m-d H:i" }}</td>
               <td>
                 {% if o.delivery_date or o.delivery_time %}
-                  {{ o.delivery_date|default:"-" }} {{ o.delivery_time|default:"" }}
+                  {{ o.delivery_date|default:"-" }} {{ o.delivery_time|timeslot_label }}
                 {% else %}
                   -
                 {% endif %}
@@ -73,7 +74,7 @@
                 <a class="btn btn-sm btn-outline-primary" href="{% url 'admin:_orders_order_change' o.id %}">Open in Admin</a>
                 <form method="post" action="{% url '_product_management:mark_order_completed' o.id %}">
                   {% csrf_token %}
-                  <button type="submit" class="btn btn-sm btn-success">Mark Completed</button>
+                  <button type="submit" class="btn btn-sm btn-success">Mark Processed</button>
                 </form>
               </td>
             </tr>
@@ -109,7 +110,7 @@
                       <li class="list-group-item d-flex justify-content-between align-items-center">
                         <div>
                           <div class="fw-semibold">{{ item.product.name }}</div>
-                          <div class="text-muted small">&pound;{{ item.price }} x {{ item.quantity }}</div>
+                          <div class="text-muted small">&pound;{{ item.price|floatformat:2 }} x {{ item.quantity }}</div>
                         </div>
                       </li>
                     {% empty %}
@@ -119,7 +120,7 @@
 
                   <div class="mt-3 text-end">
                     <strong>Total:</strong>
-                    {% if o.computed_total %}&pound;{{ o.computed_total }}{% else %}&pound;{{ o.total }}{% endif %}
+                    {% if o.computed_total %}&pound;{{ o.computed_total|floatformat:2 }}{% else %}&pound;{{ o.total|floatformat:2 }}{% endif %}
                   </div>
                 </div>
               </td>
@@ -133,7 +134,7 @@
       </table>
     </div>
     <div class="mt-3 d-flex gap-2">
-      <a class="btn btn-link" href="{% url '_product_management:completed_orders' %}">View Processed Orders</a>
+      <a class="btn btn-link" href="{% url '_product_management:processed_orders' %}">View Processed Orders</a>
       <a class="btn btn-link" href="{% url '_product_management:items_to_order' %}">Items To Order</a>
     </div>
   </div>

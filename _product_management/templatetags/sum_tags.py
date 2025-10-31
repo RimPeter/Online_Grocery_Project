@@ -1,4 +1,5 @@
 from django import template
+from datetime import time
 
 register = template.Library()
 
@@ -48,3 +49,37 @@ def sum_coalesce(items, attrs):
         except (TypeError, ValueError):
             continue
     return total
+
+
+@register.filter
+def timeslot_label(value):
+    """Map a delivery time (Time or 'HH:MM' string) to a human label.
+
+    Example: 09:00 -> '9am - 12pm'. If no match, returns the 'HH:MM' string
+    or empty string when value is falsy.
+    """
+    if not value:
+        return ""
+    try:
+        if isinstance(value, time):
+            key = value.strftime('%H:%M')
+        else:
+            s = str(value).strip()
+            key = s[:5]
+    except Exception:
+        return ""
+
+    mapping = {
+        '09:00': '9am - 12pm',
+        '10:00': '10am - 1pm',
+        '11:00': '11am - 2pm',
+        '12:00': '12pm - 3pm',
+        '13:00': '1pm - 4pm',
+        '14:00': '2pm - 5pm',
+        '15:00': '3pm - 6pm',
+        '16:00': '4pm - 7pm',
+        '17:00': '5pm - 8pm',
+        '18:00': '6pm - 9pm',
+        '19:00': '7pm - 10pm',
+    }
+    return mapping.get(key, key)

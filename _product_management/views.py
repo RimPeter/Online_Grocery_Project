@@ -324,7 +324,7 @@ def active_orders(request):
         )
         .order_by('-created_at')
     )
-    return render(request, '_product_management/active_orders.html', {'orders': orders})
+    return render(request, '_product_management/paid_orders.html', {'orders': orders})
 
 
 @staff_member_required
@@ -342,7 +342,7 @@ def completed_orders(request):
         )
         .order_by('-created_at')
     )
-    return render(request, '_product_management/completed_orders.html', {'orders': orders})
+    return render(request, '_product_management/processed_orders.html', {'orders': orders})
 
 
 @staff_member_required
@@ -376,7 +376,7 @@ def mark_order_completed(request, order_id: int):
     else:
         messages.info(request, f'Order #{order.id} is already {order.get_status_display().lower()}.')
 
-    return redirect('_product_management:active_orders')
+    return redirect('_product_management:paid_orders')
 
 
 @staff_member_required
@@ -391,7 +391,7 @@ def mark_all_orders_completed(request):
         messages.success(request, f'Marked {updated} order(s) as completed.')
     else:
         messages.info(request, 'No active orders to complete.')
-    return redirect('_product_management:active_orders')
+    return redirect('_product_management:paid_orders')
 
 
 @staff_member_required
@@ -407,7 +407,23 @@ def mark_order_active(request, order_id: int):
     else:
         messages.info(request, f'Order #{order.id} is {order.get_status_display().lower()}, not completed.')
 
-    return redirect('_product_management:completed_orders')
+    return redirect('_product_management:processed_orders')
+
+
+@staff_member_required
+def mark_order_paid(request, order_id: int):
+    if request.method != 'POST':
+        return HttpResponseBadRequest('Invalid method')
+
+    order = get_object_or_404(Order, id=order_id)
+    if order.status in ('pending', 'processed'):
+        order.status = 'paid'
+        order.save(update_fields=['status'])
+        messages.success(request, f'Order #{order.id} moved back to Paid.')
+    else:
+        messages.info(request, f'Order #{order.id} is already {order.get_status_display().lower()}.')
+
+    return redirect('_product_management:paid_orders')
 
 
 @staff_member_required
@@ -651,7 +667,7 @@ def set_delivery_slot(request, order_id: int):
                 order.delivery_time = delivery_time
                 order.save(update_fields=['delivery_date', 'delivery_time'])
                 messages.success(request, f'Delivery slot saved for Order #{order.id}.')
-                return redirect('_product_management:active_orders')
+                return redirect('_product_management:paid_orders')
 
     return render(
         request,
