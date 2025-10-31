@@ -149,6 +149,33 @@ def product_list(request):
         'level1_names': level1_names,
         'level2_names': level2_names,
     }
+
+    # Add recent purchased items from the user's last 3 non-pending orders
+    if request.user.is_authenticated:
+        try:
+            recent_orders = (
+                Order.objects
+                .filter(user=request.user, status__in=['paid', 'processed', 'delivered'])
+                .order_by('-created_at')[:3]
+            )
+            seen = set()
+            recent_items = []
+            for order in recent_orders:
+                for it in order.items.select_related('product').all():
+                    pid = it.product_id
+                    if pid in seen or not it.product:
+                        continue
+                    seen.add(pid)
+                    recent_items.append({
+                        'product_id': pid,
+                        'name': it.product.name,
+                        'quantity': it.quantity,
+                        'image_url': it.product.image_url or '',
+                    })
+            context['recent_purchased_items'] = recent_items
+        except Exception:
+            context['recent_purchased_items'] = []
+
     return render(request, '_catalog/product.html', context)
 
 @login_required
@@ -285,6 +312,11 @@ def update_cart(request):
                     if product_id in cart:
                         del cart[product_id]
                         messages.success(request, "Item removed from your cart.")
+
+        elif action == 'clear':
+            # Remove all items from the cart
+            cart = {}
+            messages.success(request, "All items removed from your cart.")
 
         # Save the updated cart back to the session
         request.session['cart'] = cart

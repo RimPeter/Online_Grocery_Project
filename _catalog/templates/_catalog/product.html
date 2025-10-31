@@ -63,6 +63,55 @@
     <!-- Right Column: Search Form & Product Listing -->
     <div class="col-md-9">
 
+      {# Quick reorder from last 3 orders #}
+      {% if user.is_authenticated and recent_purchased_items %}
+      <div class="card mb-3">
+        <div class="card-body">
+          <form id="recent-reorder-form" method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="return_to" value="{{ request.get_full_path }}" />
+            <input type="hidden" id="recent-reorder-id" />
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <label class="form-label mb-0">Reorder from last 3 orders</label>
+              <button type="button" id="recent-add-all" class="btn btn-sm btn-success">Add All To Cart</button>
+            </div>
+            <div class="input-group align-items-center">
+              <span class="input-group-text p-1" style="background:white;border:none;">
+                <img id="recent-reorder-img" src="{% static 'images/fresh_products.jpg' %}" alt="preview" style="width:40px;height:40px;object-fit:contain;" onerror="this.onerror=null;this.src='{% static 'images/fresh_products.jpg' %}';" />
+              </span>
+              <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="recent-reorder-button" data-bs-toggle="dropdown" aria-expanded="false">
+                  Select item
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="recent-reorder-button" id="recent-reorder-menu" style="max-height: 260px; overflow-y: auto;">
+                  {% for it in recent_purchased_items %}
+                  <li class="px-1">
+                    <div class="d-flex align-items-center justify-content-between gap-2">
+                      <a class="dropdown-item d-inline-flex align-items-center w-auto flex-grow-1" href="#" data-role="select" data-id="{{ it.product_id }}" data-img="{{ it.image_url }}" data-qty="{{ it.quantity }}">
+                        {% if it.image_url and it.image_url != '/img/products/no-image.png' %}
+                          <img src="{{ it.image_url }}" alt="{{ it.name }}" class="me-2" style="width:28px;height:28px;object-fit:contain;" onerror="this.onerror=null;this.src='{% static 'images/fresh_products.jpg' %}';" />
+                        {% else %}
+                          <img src="{% static 'images/fresh_products.jpg' %}" alt="{{ it.name }}" class="me-2" style="width:28px;height:28px;object-fit:contain;" />
+                        {% endif %}
+                        <span>{{ it.name }} (last qty {{ it.quantity }})</span>
+                      </a>
+                      <a class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" href="{% url 'product_detail' it.product_id %}" title="View product details">
+                        <i class="bi bi-eye"></i>
+                        <span>Details</span>
+                      </a>
+                    </div>
+                  </li>
+                  {% endfor %}
+                </ul>
+              </div>
+              <input type="number" id="recent-reorder-qty" class="form-control" min="1" value="1" aria-label="Quantity" />
+              <button class="btn btn-primary" type="submit">Add</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      {% endif %}
+
 <form method="GET" action="" class="mb-3" id="search-form">
   {# preserve current filters when searching #}
   {% if request.GET.l1 %}<input type="hidden" name="l1" id="l1-field" value="{{ request.GET.l1 }}">{% else %}<input type="hidden" name="l1" id="l1-field">{% endif %}
@@ -248,6 +297,106 @@
 
     // Observe the sentinel
     observer.observe(sentinel);
+  });
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('recent-reorder-form');
+    if (!form) return;
+    const idInput = document.getElementById('recent-reorder-id');
+    const qty = document.getElementById('recent-reorder-qty');
+    const img = document.getElementById('recent-reorder-img');
+    const btn = document.getElementById('recent-reorder-button');
+    const menu = document.getElementById('recent-reorder-menu');
+    const addAllBtn = document.getElementById('recent-add-all');
+    const addUrlTemplate = "{% url 'add_to_cart' 999999 %}".replace('999999', '__ID__');
+
+    const selectItem = (pid, label, imageUrl) => {
+      if (idInput) idInput.value = pid;
+      if (btn) btn.textContent = label || 'Selected item';
+      if (img) {
+        if (imageUrl && imageUrl !== '/img/products/no-image.png') {
+          img.src = imageUrl;
+        } else {
+          img.src = "{% static 'images/fresh_products.jpg' %}";
+        }
+      }
+    };
+
+    menu && menu.addEventListener('click', function (e) {
+      const a = e.target.closest('a[data-role="select"]');
+      if (!a) return;
+      e.preventDefault();
+      const pid = a.getAttribute('data-id');
+      const imageUrl = a.getAttribute('data-img') || '';
+      const label = (a.querySelector('span') && a.querySelector('span').textContent) || a.textContent || '';
+      selectItem(pid, label.trim(), imageUrl);
+    });
+
+    // Preselect first item if available
+    const first = menu && menu.querySelector('a[data-role="select"]');
+    if (first) {
+      const pid = first.getAttribute('data-id');
+      const imageUrl = first.getAttribute('data-img') || '';
+      const label = (first.querySelector('span') && first.querySelector('span').textContent) || first.textContent || '';
+      selectItem(pid, label.trim(), imageUrl);
+    }
+
+    form.addEventListener('submit', function (e) {
+      const pid = idInput && idInput.value;
+      if (!pid) {
+        e.preventDefault();
+        return;
+      }
+      // Update action to the product-specific add_to_cart URL
+      form.action = addUrlTemplate.replace('__ID__', pid);
+
+      // Ensure quantity field exists for POST
+      let qInput = form.querySelector('input[name="quantity"]');
+      if (!qInput) {
+        qInput = document.createElement('input');
+        qInput.type = 'hidden';
+        qInput.name = 'quantity';
+        form.appendChild(qInput);
+      }
+      const q = parseInt((qty && qty.value) || '1', 10);
+      qInput.value = isNaN(q) || q < 1 ? 1 : q;
+    });
+
+    // Add all items to cart using fetch
+    addAllBtn && addAllBtn.addEventListener('click', async function () {
+      const anchors = menu ? Array.from(menu.querySelectorAll('a[data-role="select"]')) : [];
+      if (!anchors.length) return;
+      const csrf = form.querySelector('input[name="csrfmiddlewaretoken"]').value;
+      const returnTo = form.querySelector('input[name="return_to"]').value;
+      addAllBtn.disabled = true;
+      addAllBtn.textContent = 'Adding...';
+      try {
+        for (const a of anchors) {
+          const pid = a.getAttribute('data-id');
+          const q = parseInt(a.getAttribute('data-qty') || '1', 10) || 1;
+          const url = addUrlTemplate.replace('__ID__', pid);
+          await fetch(url, {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': csrf,
+              'X-Requested-With': 'XMLHttpRequest',
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({ quantity: q, return_to: returnTo })
+          });
+        }
+        // After all requests complete, reload or redirect to reflect cart updates
+        window.location.href = returnTo || window.location.href;
+      } catch (e) {
+        console.error('Failed to add all items', e);
+        addAllBtn.disabled = false;
+        addAllBtn.textContent = 'Add All To Cart';
+      }
+    });
+
+    // Preview handled in selectItem and initial preselect; nothing else to do
   });
 </script>
 <script>

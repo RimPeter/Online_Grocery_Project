@@ -6,6 +6,15 @@
 {% block content %}
 <div class="container my-5 cart-page">
   <h1>Your Shopping Cart</h1>
+  {% if cart_items %}
+  <div class="mb-3 text-end">
+    <form method="POST" action="{% url 'update_cart' %}" class="d-inline">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="clear">
+      <button type="submit" class="btn btn-outline-danger">Remove All Items</button>
+    </form>
+  </div>
+  {% endif %}
   
   {% if cart_items %}
     <ul class="list-group">
