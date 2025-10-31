@@ -75,6 +75,60 @@
       </div>
     </div>
 
+    <div class="card mt-4">
+      <div class="card-body">
+        <h5 class="card-title">Scrape Retail EAN</h5>
+        <p class="text-muted">Fetch product pages and populate missing Retail EANs. Runs in the background.</p>
+        <form method="post" class="vstack gap-3">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="scrape_retail_ean">
+
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label for="ean_limit" class="form-label">Limit</label>
+              <input id="ean_limit" type="number" min="0" step="1" name="limit" class="form-control" placeholder="0 = no limit">
+            </div>
+            <div class="col-md-4">
+              <label for="ean_sleep" class="form-label">Sleep (seconds)</label>
+              <input id="ean_sleep" type="number" min="0" step="0.1" name="sleep" class="form-control" value="0.5">
+            </div>
+            <div class="col-md-4">
+              <label for="ean_domain" class="form-label">Only domain contains</label>
+              <input id="ean_domain" type="text" name="only_domain" class="form-control" placeholder="e.g. bestwaywholesale.co.uk">
+            </div>
+          </div>
+
+          <div class="row g-3 mt-1">
+            <div class="col-md-4">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="ean_force" name="force">
+                <label class="form-check-label" for="ean_force">Force overwrite existing EAN</label>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="ean_dry" name="dry_run">
+                <label class="form-check-label" for="ean_dry">Dry-run (no save)</label>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <label for="ean_verbosity" class="form-label">Verbosity</label>
+              <select id="ean_verbosity" name="verbosity" class="form-select form-select-sm">
+                <option value="0">0 - errors</option>
+                <option value="1" selected>1 - normal</option>
+                <option value="2">2 - verbose</option>
+                <option value="3">3 - very verbose</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <button type="submit" class="btn btn-primary">Start EAN Scrape</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <div class="card mt-4 border-danger">
       <div class="card-body">
         <h5 class="card-title text-danger">Danger Zone: Clear All Products</h5>

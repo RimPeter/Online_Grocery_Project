@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Missing Retail EAN{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="mb-0">Products Missing Retail EAN</h1>
+      <div class="text-muted">Total: {{ count }}</div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-striped table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th scope="col">Product</th>
+            <th scope="col">Variant</th>
+            <th scope="col">SKU</th>
+            <th scope="col">GA Product ID</th>
+            <th scope="col">RSP</th>
+            <th scope="col">Category</th>
+            <th scope="col">Subcategory</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in products %}
+          <tr>
+            <td>
+              <a href="{% url 'product_detail' p.id %}">{{ p.name }}</a>
+            </td>
+            <td>{{ p.variant|default:"-" }}</td>
+            <td>{{ p.sku|default:"-" }}</td>
+            <td>{{ p.ga_product_id|default:"-" }}</td>
+            <td>{% if p.rsp %}&pound;{{ p.rsp|floatformat:2 }}{% else %}-{% endif %}</td>
+            <td>{{ p.sub_category|default:"-" }}</td>
+            <td>{{ p.sub_subcategory|default:"-" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center text-muted py-4">All products have Retail EAN set. Nice!</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

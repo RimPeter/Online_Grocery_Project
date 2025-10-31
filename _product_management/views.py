@@ -860,6 +860,37 @@ def commands(request):
             messages.success(request, 'Data job started in background. Refresh later to see results.')
             return redirect('_product_management:commands')
 
+        elif action == 'scrape_retail_ean':
+            limit = int(request.POST.get('limit') or 0)
+            force = bool(request.POST.get('force'))
+            dry_run = bool(request.POST.get('dry_run'))
+            sleep = float(request.POST.get('sleep') or 0.5)
+            only_domain = (request.POST.get('only_domain') or '').strip()
+
+            def _run_scrape_ean():
+                try:
+                    from django.core.management import call_command
+                    call_kwargs = {
+                        'verbosity': int(request.POST.get('verbosity') or 1),
+                    }
+                    if limit:
+                        call_kwargs['limit'] = limit
+                    if force:
+                        call_kwargs['force'] = True
+                    if dry_run:
+                        call_kwargs['dry_run'] = True
+                    if sleep:
+                        call_kwargs['sleep'] = sleep
+                    if only_domain:
+                        call_kwargs['only_domain'] = only_domain
+                    call_command('scrape_retail_ean', **call_kwargs)
+                except Exception:
+                    pass
+
+            threading.Thread(target=_run_scrape_ean, daemon=True).start()
+            messages.success(request, 'Retail EAN scrape started in background.')
+            return redirect('_product_management:commands')
+
         elif action == 'clear_all_products':
             # Extra safety: only superusers may execute
             if not request.user.is_superuser:
@@ -888,3 +919,21 @@ def commands(request):
             return redirect('_product_management:commands')
 
     return render(request, '_product_management/commands.html', {'product_count': product_count})
+
+
+def missing_retail_ean(request):
+    """List products that do not have a Retail EAN set.
+
+    Shows products where `retail_EAN` is null or blank so staff can
+    identify and fix them. Accessible from the Product Management menu.
+    """
+    products = (
+        All_Products.objects
+        .filter(Q(retail_EAN__isnull=True) | Q(retail_EAN=""))
+        .order_by('name')
+    )
+    context = {
+        'products': products,
+        'count': products.count(),
+    }
+    return render(request, '_product_management/missing_retail_ean.html', context)

@@ -26,4 +26,5 @@ urlpatterns = [
     path("items-to-order.pdf", views.items_to_order_pdf, name="items_to_order_pdf"),
     path("orders/<int:order_id>/delivery/", views.set_delivery_slot, name="set_delivery_slot"),
     path("commands/", views.commands, name="commands"),
+    path("missing-retail-ean/", views.missing_retail_ean, name="missing_retail_ean"),
 ]
