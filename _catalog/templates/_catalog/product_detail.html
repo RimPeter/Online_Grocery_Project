@@ -42,9 +42,11 @@
   <div class="pd-info">
     <h1 class="pd-title">{{ product.name }}</h1>
     <div class="pd-price-row">
+      {% if user.is_superuser %}
       <span class="pd-price">£{{ product.price|floatformat:2 }}</span>
+      {% endif %}
       {% if product.rsp %}
-      <span class="pd-rsp">RSP: £{{ product.rsp|floatformat:2 }}</span>
+      <span class="pd-rsp">£{{ product.rsp|floatformat:2 }}</span>
       {% endif %}
     </div>
 
