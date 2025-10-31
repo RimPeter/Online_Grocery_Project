@@ -310,7 +310,41 @@ def leaflet_status(request):
 
 
 @staff_member_required
-def active_orders(request):
+def pending_orders(request):
+    dec = DecimalField(max_digits=12, decimal_places=2)
+    amount_expr = F('items__price') * Cast('items__quantity', output_field=dec)
+    orders = (
+        Order.objects
+        .filter(status='pending')
+        .select_related('user')
+        .prefetch_related('items__product', 'user__addresses')
+        .annotate(
+            items_count=Count('items'),
+            computed_total=Coalesce(Sum(amount_expr), Value(0, output_field=dec))
+        )
+        .order_by('-created_at')
+    )
+    # Pagination
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+    paginator = Paginator(orders, 25)
+    page = request.GET.get('page')
+    try:
+        page_obj = paginator.page(page)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+    ctx = {
+        'orders': page_obj.object_list,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'is_paginated': page_obj.has_other_pages(),
+    }
+    return render(request, '_product_management/pending_orders.html', ctx)
+
+
+@staff_member_required
+def paid_orders(request):
     dec = DecimalField(max_digits=12, decimal_places=2)
     amount_expr = F('items__price') * Cast('items__quantity', output_field=dec)
     orders = (
@@ -324,11 +358,27 @@ def active_orders(request):
         )
         .order_by('-created_at')
     )
-    return render(request, '_product_management/paid_orders.html', {'orders': orders})
+    # Pagination
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+    paginator = Paginator(orders, 25)
+    page = request.GET.get('page')
+    try:
+        page_obj = paginator.page(page)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+    ctx = {
+        'orders': page_obj.object_list,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'is_paginated': page_obj.has_other_pages(),
+    }
+    return render(request, '_product_management/paid_orders.html', ctx)
 
 
 @staff_member_required
-def completed_orders(request):
+def processed_orders(request):
     dec = DecimalField(max_digits=12, decimal_places=2)
     amount_expr = F('items__price') * Cast('items__quantity', output_field=dec)
     orders = (
@@ -342,7 +392,23 @@ def completed_orders(request):
         )
         .order_by('-created_at')
     )
-    return render(request, '_product_management/processed_orders.html', {'orders': orders})
+    # Pagination
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+    paginator = Paginator(orders, 25)
+    page = request.GET.get('page')
+    try:
+        page_obj = paginator.page(page)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+    ctx = {
+        'orders': page_obj.object_list,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'is_paginated': page_obj.has_other_pages(),
+    }
+    return render(request, '_product_management/processed_orders.html', ctx)
 
 
 @staff_member_required
@@ -360,7 +426,23 @@ def delivered_orders(request):
         )
         .order_by('-created_at')
     )
-    return render(request, '_product_management/delivered_orders.html', {'orders': orders})
+    # Pagination
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+    paginator = Paginator(orders, 25)
+    page = request.GET.get('page')
+    try:
+        page_obj = paginator.page(page)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+    ctx = {
+        'orders': page_obj.object_list,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'is_paginated': page_obj.has_other_pages(),
+    }
+    return render(request, '_product_management/delivered_orders.html', ctx)
 
 
 @staff_member_required
@@ -376,7 +458,17 @@ def mark_order_completed(request, order_id: int):
     else:
         messages.info(request, f'Order #{order.id} is already {order.get_status_display().lower()}.')
 
-    return redirect('_product_management:paid_orders')
+    # Redirect back to referring page if local; otherwise to delivered list
+    ref = request.META.get('HTTP_REFERER') or ''
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(ref)
+        # Redirect only if same host or relative
+        if not parsed.netloc or parsed.netloc == request.get_host():
+            return redirect(ref)
+    except Exception:
+        pass
+    return redirect('_product_management:delivered_orders')
 
 
 @staff_member_required
@@ -384,8 +476,8 @@ def mark_all_orders_completed(request):
     if request.method != 'POST':
         return HttpResponseBadRequest('Invalid method')
 
-    active_statuses = ('pending', 'paid', 'processed')
-    qs = Order.objects.filter(status__in=active_statuses)
+    # Safer bulk: only deliver orders currently in 'paid' state
+    qs = Order.objects.filter(status='paid')
     updated = qs.update(status='delivered')
     if updated:
         messages.success(request, f'Marked {updated} order(s) as completed.')
@@ -407,6 +499,15 @@ def mark_order_active(request, order_id: int):
     else:
         messages.info(request, f'Order #{order.id} is {order.get_status_display().lower()}, not completed.')
 
+    # Prefer returning to the referring page when possible
+    ref = request.META.get('HTTP_REFERER') or ''
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(ref)
+        if not parsed.netloc or parsed.netloc == request.get_host():
+            return redirect(ref)
+    except Exception:
+        pass
     return redirect('_product_management:processed_orders')
 
 
@@ -423,7 +524,39 @@ def mark_order_paid(request, order_id: int):
     else:
         messages.info(request, f'Order #{order.id} is already {order.get_status_display().lower()}.')
 
+    ref = request.META.get('HTTP_REFERER') or ''
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(ref)
+        if not parsed.netloc or parsed.netloc == request.get_host():
+            return redirect(ref)
+    except Exception:
+        pass
     return redirect('_product_management:paid_orders')
+
+
+@staff_member_required
+def mark_order_processed(request, order_id: int):
+    if request.method != 'POST':
+        return HttpResponseBadRequest('Invalid method')
+
+    order = get_object_or_404(Order, id=order_id)
+    if order.status in ('pending', 'paid'):
+        order.status = 'processed'
+        order.save(update_fields=['status'])
+        messages.success(request, f'Order #{order.id} marked as processed.')
+    else:
+        messages.info(request, f'Order #{order.id} is already {order.get_status_display().lower()}.')
+
+    ref = request.META.get('HTTP_REFERER') or ''
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(ref)
+        if not parsed.netloc or parsed.netloc == request.get_host():
+            return redirect(ref)
+    except Exception:
+        pass
+    return redirect('_product_management:processed_orders')
 
 
 @staff_member_required

@@ -43,7 +43,7 @@
               </td>
               <td>#{{ o.id }}</td>
               <td>{{ o.user }}</td>
-              <td><span class="badge bg-success">{{ o.get_status_display }}</span></td>
+              <td><span class="badge bg-info">{{ o.get_status_display }}</span></td>
               <td>
                 {% if o.items_count %}
                   {{ o.items_count }}
@@ -108,6 +108,23 @@
         </tbody>
       </table>
     </div>
+    {% if is_paginated %}
+    <nav aria-label="Orders pagination" class="mt-3">
+      <ul class="pagination">
+        {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">Previous</span></li>
+        {% endif %}
+        <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span></li>
+        {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">Next</span></li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% endif %}
 
     <div class="mt-3 d-flex gap-2">
 <a class="btn btn-link" href="{% url '_product_management:paid_orders' %}">Back To Paid</a>

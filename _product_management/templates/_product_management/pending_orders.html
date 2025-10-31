@@ -2,12 +2,15 @@
 {% load static %}
 {% load sum_tags %}
 
-{% block title %}Paid Orders{% endblock %}
+{% block title %}Pending Orders{% endblock %}
 
 {% block content %}
 <div class="row">
   <div class="col-12">
-    <h1 class="mb-4">Paid Orders</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="mb-0">Pending Orders</h1>
+      <a class="btn btn-outline-secondary" href="{% url '_product_management:paid_orders' %}">Go To Paid</a>
+    </div>
 
     <div class="table-responsive">
       <table class="table table-striped table-hover align-middle">
@@ -21,18 +24,10 @@
             <th scope="col">Total</th>
             <th scope="col">Created</th>
             <th scope="col">Delivery</th>
-            <th scope="col" class="text-end">
-              <div class="d-flex justify-content-end align-items-center gap-2">
-                <span>Actions</span>
-                <form method="post" action="{% url '_product_management:mark_all_orders_completed' %}">
-                  {% csrf_token %}
-                  <button type="submit" class="btn btn-sm btn-success">Deliver All</button>
-                </form>
-              </div>
-            </th>
+            <th scope="col" class="text-end">Actions</th>
           </tr>
         </thead>
-        <tbody id="ordersTableBody">
+        <tbody id="ordersPendingBody">
           {% for o in orders %}
             <!-- Summary row -->
             <tr>
@@ -40,15 +35,15 @@
                 <button class="btn btn-sm btn-outline-secondary"
                         type="button"
                         data-bs-toggle="collapse"
-                        data-bs-target="#order-{{ o.id }}"
+                        data-bs-target="#orderp-{{ o.id }}"
                         aria-expanded="false"
-                        aria-controls="order-{{ o.id }}">
+                        aria-controls="orderp-{{ o.id }}">
                   +
                 </button>
               </td>
               <td>#{{ o.id }}</td>
               <td>{{ o.user }}</td>
-              <td><span class="badge bg-secondary">{{ o.get_status_display }}</span></td>
+              <td><span class="badge bg-warning text-dark">{{ o.get_status_display }}</span></td>
               <td>
                 {% if o.items_count %}
                   {{ o.items_count }}
@@ -70,8 +65,12 @@
                   <a class="btn btn-sm btn-warning ms-2" href="{% url '_product_management:set_delivery_slot' o.id %}">Set Delivery</a>
                 {% endif %}
               </td>
-              <td class="d-flex gap-2">
+              <td class="d-flex gap-2 justify-content-end">
                 <a class="btn btn-sm btn-outline-primary" href="{% url 'admin:_orders_order_change' o.id %}">Open in Admin</a>
+                <form method="post" action="{% url '_product_management:mark_order_paid' o.id %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-secondary">Mark Paid</button>
+                </form>
                 <form method="post" action="{% url '_product_management:mark_order_processed' o.id %}">
                   {% csrf_token %}
                   <button type="submit" class="btn btn-sm btn-info">Mark Processed</button>
@@ -84,7 +83,7 @@
             </tr>
 
             <!-- Detail row (collapsible) -->
-            <tr id="order-{{ o.id }}" class="collapse" data-bs-parent="#ordersTableBody">
+            <tr id="orderp-{{ o.id }}" class="collapse" data-bs-parent="#ordersPendingBody">
               <td colspan="9">
                 <div class="p-2">
                   <div class="mb-3">
@@ -131,12 +130,13 @@
             </tr>
           {% empty %}
             <tr>
-              <td colspan="9" class="text-center text-muted py-4">No orders found.</td>
+              <td colspan="9" class="text-center text-muted py-4">No pending orders found.</td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+
     {% if is_paginated %}
     <nav aria-label="Orders pagination" class="mt-3">
       <ul class="pagination">
@@ -154,10 +154,13 @@
       </ul>
     </nav>
     {% endif %}
+
     <div class="mt-3 d-flex gap-2">
+      <a class="btn btn-link" href="{% url '_product_management:paid_orders' %}">View Paid Orders</a>
       <a class="btn btn-link" href="{% url '_product_management:processed_orders' %}">View Processed Orders</a>
-      <a class="btn btn-link" href="{% url '_product_management:items_to_order' %}">Items To Order</a>
+      <a class="btn btn-link" href="{% url '_product_management:delivered_orders' %}">View Delivered Orders</a>
     </div>
   </div>
 </div>
 {% endblock %}
+
