@@ -258,11 +258,9 @@
   <div class="totals">
     <div></div>
     <div class="summary">
-      {# Add tax/shipping rows if you later track them #}
-      <div class="row total">
-        <div>Total</div>
-        <div>£{{ total|floatformat:2 }}</div>
-      </div>
+      <div class="row"><div>Subtotal</div><div>£{{ total|floatformat:2 }}</div></div>
+      <div class="row"><div>Delivery</div><div>£{{ delivery_charge|floatformat:2 }}</div></div>
+      <div class="row total"><div>Total</div><div>£{{ grand_total|floatformat:2 }}</div></div>
     </div>
   </div>
 

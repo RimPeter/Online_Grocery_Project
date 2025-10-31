@@ -21,7 +21,7 @@
             <th scope="col">Customer</th>
             <th scope="col">Status</th>
             <th scope="col">Items</th>
-            <th scope="col">Total</th>
+            <th scope="col">Grand Total</th>
             <th scope="col">Created</th>
             <th scope="col">Delivery</th>
             <th scope="col">Actions</th>
@@ -52,7 +52,7 @@
                 {% endif %}
               </td>
               <td>
-                {% if o.computed_total %}&pound;{{ o.computed_total|floatformat:2 }}{% else %}&pound;{{ o.total|floatformat:2 }}{% endif %}
+                {% if o.computed_total %}&pound;{{ o.computed_total|add_delivery_if_paid:o.status|floatformat:2 }}{% else %}&pound;{{ o.total|add_delivery_if_paid:o.status|floatformat:2 }}{% endif %}
               </td>
               <td>{{ o.created_at|date:"Y-m-d H:i" }}</td>
               <td>
@@ -90,8 +90,8 @@
                   </ul>
 
                   <div class="mt-3 text-end">
-                    <strong>Total:</strong>
-                    {% if o.computed_total %}&pound;{{ o.computed_total|floatformat:2 }}{% else %}&pound;{{ o.total|floatformat:2 }}{% endif %}
+                    <strong>Grand Total:</strong>
+                    {% if o.computed_total %}&pound;{{ o.computed_total|add_delivery_if_paid:o.status|floatformat:2 }}{% else %}&pound;{{ o.total|add_delivery_if_paid:o.status|floatformat:2 }}{% endif %}
                   </div>
                 </div>
               </td>

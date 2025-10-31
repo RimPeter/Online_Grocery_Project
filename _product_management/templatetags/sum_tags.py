@@ -1,5 +1,6 @@
 from django import template
 from datetime import time
+from decimal import Decimal, InvalidOperation
 
 register = template.Library()
 
@@ -83,3 +84,25 @@ def timeslot_label(value):
         '19:00': '7pm - 10pm',
     }
     return mapping.get(key, key)
+
+
+@register.filter
+def add_delivery_if_paid(total, status):
+    """Add £1.50 delivery to total if order status is paid/processed/delivered.
+
+    Usage: {{ total|add_delivery_if_paid:order.status }}
+    Accepts numeric or Decimal totals; returns a Decimal.
+    """
+    try:
+        amt = Decimal(str(total or 0))
+    except (InvalidOperation, ValueError, TypeError):
+        amt = Decimal('0.00')
+
+    try:
+        st = (status or '').strip().lower()
+    except Exception:
+        st = ''
+
+    if st in ('paid', 'processed', 'delivered'):
+        amt += Decimal('1.50')
+    return amt

@@ -1,4 +1,4 @@
-from django.shortcuts import render, get_object_or_404, redirect
+﻿from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from .models import Order, OrderItem
 from _accounts.models import Address, Company   
@@ -43,6 +43,9 @@ def order_summery_view(request, order_id):
     for item in order_items:
         item.subtotal = item.price * item.quantity
     total = sum(item.subtotal for item in order_items)
+    # Fixed delivery charge to match cart display
+    delivery_charge = Decimal('1.50') if order_items else Decimal('0.00')
+    grand_total = (Decimal(total) + delivery_charge).quantize(Decimal('0.01'))
 
     # Get the user's default address (fallback to first if none marked default)
     addresses = Address.objects.filter(user=request.user)
@@ -55,6 +58,8 @@ def order_summery_view(request, order_id):
         'order': order,
         'order_items': order_items,
         'total': total,
+        'delivery_charge': delivery_charge,
+        'grand_total': grand_total,
         'default_address': default_address, 
     }
     return render(request, '_orders/order_summery.html', context)
@@ -89,7 +94,7 @@ def delivery_slots_view(request):
         shortfall = (MIN_ORDER_TOTAL - total_price).quantize(Decimal('0.01'))
         messages.error(
             request,
-            f"Minimum order is £{MIN_ORDER_TOTAL:.2f}. Add £{shortfall:.2f} more to proceed."
+            f"Minimum order is Â£{MIN_ORDER_TOTAL:.2f}. Add Â£{shortfall:.2f} more to proceed."
         )
         return redirect('cart_view')
 
@@ -224,6 +229,8 @@ def invoice_page_view(request, order_id):
     for item in order_items:
         item.subtotal = item.price * item.quantity
     total = sum(i.subtotal for i in order_items)
+    delivery_charge = Decimal('1.50') if order_items else Decimal('0.00')
+    grand_total = (Decimal(total) + delivery_charge).quantize(Decimal('0.01'))
 
     # If you show addresses on the invoice, pick default/fallback:
     default_address = Address.objects.filter(user=request.user).order_by('-is_default').first()
@@ -240,11 +247,14 @@ def invoice_page_view(request, order_id):
     return render(
         request,
         '_orders/invoice_page.html',
-        {'order': order, 
-         'order_items': order_items, 
-         'total': total, 
-         'default_address': default_address,
-         'company': company
+        {
+            'order': order,
+            'order_items': order_items,
+            'total': total,
+            'delivery_charge': delivery_charge,
+            'grand_total': grand_total,
+            'default_address': default_address,
+            'company': company,
         }
     )
 
@@ -340,14 +350,14 @@ def _build_invoice_pdf_bytes(request, order):
         if company.vat_number: meta_bits.append(f"VAT: {company.vat_number}")
         if company.company_number: meta_bits.append(f"Company No: {company.company_number}")
         if meta_bits:
-            elements.append(Paragraph(" · ".join(meta_bits), styles['Normal']))
+            elements.append(Paragraph(" Â· ".join(meta_bits), styles['Normal']))
 
         contact_bits = []
         if company.email: contact_bits.append(company.email)
         if company.phone: contact_bits.append(company.phone)
         if company.website: contact_bits.append(company.website)
         if contact_bits:
-            elements.append(Paragraph(" · ".join(contact_bits), styles['Normal']))
+            elements.append(Paragraph(" Â· ".join(contact_bits), styles['Normal']))
         elements.append(Spacer(1, 12))
 
     # Header
@@ -369,7 +379,7 @@ def _build_invoice_pdf_bytes(request, order):
     # Items table
     data = [["Item", "Qty", "Price", "Subtotal"]]
     for it in order_items:
-        data.append([it.product.name, str(it.quantity), f"£{it.price:.2f}", f"£{it.subtotal:.2f}"])
+        data.append([it.product.name, str(it.quantity), f"Â£{it.price:.2f}", f"Â£{it.subtotal:.2f}"])
 
     table = Table(data, colWidths=[260, 60, 80, 80])
     table.setStyle(TableStyle([
@@ -387,7 +397,7 @@ def _build_invoice_pdf_bytes(request, order):
 
     # Totals
     total_val = sum(getattr(i, "subtotal", i.price * i.quantity) for i in order_items)
-    elements.append(Paragraph(f"<b>Total:</b> £{total_val:.2f}", styles['Heading3']))
+    elements.append(Paragraph(f"<b>Total:</b> Â£{total_val:.2f}", styles['Heading3']))
 
     # Delivery slot
     if order.delivery_date or order.delivery_time:
