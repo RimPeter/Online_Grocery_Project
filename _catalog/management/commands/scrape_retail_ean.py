@@ -33,22 +33,38 @@ def _ean13_checksum_valid(code: str) -> bool:
 
 
 def _normalize_gtin(val: str) -> Optional[str]:
-    """Return a normalized EAN value to store in retail_EAN.
+    """Return a normalized GTIN/EAN value to store in retail_EAN.
 
-    Preference order:
-    - Valid EAN-13
-    - If 14 digits and dropping leading zero yields valid EAN-13
-    - EAN-8 (leave as-is)
+    Acceptance order:
+    - Valid EAN-13: return as-is
+    - GTIN-14: if leading zero yields a valid EAN-13, return that; else return 14-digit as-is
+    - UPC-A (12 digits): return as-is
+    - EAN-8: return as-is
     Otherwise None.
     """
     d = _digits(val)
+    # EAN-13 (with checksum validation)
     if len(d) == 13 and _ean13_checksum_valid(d):
         return d
-    if len(d) == 14 and d.startswith("0"):
-        d13 = d[1:]
-        if _ean13_checksum_valid(d13):
-            return d13
+    # GTIN-14: prefer collapsing leading zero to valid EAN-13, otherwise keep 14
+    if len(d) == 14 and d.isdigit():
+        if d.startswith("0"):
+            d13 = d[1:]
+            if _ean13_checksum_valid(d13):
+                return d13
+        return d
+    # UPC-A (12 digits): accept as-is
+    if len(d) == 12 and d.isdigit():
+        return d
+    # EAN-8: accept as-is
     if len(d) == 8 and d.isdigit():
+        return d
+    # Some suppliers omit a leading 0 for UPC-A; treat 11 digits as UPC by padding
+    if len(d) == 11 and d.isdigit():
+        return "0" + d
+    # Fallback: accept 13-digit numeric even if checksum is invalid
+    # Some suppliers publish EANs with incorrect check digits; we prefer storing what is shown.
+    if len(d) == 13 and d.isdigit():
         return d
     return None
 
@@ -95,6 +111,7 @@ def _extract_from_dom(soup: BeautifulSoup) -> Optional[str]:
     label_regex = re.compile(r"\b(EAN|GTIN|Barcode|Bar\s*code)\b", re.I)
 
     # Look for label cells
+    fallback_from_short = None
     for th in soup.find_all(["th", "td", "dt", "label"]):
         if not th.get_text(strip=True):
             continue
@@ -105,6 +122,23 @@ def _extract_from_dom(soup: BeautifulSoup) -> Optional[str]:
                 cand = sib.get_text(" ", strip=True)
                 norm = _normalize_gtin(cand)
                 if norm:
+                    # If site shows an 11-digit value, we up-convert to 12 by padding 0.
+                    # Keep it as a fallback while we keep scanning for a stronger 13/14-digit candidate.
+                    d = _digits(cand)
+                    if len(d) == 11 and len(norm) == 12:
+                        fallback_from_short = fallback_from_short or norm
+                        continue
+                    return norm
+
+    # Heuristic: barcodes often appear in image filenames or alt attributes
+    for img in soup.find_all("img"):
+        for attr in ("src", "alt"):
+            val = img.get(attr) or ""
+            if not isinstance(val, str):
+                continue
+            for m in re.finditer(r"(\d{11,14})", val):
+                norm = _normalize_gtin(m.group(1))
+                if norm:
                     return norm
 
     # Fallback: search full text
@@ -113,6 +147,10 @@ def _extract_from_dom(soup: BeautifulSoup) -> Optional[str]:
         norm = _normalize_gtin(m.group(1))
         if norm:
             return norm
+
+    # As a last resort, if we captured an 11->12 padded candidate, return it
+    if fallback_from_short:
+        return fallback_from_short
 
     return None
 
@@ -194,4 +232,3 @@ class Command(BaseCommand):
             self.stdout.write(f"Updated:   {updated}")
         self.stdout.write(f"Skipped:   {skipped}")
         self.stdout.write(f"Errors:    {errors}")
-

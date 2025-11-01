@@ -27,7 +27,8 @@ class All_Products(models.Model):
     rsp = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     promotion_end_date = models.DateField(null=True, blank=True)
     multi_buy = models.BooleanField(default=False)
-    retail_EAN = models.CharField(max_length=13, blank=True)
+    # Allow up to GTIN-14 (and room for flexibility)
+    retail_EAN = models.CharField(max_length=18, blank=True)
     
     # level1_category = models.CharField(max_length=255, blank=True)   # temp
     # level2_category = models.CharField(max_length=255, blank=True)   # temp
