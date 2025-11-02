@@ -1,0 +1,5 @@
+# Epand All_Product model with 3 more elements:
+# 1. Description
+# 2. Ingredients/Nutrition
+# 3. Other Info
+
