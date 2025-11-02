@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static catalog_extras %}
 
 {% block title %}{{ product.name }}{% endblock %}
 
@@ -33,9 +33,11 @@
 <section class="pd-grid">
   <div class="pd-gallery">
     <div class="pd-image">
-      <img src="{% if product.image_url %}{{ product.image_url }}{% else %}{% static 'images/fresh_products.jpg' %}{% endif %}"
-           alt="{{ product.name }}"
-           loading="lazy">
+      <a href="#img-modal" class="pd-zoom" aria-label="Zoom image">
+        <img src="{% if product.image_url %}{{ product.image_url }}{% else %}{% static 'images/fresh_products.jpg' %}{% endif %}"
+             alt="{{ product.name }}"
+             loading="lazy">
+      </a>
     </div>
   </div>
 
@@ -50,6 +52,12 @@
       {% endif %}
     </div>
 
+    {% if product.is_bulk and product.bulk_total_price %}
+    <div class="pd-pack-info">
+      Pack total &pound;{{ product.bulk_total_price|floatformat:2 }} for {{ product.pack_amount }} units
+    </div>
+    {% endif %}
+
     <form method="POST" action="{% url 'add_to_cart' product.id %}" class="pd-buy">
       {% csrf_token %}
       <input type="hidden" name="return_to" value="{{ request.get_full_path }}">
@@ -62,18 +70,52 @@
     <p class="pd-login">Please <a href="{% url 'login' %}">log in</a> to complete purchase.</p>
     {% endif %}
 
-    <div class="pd-specs">
-      <div><span>Retail EAN</span><strong>{{ product.retail_EAN|default:"N/A" }}</strong></div>
-      <div><span>Main Category</span><strong>{{ product.main_category|default:"N/A" }}</strong></div>
-      <div><span>Sub Category</span><strong>{{ product.sub_category|default:"N/A" }}</strong></div>
-      <div><span>Sub-subcategory</span><strong>{{ product.sub_subcategory|default:"N/A" }}</strong></div>
-      <div><span>Variant</span><strong>{{ product.variant|default:"N/A" }}</strong></div>
-      <div><span>Promotion Ends</span>
-        <strong>{% if product.promotion_end_date %}{{ product.promotion_end_date|date:"d M Y" }}{% else %}N/A{% endif %}</strong>
-      </div>
-    </div>
+    <dl class="pd-specs">
+      <dt>Retail EAN</dt><dd>{{ product.retail_EAN|default:"N/A" }}</dd>
+      <dt>Main Category</dt><dd>{{ product.main_category|default:"N/A" }}</dd>
+      <dt>Sub Category</dt><dd>{{ product.sub_category|default:"N/A" }}</dd>
+      <dt>Sub-subcategory</dt><dd>{{ product.sub_subcategory|default:"N/A" }}</dd>
+      <dt>Variant</dt><dd>{{ product.variant|default:"N/A" }}</dd>
+      <dt>Promotion Ends</dt>
+      <dd>{% if product.promotion_end_date %}{{ product.promotion_end_date|date:"d M Y" }}{% else %}N/A{% endif %}</dd>
+    </dl>
 
     <p class="pd-disclaimer">Images and product information are for illustration only and may differ from the actual product.</p>
   </div>
 </section>
+
+<section class="pd-details">
+  {% if product.description %}
+  <details class="pd-accordion" open>
+    <summary><strong>Description</strong></summary>
+    <div class="pd-section-body pd-multiline">{{ product.description|linebreaksbr }}</div>
+  </details>
+  {% endif %}
+
+  {% if product.ingredients_nutrition %}
+    <details class="pd-accordion">
+      <summary><strong>Ingredients/Nutrition</strong></summary>
+      <div class="pd-section-body">{{ product.ingredients_nutrition|render_ingredients_nutrition|safe }}</div>
+    </details>
+  {% endif %}
+
+  {% if product.other_info %}
+    <details class="pd-accordion">
+      <summary><strong>
+        Other Info
+      </strong></summary>
+      <div class="pd-section-body pd-multiline">{{ product.other_info|linebreaksbr }}</div>
+    </details>
+  {% endif %}
+</section>
+
+<!-- CSS-only lightbox using :target -->
+{% comment %} <div id="img-modal" class="pd-lightbox" aria-modal="true" role="dialog">
+  <a href="#" class="pd-lightbox-close" aria-label="Close"></a>
+  <img src="{% if product.image_url %}{{ product.image_url }}{% else %}{% static 'images/fresh_products.jpg' %}{% endif %}"
+       alt="{{ product.name }}">
+  <div class="pd-lightbox-caption">{{ product.name }}</div>
+  <a href="#" class="pd-lightbox-backdrop" aria-hidden="true"></a>
+  
+</div> {% endcomment %}
 {% endblock %}
