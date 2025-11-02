@@ -105,6 +105,9 @@ def product_list(request):
         .exclude(image_url='/img/products/no-image.png')
         .order_by('id')
     )
+    # Fallback: if no base variants found, show all products
+    if not products.exists():
+        products = All_Products.objects.all().order_by('id')
 
     if l2:
         products = products.filter(
@@ -333,6 +336,9 @@ def load_more_products(request):
                    .filter(ga_product_id__endswith="1")
                    .exclude(image_url='/img/products/no-image.png')
                    .order_by('id'))
+    # Fallback: if no base variants found, show all products
+    if not products_qs.exists():
+        products_qs = All_Products.objects.all().order_by('id')
 
     # Rebuild the category name sets (or refactor into a helper if you prefer)
     from pathlib import Path
