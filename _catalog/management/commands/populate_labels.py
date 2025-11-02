@@ -33,10 +33,18 @@ class Command(BaseCommand):
                 if product.ga_product_id in processed_ga_ids:
                     continue
 
-                # Generate labels
-                name = product.name.split()
-                category_words = product.category.split() if product.category else []
-                all_words = set(name + category_words)
+                # Generate labels from name + all category levels + ga_product_id
+                words = []
+                if product.name:
+                    words.extend(product.name.split())
+                for field in ("main_category", "sub_category", "sub_subcategory"):
+                    value = getattr(product, field, "")
+                    if value:
+                        words.extend(value.split())
+                if product.ga_product_id:
+                    words.extend(product.ga_product_id.split())
+
+                all_words = set(words)
                 labels_str = " ".join(all_words)
 
                 # Update or create the associated labels record
