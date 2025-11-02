@@ -49,6 +49,41 @@
 /* Zoom affordance */
 .pd-zoom img { cursor: zoom-in; }
 
+/* Hover tooltip for image zoom */
+.pd-zoom[data-tooltip] { position: relative; }
+.pd-zoom[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-6px);
+  background: rgba(0,0,0,0.8);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  padding: 6px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s ease, transform .15s ease;
+}
+.pd-zoom[data-tooltip]::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% - 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: rgba(0,0,0,0.8);
+  opacity: 0;
+  transition: opacity .15s ease;
+}
+.pd-zoom[data-tooltip]:hover::after,
+.pd-zoom[data-tooltip]:hover::before {
+  opacity: 1;
+}
+
 .pd-info {
   background: #fff;
   border: 1px solid #e9ecef;

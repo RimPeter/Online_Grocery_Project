@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block content %}
-<nav class="pd-breadcrumb" aria-label="Breadcrumb">
+{% comment %} <nav class="pd-breadcrumb" aria-label="Breadcrumb">
   <ol>
     <li><a href="{% url 'home' %}">Home</a></li>
     {% if product.sub_category %}
@@ -28,15 +28,16 @@
   {% if product.vat_rate %}
     <span class="pd-meta">VAT: {{ product.get_vat_rate_display }}</span>
   {% endif %}
-  </nav>
+</nav> {% endcomment %}
 
 <section class="pd-grid">
   <div class="pd-gallery">
     <div class="pd-image">
-      <a href="#img-modal" class="pd-zoom" aria-label="Zoom image">
+      <a href="#img-modal" class="pd-zoom" aria-label="Zoom image" title="Product Detail" >
         <img src="{% if product.image_url %}{{ product.image_url }}{% else %}{% static 'images/fresh_products.jpg' %}{% endif %}"
              alt="{{ product.name }}"
-             loading="lazy">
+             loading="lazy"
+             title="Product Detail">
       </a>
     </div>
   </div>
@@ -113,7 +114,8 @@
 {% comment %} <div id="img-modal" class="pd-lightbox" aria-modal="true" role="dialog">
   <a href="#" class="pd-lightbox-close" aria-label="Close"></a>
   <img src="{% if product.image_url %}{{ product.image_url }}{% else %}{% static 'images/fresh_products.jpg' %}{% endif %}"
-       alt="{{ product.name }}">
+       alt="{{ product.name }}"
+       title="Product Detail">
   <div class="pd-lightbox-caption">{{ product.name }}</div>
   <a href="#" class="pd-lightbox-backdrop" aria-hidden="true"></a>
   

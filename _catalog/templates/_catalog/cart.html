@@ -30,9 +30,21 @@
                 </span>
               {% endif %}
               {% if item.product.image_url %}
-                <img src="{{ item.product.image_url }}" alt="{{ item.product.name }}" class="img-fluid">
+                <a href="{% url 'product_detail' item.product.pk %}"
+                   class="d-inline-block hover-tip"
+                   aria-label="View {{ item.product.name }} details"
+                   title="Product Detail"
+                   data-tooltip="Product Detail">
+                  <img src="{{ item.product.image_url }}" alt="{{ item.product.name }}" class="img-fluid">
+                </a>
               {% else %}
-                <img src="{% static 'images/default_product.jpg' %}" alt="No Image" class="img-fluid">
+                <a href="{% url 'product_detail' item.product.pk %}"
+                   class="d-inline-block hover-tip"
+                   aria-label="View {{ item.product.name }} details"
+                   title="Product Detail"
+                   data-tooltip="Product Detail">
+                  <img src="{% static 'images/default_product.jpg' %}" alt="No Image" class="img-fluid">
+                </a>
               {% endif %}
             </div>
             

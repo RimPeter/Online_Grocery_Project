@@ -110,3 +110,38 @@
     max-width: 180px;
   }
 }
+
+/* Generic hover tooltip (for image links etc.) */
+.hover-tip[data-tooltip] { position: relative; }
+.hover-tip[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-6px);
+  background: rgba(0,0,0,0.8);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  padding: 6px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s ease, transform .15s ease;
+  z-index: 5;
+}
+.hover-tip[data-tooltip]::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% - 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: rgba(0,0,0,0.8);
+  opacity: 0;
+  transition: opacity .15s ease;
+  z-index: 5;
+}
+.hover-tip[data-tooltip]:hover::after,
+.hover-tip[data-tooltip]:hover::before { opacity: 1; }
