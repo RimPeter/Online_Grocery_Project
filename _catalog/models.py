@@ -29,6 +29,11 @@ class All_Products(models.Model):
     multi_buy = models.BooleanField(default=False)
     # Allow up to GTIN-14 (and room for flexibility)
     retail_EAN = models.CharField(max_length=18, blank=True)
+
+    # Product detail fields scraped from product pages
+    description = models.TextField(blank=True)
+    ingredients_nutrition = models.TextField(blank=True)
+    other_info = models.TextField(blank=True)
     
     # level1_category = models.CharField(max_length=255, blank=True)   # temp
     # level2_category = models.CharField(max_length=255, blank=True)   # temp

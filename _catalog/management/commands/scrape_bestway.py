@@ -28,7 +28,7 @@ class Command(BaseCommand):
             / "commands"
             / "product_category.json"
         )
-        with open(json_path, encoding="utf‑8") as fh:
+        with open(json_path, encoding="utf-8") as fh:
             return json.load(fh)
 
     @staticmethod
@@ -81,6 +81,12 @@ class Command(BaseCommand):
                     list_position += 1
 
                     ga_id  = li.get("data-ga-product-id", "").strip()
+
+                    # avoid double work if the same product ID appears in
+                    # multiple category pages
+                    if ga_id in seen_ids:
+                        continue
+
                     name   = li.get("data-ga-product-name", "").strip()
                     price  = float(li.get("data-ga-product-price", 0) or 0)
                     cat    = li.get("data-ga-product-category", "").strip()
@@ -126,15 +132,99 @@ class Command(BaseCommand):
                         sub_subcategory=level2 or "",
                     )
 
-                    # avoid double work if the same product ID appears in
-                    # multiple category pages
-                    if ga_id in seen_ids:
-                        continue
-                    seen_ids.add(ga_id)
+                    # scrape product detail page for extended fields
+                    product_url = defaults.get("url")
+                    desc_text, ingr_text, other_info_text = self._scrape_product_details(product_url)
 
-                    All_Products.objects.update_or_create(
+                    # upsert base fields
+                    obj, _ = All_Products.objects.update_or_create(
                         ga_product_id=ga_id, defaults=defaults
                     )
+
+                    # set extended fields if present on the model
+                    updated_fields = []
+                    if hasattr(obj, "description") and desc_text is not None:
+                        setattr(obj, "description", desc_text)
+                        updated_fields.append("description")
+                    if hasattr(obj, "ingredients_nutrition") and ingr_text is not None:
+                        setattr(obj, "ingredients_nutrition", ingr_text)
+                        updated_fields.append("ingredients_nutrition")
+                    if hasattr(obj, "other_info") and other_info_text is not None:
+                        setattr(obj, "other_info", other_info_text)
+                        updated_fields.append("other_info")
+                    if updated_fields:
+                        try:
+                            obj.save(update_fields=updated_fields)
+                        except Exception:
+                            # fall back to full save if update_fields fails for any reason
+                            obj.save()
+
+                    seen_ids.add(ga_id)
                     upserted += 1
 
         self.stdout.write(self.style.SUCCESS(f"\nUpserted {upserted:,} products."))
+
+    @staticmethod
+    def _clean_text(el) -> str:
+        if not el:
+            return ""
+        # Get text with line breaks for block elements
+        text = el.get_text("\n", strip=True)
+        # Normalize excessive whitespace/newlines
+        lines = [ln.strip() for ln in text.splitlines()]
+        lines = [ln for ln in lines if ln]
+        return "\n".join(lines).strip()
+
+    def _scrape_product_details(self, url):
+        """
+        Fetch product detail page and extract three fields:
+        - Description
+        - Ingredients/Nutrition (combined bucket)
+        - Other Info (remaining sections)
+
+        Returns a 3-tuple of strings (or None if not found):
+        (description, ingredients_nutrition, other_info)
+        """
+        if not url:
+            return None, None, None
+        try:
+            r = requests.get(url, timeout=20)
+            r.raise_for_status()
+        except Exception:
+            return None, None, None
+
+        soup = BeautifulSoup(r.text, "html.parser")
+
+        # The product detail tabs are structured as pairs of
+        #   <div class="accordionButton">Title</div>
+        #   <div class="accordionContent prodtabcontents">...</div>
+        # Titles vary per page, so we categorize by keywords.
+        description = []
+        ingredients_nutrition = []
+        other_info = []
+
+        for btn in soup.select(".accordionButton"):
+            title = (btn.get_text(strip=True) or "").lower()
+            content = btn.find_next_sibling(lambda tag: tag.name == "div" and "accordionContent" in tag.get("class", []) and "prodtabcontents" in tag.get("class", []))
+            text = self._clean_text(content)
+            if not text:
+                continue
+
+            if any(k in title for k in ["description", "product details", "about", "overview"]):
+                description.append(text)
+            elif any(k in title for k in [
+                "ingredient", "nutrition", "nutritional", "allergen", "allergy", "dietary", "diet"]):
+                ingredients_nutrition.append(f"{btn.get_text(strip=True)}\n{text}")
+            else:
+                # Keep header to preserve context in other_info
+                other_info.append(f"{btn.get_text(strip=True)}\n{text}")
+
+        def join_or_none(parts):
+            s = "\n\n".join(p for p in parts if p)
+            return s if s else None
+
+        return (
+            join_or_none(description),
+            join_or_none(ingredients_nutrition),
+            join_or_none(other_info),
+        )
