@@ -226,9 +226,30 @@ def invoice_page_view(request, order_id):
         return redirect('order_summery', order_id=order.id)
 
     order_items = order.items.select_related('product').all()
+
+    # VAT rate map and per-line VAT calculation (assumes VAT-inclusive prices)
+    rate_map = {
+        'standard': Decimal('0.20'),
+        'reduced': Decimal('0.05'),
+        'zero': Decimal('0.00'),
+        'exempt': Decimal('0.00'),
+    }
+    vat_included = Decimal('0.00')
+
     for item in order_items:
         item.subtotal = item.price * item.quantity
+        try:
+            r = rate_map.get(getattr(item.product, 'vat_rate', 'standard'), Decimal('0.00'))
+            if r > 0:
+                item.vat_included = (item.subtotal * r) / (Decimal('1.00') + r)
+                vat_included += item.vat_included
+            else:
+                item.vat_included = Decimal('0.00')
+        except Exception:
+            item.vat_included = Decimal('0.00')
+
     total = sum(i.subtotal for i in order_items)
+    vat_included = vat_included.quantize(Decimal('0.01'))
     delivery_charge = Decimal('1.50') if order_items else Decimal('0.00')
     grand_total = (Decimal(total) + delivery_charge).quantize(Decimal('0.01'))
 
@@ -251,6 +272,7 @@ def invoice_page_view(request, order_id):
             'order': order,
             'order_items': order_items,
             'total': total,
+            'vat_included': vat_included,
             'delivery_charge': delivery_charge,
             'grand_total': grand_total,
             'default_address': default_address,

@@ -235,6 +235,7 @@
         <th>Item</th>
         <th class="text-right">Qty</th>
         <th class="text-right">Price</th>
+        <th class="text-right">VAT (included)</th>
         <th class="text-right">Subtotal</th>
       </tr>
     </thead>
@@ -244,11 +245,12 @@
           <td>{{ it.product.name }}</td>
           <td class="text-right">{{ it.quantity }}</td>
           <td class="text-right">£{{ it.price|floatformat:2 }}</td>
+          <td class="text-right">£{{ it.vat_included|default:0|floatformat:2 }}</td>
           <td class="text-right">£{{ it.subtotal|floatformat:2 }}</td>
         </tr>
       {% empty %}
         <tr>
-          <td colspan="4" class="muted">No items found for this invoice.</td>
+          <td colspan="5" class="muted">No items found for this invoice.</td>
         </tr>
       {% endfor %}
     </tbody>
@@ -259,6 +261,7 @@
     <div></div>
     <div class="summary">
       <div class="row"><div>Subtotal</div><div>£{{ total|floatformat:2 }}</div></div>
+      <div class="row"><div>VAT (included)</div><div>£{{ vat_included|default:0|floatformat:2 }}</div></div>
       <div class="row"><div>Delivery</div><div>£{{ delivery_charge|floatformat:2 }}</div></div>
       <div class="row total"><div>Total</div><div>£{{ grand_total|floatformat:2 }}</div></div>
     </div>
