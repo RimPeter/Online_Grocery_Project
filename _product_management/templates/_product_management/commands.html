@@ -33,6 +33,15 @@
                 <input class="form-check-input" type="checkbox" value="1" id="vat" name="vat" title="Include 'update_vat_rates' step">
                 <label class="form-check-label" for="vat" title="Runs management command 'update_vat_rates' (_catalog/management/commands/update_vat_rates.py)">Update VAT rates</label>
               </div>
+              {% comment %} <div class="ms-4 mt-1 text-muted small">
+                <div class="fw-semibold">VAT updater usage</div>
+                <ul class="mb-1">
+                  <li>Fresh run with periodic checkpoints: <code>python manage.py update_vat_rates --save-every 200</code></li>
+                  <li>Resume from last checkpoint: <code>python manage.py update_vat_rates --resume</code></li>
+                  <li>Start from a specific PK: <code>python manage.py update_vat_rates --start-from-pk 15000</code></li>
+                  <li>Start from a specific GAID: <code>python manage.py update_vat_rates --start-from-gaid 822104-1</code></li>
+                </ul>
+              </div> {% endcomment %}
             </div>
             <div class="col-md-6">
               <div class="form-check">
@@ -59,8 +68,8 @@
           </div>
 
           <div class="col-md-3 mt-2">
-            <label for="verbosity" class="form-label" title="Passes --verbosity to the invoked management commands">Verbosity</label>
-            <select id="verbosity" name="verbosity" class="form-select form-select-sm" title="Verbosity level for underlying management commands">
+            <label for="datajob_verbosity" class="form-label" title="Passes --verbosity to the invoked management commands">Verbosity</label>
+            <select id="datajob_verbosity" name="verbosity" class="form-select form-select-sm" title="Verbosity level for underlying management commands">
               <option value="0">0 - errors</option>
               <option value="1" selected>1 - normal</option>
               <option value="2">2 - verbose</option>
@@ -70,6 +79,69 @@
 
           <div class="mt-3">
             <button type="submit" class="btn btn-success" title="Runs management command 'datajob' (_catalog/management/commands/datajob.py) with selected steps">Run Data Job</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-body">
+        <h5 class="card-title">VAT Updater</h5>
+        <p class="text-muted">Run <code>update_vat_rates</code> with optional resume and start offsets.</p>
+        <form method="post" class="vstack gap-3">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="update_vat_rates">
+
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label" for="vat_save_every" title="Write checkpoint every N products (--save-every)">Save every</label>
+              <div class="input-group input-group-sm">
+                <span class="input-group-text">N</span>
+                <input id="vat_save_every" name="vat_save_every" type="number" min="1" step="1" class="form-control" placeholder="200">
+              </div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="vat_start_from_pk" title="Start after this PK (--start-from-pk)">Start from PK</label>
+              <div class="input-group input-group-sm">
+                <span class="input-group-text">&gt;</span>
+                <input id="vat_start_from_pk" name="vat_start_from_pk" type="number" min="0" step="1" class="form-control" placeholder="e.g. 15000">
+              </div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="vat_start_from_gaid" title="Start after this GAID (--start-from-gaid)">Start from GAID</label>
+              <input id="vat_start_from_gaid" name="vat_start_from_gaid" type="text" class="form-control form-control-sm" placeholder="e.g. 822104-1">
+            </div>
+          </div>
+
+          <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="1" id="vat_resume" name="vat_resume" title="Resume from last checkpoint (--resume)">
+                <label class="form-check-label" for="vat_resume">Resume from checkpoint</label>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <label for="vat_verbosity" class="form-label" title="Passes --verbosity to update_vat_rates">Verbosity</label>
+              <select id="vat_verbosity" name="verbosity" class="form-select form-select-sm" title="Verbosity level for update_vat_rates">
+                <option value="0">0 - errors</option>
+                <option value="1" selected>1 - normal</option>
+                <option value="2">2 - verbose</option>
+                <option value="3">3 - very verbose</option>
+              </select>
+            </div>
+            <div class="col-md-6 text-end">
+              <button type="submit" class="btn btn-primary" title="Runs management command 'update_vat_rates' (_catalog/management/commands/update_vat_rates.py) with provided options">
+                Run VAT Updater
+              </button>
+            </div>
+          </div>
+
+          <div class="text-muted small">
+            Examples:
+            <div><code>python manage.py update_vat_rates --save-every 200</code></div>
+            <div><code>python manage.py update_vat_rates --resume</code></div>
+            <div><code>python manage.py update_vat_rates --start-from-pk 15000</code></div>
+            <div><code>python manage.py update_vat_rates --start-from-gaid 822104-1</code></div>
           </div>
         </form>
       </div>

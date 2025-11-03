@@ -891,6 +891,37 @@ def commands(request):
             messages.success(request, 'Retail EAN scrape started in background.')
             return redirect('_product_management:commands')
 
+        elif action == 'update_vat_rates':
+            # Collect parameters from the VAT updater form
+            save_every = int(request.POST.get('vat_save_every') or 0)
+            start_from_pk = int(request.POST.get('vat_start_from_pk') or 0)
+            start_from_gaid = (request.POST.get('vat_start_from_gaid') or '').strip()
+            resume = bool(request.POST.get('vat_resume'))
+            verbosity = int(request.POST.get('verbosity') or 1)
+
+            def _run_update_vat():
+                try:
+                    from django.core.management import call_command
+                    call_kwargs = {
+                        'verbosity': verbosity,
+                    }
+                    if save_every:
+                        call_kwargs['save_every'] = save_every
+                    if start_from_pk:
+                        call_kwargs['start_from_pk'] = start_from_pk
+                    if start_from_gaid:
+                        call_kwargs['start_from_gaid'] = start_from_gaid
+                    if resume:
+                        call_kwargs['resume'] = True
+                    call_command('update_vat_rates', **call_kwargs)
+                except Exception:
+                    # Keep background thread errors from crashing request
+                    pass
+
+            threading.Thread(target=_run_update_vat, daemon=True).start()
+            messages.success(request, 'VAT updater started in background. Check logs for progress.')
+            return redirect('_product_management:commands')
+
         elif action == 'clear_all_products':
             # Extra safety: only superusers may execute
             if not request.user.is_superuser:

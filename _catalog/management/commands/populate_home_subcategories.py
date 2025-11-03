@@ -1,30 +1,39 @@
 from django.core.management.base import BaseCommand
-from _catalog.models import All_Products, HomeSubcategory
+from _catalog.models import All_Products
 
 
 class Command(BaseCommand):
-    help = "Populate HomeSubcategory with one entry per unique subcategory using a representative product image."
+    help = (
+        "Preview dynamic home subcategories derived from All_Products. "
+        "No database writes are performed (HomeSubcategory model removed)."
+    )
 
     def add_arguments(self, parser):
         parser.add_argument(
             "--active",
             action="store_true",
-            help="Mark created entries as active",
+            help="(Ignored) Kept for backward compatibility.",
         )
         parser.add_argument(
             "--reset",
             action="store_true",
-            help="Delete existing HomeSubcategory rows before populating",
+            help="(Ignored) HomeSubcategory table no longer exists.",
+        )
+        parser.add_argument(
+            "--limit",
+            type=int,
+            default=24,
+            help="Print up to this many preview entries (default 24).",
         )
 
     def handle(self, *args, **opts):
         if opts.get("reset"):
-            count = HomeSubcategory.objects.count()
-            HomeSubcategory.objects.all().delete()
-            self.stdout.write(self.style.WARNING(f"Cleared {count} existing HomeSubcategory rows."))
+            self.stdout.write(self.style.WARNING(
+                "--reset ignored: HomeSubcategory model was removed; using dynamic data."
+            ))
 
-        created = 0
         seen = set()
+        preview = []
         qs = (
             All_Products.objects
             .exclude(image_url__isnull=True)
@@ -32,23 +41,28 @@ class Command(BaseCommand):
             .exclude(image_url='/img/products/no-image.png')
             .order_by('sub_category', 'sub_subcategory', 'id')
         )
+
         for p in qs.iterator():
             l1 = (p.sub_category or '').strip() or 'Other'
             l2 = (p.sub_subcategory or '').strip() or 'Other'
             key = (l1.casefold(), l2.casefold())
             if key in seen:
                 continue
-            obj, was_created = HomeSubcategory.objects.get_or_create(
-                l1=l1, l2=l2,
-                defaults={
-                    'display_name': l2,
-                    'image_url': p.image_url or '',
-                    'active': bool(opts.get('active')),
-                    'sort_order': created,
-                }
-            )
             seen.add(key)
-            if was_created:
-                created += 1
+            preview.append({
+                'l1': l1,
+                'l2': l2,
+                'image_url': p.image_url or '',
+            })
 
-        self.stdout.write(self.style.SUCCESS(f"Created {created} HomeSubcategory rows."))
+        # Sort and print a small preview to stdout so the command remains useful
+        preview.sort(key=lambda x: (x['l1'].casefold(), x['l2'].casefold()))
+        limit = int(opts.get('limit') or 24)
+        to_show = preview[:max(0, limit)]
+
+        for i, row in enumerate(to_show, start=1):
+            self.stdout.write(f"{i:>2}. {row['l1']} -> {row['l2']} | {row['image_url']}")
+
+        self.stdout.write(self.style.SUCCESS(
+            f"Previewed {len(to_show)} of {len(preview)} dynamic home subcategories."
+        ))
