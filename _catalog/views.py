@@ -99,15 +99,8 @@ def product_list(request):
     l1 = request.GET.get('l1', '').strip()
     l2 = request.GET.get('l2', '').strip()
 
-    products = (
-        All_Products.objects
-        .filter(ga_product_id__endswith="1")
-        .exclude(image_url='/img/products/no-image.png')
-        .order_by('id')
-    )
-    # Fallback: if no base variants found, show all products
-    if not products.exists():
-        products = All_Products.objects.all().order_by('id')
+    # Show all products; handle placeholder images in template
+    products = All_Products.objects.all().order_by('id')
 
     if l2:
         products = products.filter(
@@ -332,13 +325,8 @@ def load_more_products(request):
     l1 = request.GET.get('l1', '').strip()
     l2 = request.GET.get('l2', '').strip()
 
-    products_qs = (All_Products.objects
-                   .filter(ga_product_id__endswith="1")
-                   .exclude(image_url='/img/products/no-image.png')
-                   .order_by('id'))
-    # Fallback: if no base variants found, show all products
-    if not products_qs.exists():
-        products_qs = All_Products.objects.all().order_by('id')
+    # Show all products; handle placeholder images in template
+    products_qs = All_Products.objects.all().order_by('id')
 
     # Rebuild the category name sets (or refactor into a helper if you prefer)
     from pathlib import Path
