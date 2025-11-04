@@ -6,6 +6,7 @@ from django.contrib import messages
 import json
 import os
 from django.db.models import Q
+from django.db.models.functions import Lower, Trim
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from _orders.models import Order, OrderItem
 from django.contrib.auth.decorators import login_required
@@ -103,18 +104,37 @@ def product_list(request):
     products = All_Products.objects.all().order_by('id')
 
     if l2:
-        products = products.filter(
-            sub_category__iexact=l1,
-            sub_subcategory__iexact=l2
+        # Normalize DB fields with Trim+Lower to avoid mismatch on stray spaces/case
+        l1n = l1.strip().lower()
+        l2n = l2.strip().lower()
+        products = (
+            products
+            .annotate(l1_norm=Lower(Trim('sub_category')), l2_norm=Lower(Trim('sub_subcategory')))
+            .filter(l1_norm=l1n, l2_norm=l2n)
         )
     elif l1:
-        products = products.filter(sub_category__iexact=l1)
+        l1n = l1.strip().lower()
+        products = (
+            products
+            .annotate(l1_norm=Lower(Trim('sub_category')))
+            .filter(l1_norm=l1n)
+        )
     elif query:
         q_ci = query.casefold()
         if q_ci in {n.casefold() for n in level2_names}:
-            products = products.filter(sub_subcategory__iexact=query)
+            qn = query.strip().lower()
+            products = (
+                products
+                .annotate(l2_norm=Lower(Trim('sub_subcategory')))
+                .filter(l2_norm=qn)
+            )
         elif q_ci in {n.casefold() for n in level1_names}:
-            products = products.filter(sub_category__iexact=query)
+            qn = query.strip().lower()
+            products = (
+                products
+                .annotate(l1_norm=Lower(Trim('sub_category')))
+                .filter(l1_norm=qn)
+            )
         else:
             products = products.filter(
                 Q(name__icontains=query) |
@@ -346,18 +366,36 @@ def load_more_products(request):
             level2_names.update(node.keys())
 
     if l2:
-        products_qs = products_qs.filter(
-            sub_category__iexact=l1,
-            sub_subcategory__iexact=l2
+        l1n = l1.strip().lower()
+        l2n = l2.strip().lower()
+        products_qs = (
+            products_qs
+            .annotate(l1_norm=Lower(Trim('sub_category')), l2_norm=Lower(Trim('sub_subcategory')))
+            .filter(l1_norm=l1n, l2_norm=l2n)
         )
     elif l1:
-        products_qs = products_qs.filter(sub_category__iexact=l1)
+        l1n = l1.strip().lower()
+        products_qs = (
+            products_qs
+            .annotate(l1_norm=Lower(Trim('sub_category')))
+            .filter(l1_norm=l1n)
+        )
     elif query:
         q_ci = query.casefold()
         if q_ci in {n.casefold() for n in level2_names}:
-            products_qs = products_qs.filter(sub_subcategory__iexact=query)
+            qn = query.strip().lower()
+            products_qs = (
+                products_qs
+                .annotate(l2_norm=Lower(Trim('sub_subcategory')))
+                .filter(l2_norm=qn)
+            )
         elif q_ci in {n.casefold() for n in level1_names}:
-            products_qs = products_qs.filter(sub_category__iexact=query)
+            qn = query.strip().lower()
+            products_qs = (
+                products_qs
+                .annotate(l1_norm=Lower(Trim('sub_category')))
+                .filter(l1_norm=qn)
+            )
         else:
             products_qs = products_qs.filter(
                 Q(name__icontains=query) |
@@ -366,9 +404,20 @@ def load_more_products(request):
                 Q(sub_subcategory__icontains=query)
             )
     elif l2:
-        products = products.filter(sub_category__iexact=l1, sub_subcategory__iexact=l2)
+        l1n = l1.strip().lower()
+        l2n = l2.strip().lower()
+        products_qs = (
+            products_qs
+            .annotate(l1_norm=Lower(Trim('sub_category')), l2_norm=Lower(Trim('sub_subcategory')))
+            .filter(l1_norm=l1n, l2_norm=l2n)
+        )
     elif l1:
-        products = products.filter(sub_category__iexact=l1)
+        l1n = l1.strip().lower()
+        products_qs = (
+            products_qs
+            .annotate(l1_norm=Lower(Trim('sub_category')))
+            .filter(l1_norm=l1n)
+        )
         
     paginator = Paginator(products_qs, 8)
     page_obj = paginator.get_page(page_number)
