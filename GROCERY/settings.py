@@ -22,7 +22,13 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 # Allowed Hosts
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='.herokuapp.com,localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='.herokuapp.com,kingstononlinegrocery.co.uk,www.kingstononlinegrocery.co.uk,localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://kingstononlinegrocery.co.uk',
+    'https://www.kingstononlinegrocery.co.uk',
+]
+
 
 # Check if running on Heroku
 
