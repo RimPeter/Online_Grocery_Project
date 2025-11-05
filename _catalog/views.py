@@ -50,21 +50,40 @@ def home(request):
         'subcats': subcats,
     })
 
+def _load_category_json():
+    """Load category JSON from whichever app path exists.
+    Tries `_catalog/management/commands/` first, then `_product_management/...`.
+    Returns an empty dict if not found to avoid 500s.
+    """
+    candidates = [
+        Path(settings.BASE_DIR)
+        / "_catalog"
+        / "management"
+        / "commands"
+        / "product_category.json",
+        Path(settings.BASE_DIR)
+        / "_product_management"
+        / "management"
+        / "commands"
+        / "product_category.json",
+    ]
+    for p in candidates:
+        try:
+            if p.exists():
+                with open(p, "r", encoding="utf-8") as f:
+                    return json.load(f)
+        except Exception:
+            # If a candidate exists but can't be read/parsed, try the next.
+            continue
+    return {}
+
 def product_detail(request, pk):
     product = get_object_or_404(All_Products, pk=pk)
     return render(request, '_catalog/product_detail.html', {'product': product})
 
 def product_list(request):
-    # Load category JSON
-    category_file = (
-        Path(settings.BASE_DIR)
-        / "_catalog"
-        / "management"
-        / "commands"
-        / "product_category.json"
-    )
-    with open(category_file, "r", encoding="utf-8") as f:
-        raw = json.load(f)
+    # Load category JSON (supports multiple candidate locations)
+    raw = _load_category_json()
 
     # Optional helper (kept even if we don't use URLs in UI)
     def pick_best_url(url_or_list):
@@ -349,16 +368,7 @@ def load_more_products(request):
     products_qs = All_Products.objects.all().order_by('id')
 
     # Rebuild the category name sets (or refactor into a helper if you prefer)
-    from pathlib import Path
-    category_file = (
-        Path(settings.BASE_DIR)
-        / "_catalog"
-        / "management"
-        / "commands"
-        / "product_category.json"
-    )
-    with open(category_file, "r", encoding="utf-8") as f:
-        raw = json.load(f)
+    raw = _load_category_json()
     level1_names, level2_names = set(), set()
     for k, node in raw.items():
         level1_names.add(k)

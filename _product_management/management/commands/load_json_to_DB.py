@@ -16,11 +16,53 @@ import json
 class Command(BaseCommand):
     help = "Loads products from a JSON file into the database."
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--json-path",
+            type=str,
+            help=(
+                "Optional path to products JSON. If omitted, the command searches "
+                "common locations like data_job/products6.json and "
+                "_product_management/management/commands/products6.json"
+            ),
+        )
+
     def handle(self, *args, **options):
-        # Cross-platform path to data_job/products6.json
-        data_path = Path(settings.BASE_DIR) / "data_job" / "products6.json"
-        if not data_path.exists():
-            raise FileNotFoundError(f"JSON file not found: {data_path}")
+        # Resolve JSON path from arg or known locations
+        json_arg = options.get("json_path")
+        candidates = []
+        if json_arg:
+            candidates.append(Path(json_arg))
+        # Common locations (project-root relative)
+        candidates.extend(
+            [
+                Path(settings.BASE_DIR) / "data_job" / "products6.json",
+                Path(settings.BASE_DIR)
+                / "_product_management"
+                / "management"
+                / "commands"
+                / "products6.json",
+                Path(settings.BASE_DIR)
+                / "_product_management"
+                / "management"
+                / "commands"
+                / "products.json",
+                Path(settings.BASE_DIR)
+                / "_catalog"
+                / "management"
+                / "commands"
+                / "products6.json",
+            ]
+        )
+
+        data_path = next((p for p in candidates if p.exists()), None)
+        if not data_path:
+            checked = "\n - " + "\n - ".join(str(p) for p in candidates)
+            raise FileNotFoundError(
+                "Could not locate products JSON. Checked:" + checked
+            )
+
+        self.stdout.write(f"Using JSON: {data_path}")
 
         with open(data_path, "r", encoding="utf-8") as file:
             data = json.load(file)
@@ -82,4 +124,3 @@ class Command(BaseCommand):
                 f"JSON load complete. Created: {created_count}, Updated: {updated_count}."
             )
         )
-

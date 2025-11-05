@@ -14,6 +14,18 @@ from django.conf import settings
 from _catalog.models import All_Products
 
 
+# Simple browser-like headers to reduce blocking
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-GB,en;q=0.9",
+    "Connection": "close",
+}
+
 class Command(BaseCommand):
     help = "Scrape all Bestway category pages (taken from product_category.json) and upsert them into All_Products."
 
@@ -21,15 +33,24 @@ class Command(BaseCommand):
 
     @staticmethod
     def load_category_json():
-        json_path = (
+        candidates = [
             Path(settings.BASE_DIR)
             / "_catalog"
             / "management"
             / "commands"
-            / "product_category.json"
-        )
-        with open(json_path, encoding="utf-8") as fh:
-            return json.load(fh)
+            / "product_category.json",
+            Path(settings.BASE_DIR)
+            / "_product_management"
+            / "management"
+            / "commands"
+            / "product_category.json",
+        ]
+        for p in candidates:
+            if p.exists():
+                with open(p, encoding="utf-8") as fh:
+                    return json.load(fh)
+        # Fallback: return empty dict if not found
+        return {}
 
     @staticmethod
     def expand_urls(category_data):
@@ -55,21 +76,38 @@ class Command(BaseCommand):
 
     #──── main handler ─────────────────────────────────────────────────────
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--json-out",
+            type=str,
+            default=str(
+                Path(settings.BASE_DIR)
+                / "_product_management" / "management" / "commands" / "products6.json"
+            ),
+            help="Path to write JSON export (default: commands/products6.json)",
+        )
+
     def handle(self, *args, **options):
         category_data = self.load_category_json()
         sources = list(self.expand_urls(category_data))
         self.stdout.write(f"Found {len(sources):,} category URLs to scrape.")
 
+        # Use a session with headers for category pages
+        session = requests.Session()
+        session.headers.update(HEADERS)
+
         upserted = 0
         seen_ids = set()
         list_position = 0
+        # Collect a JSON dump of all scraped products
+        collected = []
 
         # wrap the whole run in a single transaction for speed
         with transaction.atomic():
             for level1, level2, url in sources:
                 self.stdout.write(self.style.NOTICE(f"› {url}"))
                 try:
-                    response = requests.get(url, timeout=20)
+                    response = session.get(url, timeout=20)
                     response.raise_for_status()
                 except Exception as exc:
                     self.stderr.write(self.style.WARNING(f"  skipped ({exc})"))
@@ -77,7 +115,9 @@ class Command(BaseCommand):
 
                 soup = BeautifulSoup(response.text, "html.parser")
 
-                for li in soup.select("li[data-ga-product-id]"):
+                items = soup.select("li[data-ga-product-id]")
+                self.stdout.write(f"  found {len(items)} items")
+                for li in items:
                     list_position += 1
 
                     ga_id  = li.get("data-ga-product-id", "").strip()
@@ -159,10 +199,47 @@ class Command(BaseCommand):
                             # fall back to full save if update_fields fails for any reason
                             obj.save()
 
+                    # Build a JSON row representing the product, including extended fields
+                    collected.append({
+                        "ga_product_id": ga_id,
+                        "name": name,
+                        "price": price,
+                        "main_category": cat,
+                        "sub_category": level1,
+                        "sub_subcategory": level2 or "",
+                        "variant": var,
+                        "list_position": list_position,
+                        "url": f"https://www.bestwaywholesale.co.uk{relurl}",
+                        "image_url": img_url,
+                        "sku": sku,
+                        "rsp": rsp_val,
+                        "promotion_end_date": None,
+                        "multi_buy": False,
+                        "retail_EAN": getattr(obj, "retail_EAN", "") or "",
+                        "vat_rate": getattr(obj, "vat_rate", "standard") or "standard",
+                        "description": getattr(obj, "description", None),
+                        "ingredients_nutrition": getattr(obj, "ingredients_nutrition", None),
+                        "other_info": getattr(obj, "other_info", None),
+                    })
+
                     seen_ids.add(ga_id)
                     upserted += 1
 
-        self.stdout.write(self.style.SUCCESS(f"\nUpserted {upserted:,} products."))
+        # Write/update products6.json next to this command module
+        try:
+            json_out_path = Path(options.get("json_out"))
+            json_out_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp_path = json_out_path.with_suffix(json_out_path.suffix + ".tmp")
+            with tmp_path.open("w", encoding="utf-8") as jf:
+                json.dump(collected, jf, ensure_ascii=False, indent=2)
+            os.replace(tmp_path, json_out_path)
+            self.stdout.write(self.style.SUCCESS(
+                f"\nUpserted {upserted:,} products and wrote {len(collected):,} to {json_out_path}"
+            ))
+        except Exception as exc:
+            self.stdout.write(self.style.WARNING(
+                f"\nUpserted {upserted:,} products, but failed writing products6.json: {exc}"
+            ))
 
     @staticmethod
     def _clean_text(el) -> str:
@@ -188,7 +265,7 @@ class Command(BaseCommand):
         if not url:
             return None, None, None
         try:
-            r = requests.get(url, timeout=20)
+            r = requests.get(url, headers=HEADERS, timeout=20)
             r.raise_for_status()
         except Exception:
             return None, None, None
