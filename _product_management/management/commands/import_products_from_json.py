@@ -6,34 +6,30 @@ from _catalog.models import All_Products
 
 
 class Command(BaseCommand):
-    help = "Import products from a plain JSON list (like products6.json) into All_Products."
+    help = "Import products from a plain JSON list into All_Products."
 
     def add_arguments(self, parser):
-        parser.add_argument(
-            "json_path",
-            nargs="?",
-            default="products6.json",
-            help="Path to JSON file (default: products6.json in the same app folder)",
-        )
-        parser.add_argument(
-            "--update",
-            action="store_true",
-            help="Update existing products matched by ga_product_id instead of skipping.",
-        )
+      # path to the json file
+      parser.add_argument(
+          "json_path",
+          help="Path to JSON file (e.g. _product_management/management/commands/products6.json)",
+      )
+      # <-- THIS is the bit you don't have on Heroku yet
+      parser.add_argument(
+          "--update",
+          action="store_true",
+          help="Update existing products (matched by ga_product_id) instead of skipping.",
+      )
 
     def handle(self, *args, **options):
         json_path = options["json_path"]
+        do_update = options["update"]
 
-        # resolve relative to project root if needed
         path = Path(json_path)
         if not path.exists():
-            # try to resolve relative to this management/commands folder
-            here = Path(__file__).resolve().parent
-            path = here / json_path
-            if not path.exists():
-                raise CommandError(f"JSON file not found at {json_path}")
+            raise CommandError(f"JSON file not found at {json_path}")
 
-        self.stdout.write(f"Loading products from {path} ...")
+        self.stdout.write(f"Loading products from {json_path} ...")
 
         data = json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(data, list):
@@ -41,10 +37,10 @@ class Command(BaseCommand):
 
         created = 0
         updated = 0
+
         for obj in data:
             ga_id = obj.get("ga_product_id")
             if not ga_id:
-                self.stderr.write("Skipping item without ga_product_id")
                 continue
 
             defaults = {
@@ -68,24 +64,23 @@ class Command(BaseCommand):
                 "vat_rate": obj.get("vat_rate") or "standard",
             }
 
-            try:
-                if options["update"]:
-                    obj_db, created_flag = All_Products.objects.update_or_create(
-                        ga_product_id=ga_id,
-                        defaults=defaults,
-                    )
-                    if created_flag:
-                        created += 1
-                    else:
-                        updated += 1
-                else:
-                    # create only, skip if exists
-                    All_Products.objects.get_or_create(
-                        ga_product_id=ga_id,
-                        defaults=defaults,
-                    )
+            if do_update:
+                # update-or-create path
+                _, created_flag = All_Products.objects.update_or_create(
+                    ga_product_id=ga_id,
+                    defaults=defaults,
+                )
+                if created_flag:
                     created += 1
-            except Exception as e:
-                self.stderr.write(f"Error creating {ga_id}: {e}")
+                else:
+                    updated += 1
+            else:
+                # create-only path
+                _, created_flag = All_Products.objects.get_or_create(
+                    ga_product_id=ga_id,
+                    defaults=defaults,
+                )
+                if created_flag:
+                    created += 1
 
         self.stdout.write(self.style.SUCCESS(f"Done. Created: {created}, Updated: {updated}"))
