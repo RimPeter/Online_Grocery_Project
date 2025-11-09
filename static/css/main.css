@@ -16,11 +16,8 @@
 
 
 .main-banner {
-  background-image: url('../images/banner.jpg');
-  background-size: cover;
-  background-position: center;
+  background: linear-gradient(135deg, #315c1d, #79b353);
   color: white;
-  background-color: #E1EDDE;
 }
 
 .footer {

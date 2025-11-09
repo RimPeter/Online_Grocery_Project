@@ -29,9 +29,12 @@ CSRF_TRUSTED_ORIGINS = [
     'https://www.kingstononlinegrocery.co.uk',
 ]
 
-SECURE_SSL_REDIRECT = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-
+# if ON_HEROKU or not DEBUG:
+#     SECURE_SSL_REDIRECT = True
+#     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# else:
+#     # local dev: do NOT force https
+#     SECURE_SSL_REDIRECT = False
 # Check if running on Heroku
 
 
@@ -42,7 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
+    'django_extensions',
     '_accounts',
     '_catalog',
     '_employees',
