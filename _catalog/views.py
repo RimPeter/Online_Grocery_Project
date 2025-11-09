@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from collections import defaultdict
-from .models import All_Products
+from .models import All_Products, HomeCategoryTile, HomeValuePillar
 from django.conf import settings
 from django.contrib import messages
 import json
@@ -25,8 +25,33 @@ except ImportError:  # pragma: no cover - postgres not available in dev
     TrigramSimilarity = None
 
 
-def home(request):
-    # Build dynamic Category shortcuts from all categories and subcategories
+DEFAULT_HOME_PILLARS = [
+    {
+        'key': 'speed',
+        'title': 'Next-day windows',
+        'subtitle': 'Pick a delivery time that fits your schedule',
+        'sort_order': 10,
+    },
+    {
+        'key': 'selection',
+        'title': 'Great local selection',
+        'subtitle': 'From fresh produce to daily essentials',
+        'sort_order': 20,
+    },
+    {
+        'key': 'reorders',
+        'title': 'Easy reorders',
+        'subtitle': 'Save time with your recent items and favorites',
+        'sort_order': 30,
+    },
+]
+
+def _normalize_category_value(value):
+    value = (value or '').strip()
+    return value or 'Other'
+
+
+def _auto_home_tiles():
     subcats = []
     try:
         qs = (
@@ -38,8 +63,8 @@ def home(request):
         )
         seen = set()
         for p in qs:
-            l1 = (p.sub_category or '').strip() or 'Other'
-            l2 = (p.sub_subcategory or '').strip() or 'Other'
+            l1 = _normalize_category_value(p.sub_category)
+            l2 = _normalize_category_value(p.sub_subcategory)
             key = (l1.casefold(), l2.casefold())
             if key in seen:
                 continue
@@ -50,13 +75,97 @@ def home(request):
                 'l1': l1,
                 'l2': l2,
             })
-        # Sort by parent then child for tidy grouping
         subcats.sort(key=lambda x: (x['l1'].casefold(), x['name'].casefold()))
     except Exception:
         subcats = []
+    return subcats
+
+
+def _home_value_pillars():
+    try:
+        pillars = list(HomeValuePillar.objects.order_by('sort_order', 'id'))
+    except Exception:
+        pillars = []
+    if pillars:
+        return [
+            {
+                'title': pillar.title,
+                'subtitle': pillar.subtitle,
+            }
+            for pillar in pillars
+        ]
+    return [
+        {
+            'title': default['title'],
+            'subtitle': default['subtitle'],
+        }
+        for default in DEFAULT_HOME_PILLARS
+    ]
+
+
+def _group_home_tiles(subcats):
+    if not subcats:
+        return []
+    grouped = defaultdict(list)
+    for tile in subcats:
+        grouped[tile['l1']].append(tile)
+    category_groups = []
+    for l1 in sorted(grouped.keys(), key=str.casefold):
+        items = grouped[l1]
+        items.sort(key=lambda x: x['name'].casefold())
+        category_groups.append({'l1': l1, 'label': l1, 'items': items})
+    return category_groups
+
+
+def _manual_home_groups(auto_tiles):
+    try:
+        tiles = list(
+            HomeCategoryTile.objects
+            .filter(is_active=True)
+            .order_by('sort_order', 'id')
+        )
+    except Exception:
+        return []
+    if not tiles:
+        return []
+
+    grouped_auto = defaultdict(list)
+    for tile in auto_tiles:
+        grouped_auto[tile['l1']].append(tile)
+
+    manual_groups = []
+    for tile in tiles:
+        l1 = _normalize_category_value(tile.l1)
+        children = grouped_auto.get(l1)
+        if not children:
+            continue
+        label = (tile.display_name or '').strip() or l1
+        manual_groups.append({
+            'l1': l1,
+            'label': label,
+            'items': children,
+        })
+    return manual_groups
+
+
+def home(request):
+    auto_tiles = _auto_home_tiles()
+    manual_groups = _manual_home_groups(auto_tiles)
+    value_pillars = _home_value_pillars()
+    if manual_groups:
+        category_groups = manual_groups
+        subcats = [tile for group in manual_groups for tile in group['items']]
+        using_manual = True
+    else:
+        subcats = auto_tiles
+        category_groups = _group_home_tiles(subcats)
+        using_manual = False
 
     return render(request, '_catalog/home_new.html', {
         'subcats': subcats,
+        'category_groups': category_groups,
+        'home_tiles_are_manual': using_manual,
+        'value_pillars': value_pillars,
     })
 
 def _load_category_json():

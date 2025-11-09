@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Home Categories{% endblock %}
+
+{% block content %}
+
+<div class="container py-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div class="flex-grow-1">
+      <h1 class="h3 mb-1">Home page categories</h1>
+      <p class="text-muted mb-0">Pick which category tiles appear on the storefront home page and control their order.</p>
+    </div>
+    <a href="{% url 'home' %}" class="btn btn-outline-secondary btn-sm ms-auto" target="_blank" rel="noopener">View storefront</a>
+  </div>
+
+  <div class="card mt-4">
+    <div class="card-header fw-semibold">Value pillars</div>
+    <div class="card-body">
+      {% if pillars %}
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="pillars" />
+        <div class="row g-3">
+          {% for pillar in pillars %}
+          <div class="col-12 col-sm-6 col-lg-4">
+            <div class="border rounded p-3 h-100">
+              <div class="mb-3">
+                <label for="pillar_title_{{ pillar.id }}" class="form-label">Heading</label>
+                <input type="text" id="pillar_title_{{ pillar.id }}" name="pillar_title_{{ pillar.id }}" class="form-control" value="{{ pillar.title }}" required />
+              </div>
+              <div class="mb-0">
+                <label for="pillar_subtitle_{{ pillar.id }}" class="form-label">Description</label>
+                <textarea id="pillar_subtitle_{{ pillar.id }}" name="pillar_subtitle_{{ pillar.id }}" class="form-control" rows="2" required>{{ pillar.subtitle }}</textarea>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        <button type="submit" class="btn btn-primary w-100 mt-3">Save value pillars</button>
+      </form>
+      {% else %}
+      <p class="text-muted mb-0">Value pillars will become editable once defaults are created.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-12 col-lg-8">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span class="fw-semibold">Selected categories</span>
+          <span class="badge text-bg-secondary">{{ tiles|length }} configured</span>
+        </div>
+        <div class="card-body p-0">
+          {% if tiles %}
+          <form method="post">
+            {% csrf_token %}
+            <div class="table-responsive">
+              <table class="table table-sm table-striped align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th style="width: 110px;">Order</th>
+                    <th style="width: 220px;">Main category</th>
+                    <th>Heading override</th>
+                    <th style="width: 220px;">Image URL</th>
+                    <th class="text-center" style="width: 80px;">Visible</th>
+                    <th class="text-center" style="width: 80px;">Remove</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for tile in tiles %}
+                  <tr>
+                    <td>
+                      <input type="number" name="order_{{ tile.id }}" value="{{ tile.sort_order }}" class="form-control form-control-sm" />
+                    </td>
+                    <td class="fw-semibold">{{ tile.l1 }}</td>
+                    <td>
+                      <input type="text" name="display_{{ tile.id }}" value="{{ tile.display_name }}" placeholder="{{ tile.l1 }}" class="form-control form-control-sm" />
+                    </td>
+                    <td>
+                      <input type="url" name="image_{{ tile.id }}" value="{{ tile.image_url }}" placeholder="Auto" class="form-control form-control-sm" />
+                    </td>
+                    <td class="text-center">
+                      <input class="form-check-input" type="checkbox" name="active_{{ tile.id }}" {% if tile.is_active %}checked{% endif %} />
+                    </td>
+                    <td class="text-center">
+                      <input class="form-check-input" type="checkbox" name="delete_ids" value="{{ tile.id }}" />
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 p-3 border-top">
+              <div class="text-muted small">Use the remove checkbox + button to drop tiles. Order is ascending.</div>
+              <div class="d-flex gap-2">
+                <button type="submit" name="action" value="delete" class="btn btn-outline-danger btn-sm">Remove selected</button>
+                <button type="submit" name="action" value="update" class="btn btn-primary btn-sm">Save changes</button>
+              </div>
+            </div>
+          </form>
+          {% else %}
+          <div class="p-4 text-center text-muted">
+            No curated tiles yet. Add categories using the form on the right.
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+      <div class="card h-100">
+        <div class="card-header fw-semibold">Add a category</div>
+        <div class="card-body">
+          {% if available_options %}
+          <form method="post" class="vstack gap-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add" />
+            <div class="text-muted small">
+              Selecting a main category automatically shows all of its subcategories on the storefront home page.
+            </div>
+            <div>
+              <label for="new_pair" class="form-label">Pick main category</label>
+              <select id="new_pair" name="new_pair" class="form-select" required>
+                <option value="">Select…</option>
+                {% for option in available_options %}
+                <option value="{{ option.value }}">{{ option.label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label for="new_display_name" class="form-label">Heading override <span class="text-muted small">(optional)</span></label>
+              <input type="text" id="new_display_name" name="new_display_name" class="form-control" placeholder="Defaults to main category name" />
+            </div>
+            <div>
+              <label for="new_image_url" class="form-label">Image URL <span class="text-muted small">(optional)</span></label>
+              <input type="url" id="new_image_url" name="new_image_url" class="form-control" placeholder="Leave blank to auto-pick first product image" />
+            </div>
+            <div>
+              <label for="new_sort_order" class="form-label">Sort order</label>
+              <input type="number" id="new_sort_order" name="new_sort_order" class="form-control" value="{{ suggested_sort }}" />
+              <div class="form-text">Lower numbers appear first. Suggested next value shown.</div>
+            </div>
+            <button type="submit" class="btn btn-success w-100">Add to home page</button>
+          </form>
+          {% else %}
+          <p class="text-muted mb-0">All known categories are already configured.</p>
+          {% endif %}
+        </div>
+        <div class="card-footer text-muted small">
+          Visibility toggles control whether a tile is shown without deleting it. Changes take effect immediately on the storefront home page.
+        </div>
+      </div>
+      
+    </div>
+  </div>
+</div>
+{% endblock %}
+

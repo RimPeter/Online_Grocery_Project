@@ -115,3 +115,67 @@ class All_ProductsMissingRSP(All_Products):
         proxy = True
         verbose_name = "Product with missing RSP"
         verbose_name_plural = "Products with missing RSP"
+
+
+class HomeCategoryTile(models.Model):
+    """Manual controls for which categories appear on the home page."""
+    l1 = models.CharField(
+        max_length=255,
+        unique=True,
+        help_text="Parent category (sub_category) name shown on home page.",
+    )
+    l2 = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="(Legacy) optional child category name; ignored for main-category tiles.",
+    )
+    display_name = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Optional override for the label shown on the card.",
+    )
+    image_url = models.URLField(
+        blank=True,
+        help_text="Optional image URL; falls back to first product image if empty.",
+    )
+    is_active = models.BooleanField(default=True, db_index=True)
+    sort_order = models.PositiveIntegerField(default=0, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ('sort_order', 'l1', 'l2')
+        verbose_name = "Home category tile"
+        verbose_name_plural = "Home category tiles"
+
+    def __str__(self):
+        if self.l2:
+            return f"{self.l1} → {self.l2}"
+        return self.l1
+
+
+class HomeValuePillar(models.Model):
+    """Editable marketing blurbs shown on the home page."""
+    key = models.CharField(
+        max_length=50,
+        unique=True,
+        help_text="Stable identifier used for seeding defaults (e.g., 'speed').",
+    )
+    title = models.CharField(
+        max_length=255,
+        help_text="Short heading shown above the description.",
+    )
+    subtitle = models.CharField(
+        max_length=255,
+        help_text="Supporting sentence shown under the heading.",
+    )
+    sort_order = models.PositiveIntegerField(default=0, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ('sort_order', 'id')
+        verbose_name = "Home value pillar"
+        verbose_name_plural = "Home value pillars"
+
+    def __str__(self):
+        return self.title

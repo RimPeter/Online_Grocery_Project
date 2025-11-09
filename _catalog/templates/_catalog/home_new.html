@@ -32,24 +32,14 @@
 <section class='mb-5'>
   <div class='container'>
     <div class='row text-center g-4'>
+      {% for pillar in value_pillars %}
       <div class='col-12 col-md-4'>
         <div class='p-3 border rounded h-100'>
-          <div class='fw-semibold mb-1'>Next-day windows</div>
-          <div class='text-muted small'>Pick a delivery time that fits your schedule</div>
+          <div class='fw-semibold mb-1'>{{ pillar.title }}</div>
+          <div class='text-muted small'>{{ pillar.subtitle }}</div>
         </div>
       </div>
-      <div class='col-12 col-md-4'>
-        <div class='p-3 border rounded h-100'>
-          <div class='fw-semibold mb-1'>Great local selection</div>
-          <div class='text-muted small'>From fresh produce to daily essentials</div>
-        </div>
-      </div>
-      <div class='col-12 col-md-4'>
-        <div class='p-3 border rounded h-100'>
-          <div class='fw-semibold mb-1'>Easy reorders</div>
-          <div class='text-muted small'>Save time with your recent items and favorites</div>
-        </div>
-      </div>
+      {% endfor %}
     </div>
   </div>
 </section>
@@ -57,8 +47,37 @@
 <!-- Category shortcuts -->
 <section class='mb-5'>
   <div class='container'>
-    <div class='row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3'>
-      {% if subcats %}
+    {% if category_groups %}
+      {% for group in category_groups %}
+      <div class='mb-4'>
+        <div class='d-flex justify-content-between align-items-center mb-2'>
+          <h3 class='h5 mb-0'>{{ group.label }}</h3>
+          <a href="{% url 'product_list' %}?l1={{ group.l1|urlencode }}" class='small text-decoration-none'>View all</a>
+        </div>
+        <div class='row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3'>
+          {% for sc in group.items %}
+          <div class='col'>
+            <a href="{% url 'product_list' %}?l1={{ sc.l1|urlencode }}&l2={{ sc.l2|urlencode }}" class='text-decoration-none d-block h-100'>
+              <div class='card h-100'>
+                <div class='ratio ratio-1x1'>
+                  {% if sc.image_url %}
+                    <img src="{{ sc.image_url }}" alt="{{ sc.name }}" class='w-100 h-100 object-fit-cover'>
+                  {% else %}
+                    <img src="{% static 'images/default_product.jpg' %}" alt="{{ sc.name }}" class='w-100 h-100 object-fit-cover'>
+                  {% endif %}
+                </div>
+                <div class='card-body p-2 text-center'>
+                  <div class='small fw-semibold text-break'>{{ sc.name }}</div>
+                </div>
+              </div>
+            </a>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    {% elif subcats %}
+      <div class='row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3'>
         {% for sc in subcats %}
         <div class='col'>
           <a href="{% url 'product_list' %}?l1={{ sc.l1|urlencode }}&l2={{ sc.l2|urlencode }}" class='text-decoration-none d-block h-100'>
@@ -71,18 +90,16 @@
                 {% endif %}
               </div>
               <div class='card-body p-2 text-center'>
-                <div class='small fw-semibold text-break'>{{ sc.l1 }} – {{ sc.name }}</div>
+                <div class='small fw-semibold text-break'>{{ sc.l1 }} - {{ sc.name }}</div>
               </div>
             </div>
           </a>
         </div>
         {% endfor %}
-      {% else %}
-        <div class='col-12'>
-          <p class='text-muted small'>Browse all categories or use search above.</p>
-        </div>
-      {% endif %}
-    </div>
+      </div>
+    {% else %}
+      <p class='text-muted small'>Browse all categories or use search above.</p>
+    {% endif %}
   </div>
 </section>
 

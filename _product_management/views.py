@@ -9,12 +9,12 @@ from django.conf import settings
 from django.contrib.staticfiles import finders
 from xhtml2pdf import pisa
 from django.contrib.admin.views.decorators import staff_member_required
-from django.db.models import Count, Sum, F, DecimalField, Value, ExpressionWrapper, Q
+from django.db.models import Count, Sum, F, DecimalField, Value, ExpressionWrapper, Q, Max
 from django.db.models.functions import Coalesce, Cast
 from datetime import date, timedelta
 from django.views.decorators.http import require_http_methods
 import threading
-from _catalog.models import All_Products
+from _catalog.models import All_Products, HomeCategoryTile, HomeValuePillar
 from _orders.models import Order, OrderItem
 from django.contrib import messages
 
@@ -976,6 +976,211 @@ def commands(request):
             return redirect('_product_management:commands')
 
     return render(request, '_product_management/commands.html', {'product_count': product_count})
+
+
+def _normalize_home_category(value: str) -> str:
+    value = (value or '').strip()
+    return value or 'Other'
+
+
+HOME_PILLAR_DEFAULTS = [
+    {
+        'key': 'speed',
+        'title': 'Next-day windows',
+        'subtitle': 'Pick a delivery time that fits your schedule',
+        'sort_order': 10,
+    },
+    {
+        'key': 'selection',
+        'title': 'Great local selection',
+        'subtitle': 'From fresh produce to daily essentials',
+        'sort_order': 20,
+    },
+    {
+        'key': 'reorders',
+        'title': 'Easy reorders',
+        'subtitle': 'Save time with your recent items and favorites',
+        'sort_order': 30,
+    },
+]
+
+def _available_home_categories(exclude_names=None):
+    exclude_names = exclude_names or set()
+    options = []
+    seen = set()
+    try:
+        qs = (
+            All_Products.objects
+            .only('sub_category')
+            .order_by('sub_category', 'id')
+        )
+        for product in qs.iterator():
+            l1 = _normalize_home_category(product.sub_category)
+            key = l1.casefold()
+            if key in seen or key in exclude_names:
+                continue
+            seen.add(key)
+            options.append({
+                'l1': l1,
+                'label': l1,
+                'value': l1,
+            })
+    except Exception:
+        return []
+    return options
+
+
+def _ensure_home_value_pillars():
+    try:
+        existing = {pillar.key: pillar for pillar in HomeValuePillar.objects.all()}
+    except Exception:
+        return []
+    to_create = []
+    for default in HOME_PILLAR_DEFAULTS:
+        if default['key'] not in existing:
+            to_create.append(HomeValuePillar(**default))
+    if to_create:
+        HomeValuePillar.objects.bulk_create(to_create)
+        existing.update({pillar.key: pillar for pillar in to_create})
+    return list(HomeValuePillar.objects.order_by('sort_order', 'id'))
+
+
+@staff_member_required
+@require_http_methods(["GET", "POST"])
+def home_categories(request):
+    """Allow superusers/staff to curate which categories appear on the home page."""
+    tiles = list(HomeCategoryTile.objects.order_by('sort_order', 'id'))
+    pillars = _ensure_home_value_pillars()
+    configured_keys = {
+        _normalize_home_category(tile.l1).casefold()
+        for tile in tiles
+    }
+    available_options = _available_home_categories(configured_keys)
+    agg = HomeCategoryTile.objects.aggregate(max_sort=Max('sort_order'))
+    suggested_sort = (agg.get('max_sort') or 0) + 10
+
+    if request.method == 'POST':
+        action = request.POST.get('action') or 'update'
+        redirect_to = redirect('_product_management:home_categories')
+
+        if action == 'add':
+            selected_l1 = (request.POST.get('new_pair') or '').strip()
+            display_name = (request.POST.get('new_display_name') or '').strip()
+            image_url = (request.POST.get('new_image_url') or '').strip()
+            if not selected_l1:
+                messages.error(request, 'Select a category to add.')
+                return redirect_to
+
+            l1 = _normalize_home_category(selected_l1)
+            if HomeCategoryTile.objects.filter(l1__iexact=l1).exists():
+                messages.warning(request, f'{l1} is already configured.')
+                return redirect_to
+
+            sort_value = request.POST.get('new_sort_order')
+            try:
+                sort_order = int(sort_value)
+            except (TypeError, ValueError):
+                sort_order = suggested_sort
+
+            HomeCategoryTile.objects.create(
+                l1=l1,
+                l2='',
+                display_name=display_name,
+                image_url=image_url,
+                sort_order=sort_order,
+                is_active=True,
+            )
+            messages.success(request, f'Added {l1} to the home page categories.')
+            return redirect_to
+
+        if action == 'delete':
+            raw_ids = request.POST.getlist('delete_ids')
+            delete_ids = []
+            for raw in raw_ids:
+                try:
+                    delete_ids.append(int(raw))
+                except (TypeError, ValueError):
+                    continue
+            if not delete_ids:
+                messages.error(request, 'Select at least one tile to remove.')
+                return redirect_to
+            deleted, _ = HomeCategoryTile.objects.filter(id__in=delete_ids).delete()
+            if deleted:
+                messages.success(request, f'Removed {deleted} tile(s).')
+            else:
+                messages.info(request, 'No tiles matched the selection.')
+            return redirect_to
+
+        if action == 'pillars':
+            updated_pillars = []
+            for pillar in pillars:
+                title_key = f'pillar_title_{pillar.id}'
+                subtitle_key = f'pillar_subtitle_{pillar.id}'
+                new_title = (request.POST.get(title_key) or '').strip()
+                new_subtitle = (request.POST.get(subtitle_key) or '').strip()
+                if not new_title or not new_subtitle:
+                    messages.error(request, 'Please provide both a heading and description for every value pillar.')
+                    return redirect_to
+                changed = False
+                if new_title != pillar.title:
+                    pillar.title = new_title
+                    changed = True
+                if new_subtitle != pillar.subtitle:
+                    pillar.subtitle = new_subtitle
+                    changed = True
+                if changed:
+                    updated_pillars.append(pillar)
+            if updated_pillars:
+                HomeValuePillar.objects.bulk_update(updated_pillars, ['title', 'subtitle'])
+                messages.success(request, 'Updated home page value pillars.')
+            else:
+                messages.info(request, 'No pillar changes detected.')
+            return redirect_to
+
+        # Default action: update existing tiles
+        updated_tiles = []
+        for tile in tiles:
+            order_raw = request.POST.get(f'order_{tile.id}')
+            try:
+                new_order = int(order_raw)
+            except (TypeError, ValueError):
+                new_order = tile.sort_order
+            new_display = (request.POST.get(f'display_{tile.id}') or '').strip()
+            new_image = (request.POST.get(f'image_{tile.id}') or '').strip()
+            new_active = bool(request.POST.get(f'active_{tile.id}'))
+
+            changed = False
+            if new_order != tile.sort_order:
+                tile.sort_order = new_order
+                changed = True
+            if new_display != (tile.display_name or ''):
+                tile.display_name = new_display
+                changed = True
+            if new_image != (tile.image_url or ''):
+                tile.image_url = new_image
+                changed = True
+            if new_active != tile.is_active:
+                tile.is_active = new_active
+                changed = True
+
+            if changed:
+                updated_tiles.append(tile)
+
+        if updated_tiles:
+            HomeCategoryTile.objects.bulk_update(updated_tiles, ['display_name', 'image_url', 'sort_order', 'is_active'])
+            messages.success(request, f'Updated {len(updated_tiles)} tile(s).')
+        else:
+            messages.info(request, 'No changes detected.')
+        return redirect_to
+
+    context = {
+        'tiles': tiles,
+        'available_options': available_options,
+        'suggested_sort': suggested_sort,
+        'has_tiles': bool(tiles),
+        'pillars': pillars,
+    }
+    return render(request, '_product_management/home_categories.html', context)
 
 
 def missing_retail_ean(request):

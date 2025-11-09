@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.db.models import Q
-from .models import All_Products, Product_Labels_For_Searchbar, All_ProductsMissingRSP
+from .models import All_Products, Product_Labels_For_Searchbar, All_ProductsMissingRSP, HomeCategoryTile, HomeValuePillar
 from django.utils.html import format_html
 
    
@@ -82,3 +82,33 @@ class BulkListFilter(admin.SimpleListFilter):
 
 # Re-register All_Products with Bulk filter added
 All_ProductsAdmin.list_filter = All_ProductsAdmin.list_filter + (BulkListFilter,)
+
+
+@admin.register(HomeCategoryTile)
+class HomeCategoryTileAdmin(admin.ModelAdmin):
+    list_display = (
+        'l1',
+        'display_name',
+        'is_active',
+        'sort_order',
+        'image_preview',
+        'updated_at',
+    )
+    list_editable = ('is_active', 'sort_order',)
+    search_fields = ('l1', 'display_name')
+    list_filter = ('is_active',)
+    ordering = ('sort_order', 'l1', 'l2')
+
+    @admin.display(description='Image', ordering='image_url')
+    def image_preview(self, obj):
+        if obj.image_url:
+            return format_html('<img src="{}" width="50" height="50" />', obj.image_url)
+        return 'Auto'
+
+
+@admin.register(HomeValuePillar)
+class HomeValuePillarAdmin(admin.ModelAdmin):
+    list_display = ('title', 'subtitle', 'sort_order', 'updated_at')
+    list_editable = ('sort_order',)
+    ordering = ('sort_order', 'id')
+    search_fields = ('title', 'subtitle')
