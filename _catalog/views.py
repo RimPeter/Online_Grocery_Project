@@ -5,15 +5,24 @@ from django.conf import settings
 from django.contrib import messages
 import json
 import os
+from django.db import connection
 from django.db.models import Q
-from django.db.models.functions import Lower, Trim
+from django.db.models.functions import Lower, Trim, Greatest
+from django.db.utils import DatabaseError
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET
 from _orders.models import Order, OrderItem
 from django.contrib.auth.decorators import login_required
 from pathlib import Path
 from django.urls import reverse
 from decimal import Decimal
 from django.utils.http import url_has_allowed_host_and_scheme
+
+try:
+    from django.contrib.postgres.search import TrigramSimilarity
+except ImportError:  # pragma: no cover - postgres not available in dev
+    TrigramSimilarity = None
 
 
 def home(request):
@@ -77,42 +86,73 @@ def _load_category_json():
             continue
     return {}
 
+def _pick_best_url(url_or_list):
+    if isinstance(url_or_list, list):
+        for pref in ("s=200", "s=100"):
+            for u in url_or_list:
+                if f"?{pref}" in u or f"&{pref}" in u:
+                    return u
+        return url_or_list[-1]
+    return url_or_list
+
+def _category_metadata():
+    """
+    Returns (category_tree, level1_names, level2_names, level2_map)
+    category_tree mirrors the JSON but with deterministic ordering and best-fit URLs.
+    level2_map is a dict of {level1: [level2,...]} to help client-side filtering.
+    """
+    raw = _load_category_json() or {}
+    category_tree = {}
+    level1_names = []
+    level2_names = set()
+    level2_map = {}
+
+    for level1 in sorted(raw.keys(), key=str.casefold):
+        node = raw[level1]
+        if isinstance(node, dict):
+            ordered = {}
+            for level2 in sorted(node.keys(), key=str.casefold):
+                ordered[level2] = _pick_best_url(node[level2])
+                level2_names.add(level2)
+            category_tree[level1] = ordered
+            level2_map[level1] = list(ordered.keys())
+        else:
+            category_tree[level1] = _pick_best_url(node)
+            level2_map[level1] = []
+        level1_names.append(level1)
+
+    return category_tree, level1_names, sorted(level2_names, key=str.casefold), level2_map
+
+def _apply_category_filters(queryset, l1, l2):
+    """
+    Shared helper to filter a queryset by level-1/level-2 names with trimmed/casefold logic.
+    """
+    if l2:
+        l1n = (l1 or '').strip().lower()
+        l2n = l2.strip().lower()
+        return (
+            queryset
+            .annotate(
+                l1_norm=Lower(Trim('sub_category')),
+                l2_norm=Lower(Trim('sub_subcategory'))
+            )
+            .filter(l1_norm=l1n, l2_norm=l2n)
+        )
+    if l1:
+        l1n = l1.strip().lower()
+        return (
+            queryset
+            .annotate(l1_norm=Lower(Trim('sub_category')))
+            .filter(l1_norm=l1n)
+        )
+    return queryset
+
 def product_detail(request, pk):
     product = get_object_or_404(All_Products, pk=pk)
     return render(request, '_catalog/product_detail.html', {'product': product})
 
 def product_list(request):
-    # Load category JSON (supports multiple candidate locations)
-    raw = _load_category_json()
-
-    # Optional helper (kept even if we don't use URLs in UI)
-    def pick_best_url(url_or_list):
-        if isinstance(url_or_list, list):
-            for pref in ("s=200", "s=100"):
-                for u in url_or_list:
-                    if f"?{pref}" in u or f"&{pref}" in u:
-                        return u
-            return url_or_list[-1]
-        return url_or_list
-
-    # Build tree and suggestion lists
-    category_tree = {}
-    for level1 in sorted(raw.keys(), key=str.casefold):
-        node = raw[level1]
-        if isinstance(node, dict):
-            sub = {}
-            for level2 in sorted(node.keys(), key=str.casefold):
-                sub[level2] = pick_best_url(node[level2])
-            category_tree[level1] = sub
-        else:
-            category_tree[level1] = pick_best_url(node)
-
-    level1_names = sorted(category_tree.keys(), key=str.casefold)
-    level2_names = []
-    for node in category_tree.values():
-        if isinstance(node, dict):
-            level2_names.extend(node.keys())
-    level2_names = sorted(set(level2_names), key=str.casefold)
+    category_tree, level1_names, level2_names, level2_map = _category_metadata()
 
     # Filters
     query = request.GET.get('q', '').strip()
@@ -183,6 +223,8 @@ def product_list(request):
         'category_tree': category_tree,
         'level1_names': level1_names,
         'level2_names': level2_names,
+        'level2_map': level2_map,
+        'initial_level2_options': level2_map.get(l1, []) if l1 else [],
     }
 
     # Add recent purchased items from the user's last 3 non-pending orders
@@ -358,6 +400,135 @@ def update_cart(request):
 
     return redirect('cart_view')
 
+
+@require_GET
+def search_api(request):
+    """
+    JSON search endpoint with optional trigram ranking when Postgres is available.
+    """
+    query = (request.GET.get('q') or '').strip()
+    l1 = (request.GET.get('l1') or '').strip()
+    l2 = (request.GET.get('l2') or '').strip()
+    page_number = request.GET.get('page') or 1
+    try:
+        page_size = int(request.GET.get('page_size', 12))
+    except (TypeError, ValueError):
+        page_size = 12
+    page_size = max(1, min(page_size, 48))
+
+    products_qs = All_Products.objects.all()
+    products_qs = _apply_category_filters(products_qs, l1, l2)
+
+    use_trigram = bool(query) and TrigramSimilarity is not None and connection.vendor == 'postgresql'
+    if use_trigram:
+        try:
+            products_qs = (
+                products_qs
+                .annotate(
+                    similarity=Greatest(
+                        TrigramSimilarity('name', query),
+                        TrigramSimilarity('main_category', query),
+                        TrigramSimilarity('sub_category', query),
+                        TrigramSimilarity('sub_subcategory', query),
+                    )
+                )
+                .filter(similarity__gte=0.1)
+                .order_by('-similarity', 'name')
+            )
+        except DatabaseError:
+            use_trigram = False
+
+    if query and not use_trigram:
+        products_qs = products_qs.filter(
+            Q(name__icontains=query) |
+            Q(main_category__icontains=query) |
+            Q(sub_category__icontains=query) |
+            Q(sub_subcategory__icontains=query)
+        ).order_by('name')
+    elif not query:
+        products_qs = products_qs.order_by('name')
+
+    paginator = Paginator(products_qs, page_size)
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    results = []
+    for product in page_obj:
+        results.append({
+            'id': product.pk,
+            'name': product.name,
+            'unit_price': str(product.unit_price or ''),
+            'l1': (product.sub_category or '').strip(),
+            'l2': (product.sub_subcategory or '').strip(),
+            'image_url': product.image_url,
+            'detail_url': reverse('product_detail', args=[product.pk]),
+            'add_to_cart_url': reverse('add_to_cart', args=[product.pk]),
+        })
+
+    return JsonResponse({
+        'page': page_obj.number,
+        'total_pages': paginator.num_pages,
+        'total_results': paginator.count,
+        'results': results,
+    })
+
+
+@require_GET
+def search_suggest(request):
+    """
+    Lightweight autocomplete endpoint returning categories and product hits.
+    """
+    query = (request.GET.get('q') or '').strip()
+    if len(query) < 2:
+        return JsonResponse({'suggestions': []})
+
+    l1 = (request.GET.get('l1') or '').strip()
+    l2 = (request.GET.get('l2') or '').strip()
+    limit_param = request.GET.get('limit')
+    limit = None
+    if limit_param:
+        try:
+            limit = max(1, int(limit_param))
+        except (TypeError, ValueError):
+            limit = None
+
+    _, level1_names, _, level2_map = _category_metadata()
+    suggestions = []
+    query_cf = query.casefold()
+
+    for level1 in level1_names:
+        if query_cf in level1.casefold():
+            suggestions.append({
+                'type': 'category',
+                'label': f"{level1}",
+                'value': level1,
+                'l1': level1,
+            })
+            if limit and len(suggestions) >= limit:
+                break
+
+        for level2 in level2_map.get(level1, []):
+            label = f"{level1} \u203a {level2}"
+            haystack = f"{level1} {level2}".casefold()
+            if query_cf in level2.casefold() or query_cf in haystack:
+                suggestions.append({
+                    'type': 'subcategory',
+                    'label': label,
+                    'value': level2,
+                    'l1': level1,
+                    'l2': level2,
+                })
+                if limit and len(suggestions) >= limit:
+                    break
+        if limit and len(suggestions) >= limit:
+            break
+
+    return JsonResponse({'suggestions': suggestions})
+
 def load_more_products(request):
     page_number = request.GET.get('page', 1)
     query = request.GET.get('q', '').strip()
@@ -367,13 +538,10 @@ def load_more_products(request):
     # Show all products; handle placeholder images in template
     products_qs = All_Products.objects.all().order_by('id')
 
-    # Rebuild the category name sets (or refactor into a helper if you prefer)
-    raw = _load_category_json()
-    level1_names, level2_names = set(), set()
-    for k, node in raw.items():
-        level1_names.add(k)
-        if isinstance(node, dict):
-            level2_names.update(node.keys())
+    # Rebuild the category name sets using helper metadata
+    _, level1_name_list, level2_name_list, _ = _category_metadata()
+    level1_names = {name.casefold() for name in level1_name_list}
+    level2_names = {name.casefold() for name in level2_name_list}
 
     if l2:
         l1n = l1.strip().lower()
@@ -392,14 +560,14 @@ def load_more_products(request):
         )
     elif query:
         q_ci = query.casefold()
-        if q_ci in {n.casefold() for n in level2_names}:
+        if q_ci in level2_names:
             qn = query.strip().lower()
             products_qs = (
                 products_qs
                 .annotate(l2_norm=Lower(Trim('sub_subcategory')))
                 .filter(l2_norm=qn)
             )
-        elif q_ci in {n.casefold() for n in level1_names}:
+        elif q_ci in level1_names:
             qn = query.strip().lower()
             products_qs = (
                 products_qs

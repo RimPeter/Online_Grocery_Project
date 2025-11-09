@@ -112,74 +112,62 @@
       </div>
       {% endif %}
 
-<form method="GET" action="" class="mb-3" id="search-form">
-  {# preserve current filters when searching #}
-  {% if request.GET.l1 %}<input type="hidden" name="l1" id="l1-field" value="{{ request.GET.l1 }}">{% else %}<input type="hidden" name="l1" id="l1-field">{% endif %}
-  {% if request.GET.l2 %}<input type="hidden" name="l2" id="l2-field" value="{{ request.GET.l2 }}">{% else %}<input type="hidden" name="l2" id="l2-field">{% endif %}
+      <form method="GET" action="" class="mb-3" id="search-form" novalidate>
+        <div class="row g-3 align-items-end">
+          <div class="col-lg-6">
+            <label for="search-input" class="form-label">Search products</label>
+            <div class="position-relative">
+              <input
+                type="text"
+                name="q"
+                id="search-input"
+                class="form-control"
+                placeholder="Search for products or categories..."
+                value="{{ request.GET.q }}"
+                autocomplete="off"
+                spellcheck="false"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-expanded="false"
+                aria-haspopup="listbox"
+                aria-controls="search-suggestions"
+              />
+              <div
+                id="search-suggestions"
+                class="dropdown-menu w-100"
+                role="listbox"
+                aria-label="Search suggestions"
+                data-suggest-url="{% url 'product_search_suggest' %}">
+              </div>
+            </div>
+            {% comment %} <div class="form-text">Type at least 2 characters to see live suggestions.</div> {% endcomment %}
+          </div>
+          
+          <div class="col-md-3">
+            <label for="filter-l1" class="form-label">Category</label>
+            <select class="form-select" id="filter-l1" name="l1">
+              <option value="">All categories</option>
+              {% for level1 in level1_names %}
+                <option value="{{ level1 }}" {% if request.GET.l1 == level1 %}selected{% endif %}>{{ level1 }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label for="filter-l2" class="form-label">Subcategory</label>
+            <select class="form-select" id="filter-l2" name="l2" {% if not request.GET.l1 %}disabled{% endif %}>
+              <option value="">All subcategories</option>
+              {% for level2 in initial_level2_options %}
+                <option value="{{ level2 }}" {% if request.GET.l2 == level2 %}selected{% endif %}>{{ level2 }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="mt-2">
+          <small class="text-muted">Filters apply automatically. Need a fresh start? <a class="link-secondary" href="{% url 'product_list' %}">Clear all filters</a>.</small>
+        </div>
+      </form>
 
-  <div class="input-group">
-    <input
-      type="text"
-      name="q"
-      id="search-input"
-      class="form-control"
-      placeholder="Search for products or categories..."
-      value="{{ request.GET.q }}"
-      list="category-suggestions"
-      autocomplete="off"
-      aria-label="Search products"
-    />
-  </div>
-
-  {# As-you-type dropdown suggestions: Level-1, Level-2, and combined "L1 - L2" #}
-  <datalist id="category-suggestions">
-    {% for level1, node in category_tree.items %}
-      <option value="{{ level1 }}"></option>
-      {% if node.items %}
-        {% for level2, _ in node.items %}
-          <option value="{{ level2 }}"></option>
-          <option value="{{ level1 }} - {{ level2 }}"></option>
-        {% endfor %}
-      {% endif %}
-    {% endfor %}
-  </datalist>
-</form>
-
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    const form = document.getElementById('search-form');
-    const input = document.getElementById('search-input');
-    const datalist = document.getElementById('category-suggestions');
-
-    if (!form || !input || !datalist) return;
-
-    const allowed = new Set(Array.from(datalist.options).map(o => o.value));
-
-    // Submit when a datalist option is selected
-    input.addEventListener('change', function () {
-      const val = input.value.trim();
-      if (allowed.has(val)) {
-        form.submit();
-      }
-    });
-
-    // Prevent Enter submit unless value matches a suggestion
-    input.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') {
-        const val = input.value.trim();
-        if (!allowed.has(val)) {
-          e.preventDefault();
-        }
-      }
-    });
-  });
-  </script>
-
-{# Safe JSON payloads for exact-matching on submit #}
-{{ level1_names|json_script:"level1-names" }}
-{{ level2_names|json_script:"level2-names" }}
-
-      
+{{ level2_map|json_script:"level2-map" }}
 
       <!-- Product Container -->
       <div class="row gy-4" id="product-container">
@@ -224,6 +212,225 @@
 </div>
 
 <!-- Infinite scroll removed; using standard pagination above -->
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const mapEl = document.getElementById('level2-map');
+    if (!mapEl) return;
+    const level2Map = JSON.parse(mapEl.textContent);
+    const l1Select = document.getElementById('filter-l1');
+    const l2Select = document.getElementById('filter-l2');
+    const form = document.getElementById('search-form');
+    if (!l1Select || !l2Select) return;
+
+    const submitFilters = () => {
+      if (!form) return;
+      if (typeof form.requestSubmit === 'function') {
+        form.requestSubmit();
+      } else {
+        form.submit();
+      }
+    };
+
+    const updateSubcategories = (targetValue = '') => {
+      const selectedL1 = l1Select.value || '';
+      const currentValue = targetValue || l2Select.value || '';
+      const options = level2Map[selectedL1] || [];
+      l2Select.innerHTML = '<option value="">All subcategories</option>';
+      options.forEach(optionName => {
+        const option = document.createElement('option');
+        option.value = optionName;
+        option.textContent = optionName;
+        l2Select.appendChild(option);
+      });
+      if (!options.length) {
+        l2Select.value = '';
+        l2Select.disabled = true;
+      } else {
+        l2Select.disabled = false;
+        if (currentValue && options.includes(currentValue)) {
+          l2Select.value = currentValue;
+        } else {
+          l2Select.value = '';
+        }
+      }
+    };
+    window.updateSubcategoryOptions = updateSubcategories;
+
+    updateSubcategories();
+    l1Select.addEventListener('change', () => {
+      updateSubcategories();
+      submitFilters();
+    });
+    l2Select.addEventListener('change', submitFilters);
+  });
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const mapEl = document.getElementById('level2-map');
+    const form = document.getElementById('search-form');
+    const l1Select = document.getElementById('filter-l1');
+    const l2Select = document.getElementById('filter-l2');
+    const input = document.getElementById('search-input');
+    const suggestionBox = document.getElementById('search-suggestions');
+    if (!mapEl || !form || !input || !suggestionBox) return;
+
+    const suggestUrl = suggestionBox.dataset.suggestUrl;
+    if (!suggestUrl) return;
+
+    let controller;
+    let items = [];
+    let activeIndex = -1;
+
+    const closeSuggestions = () => {
+      suggestionBox.classList.remove('show');
+      suggestionBox.innerHTML = '';
+      input.setAttribute('aria-expanded', 'false');
+      input.removeAttribute('aria-activedescendant');
+      items = [];
+      activeIndex = -1;
+    };
+
+    const updateActive = () => {
+      const buttons = suggestionBox.querySelectorAll('button[data-index]');
+      buttons.forEach((btn, idx) => {
+        if (idx === activeIndex) {
+          btn.classList.add('active');
+          btn.setAttribute('aria-selected', 'true');
+          const optionId = `suggestion-${idx}`;
+          btn.id = optionId;
+          input.setAttribute('aria-activedescendant', optionId);
+        } else {
+          btn.classList.remove('active');
+          btn.removeAttribute('aria-selected');
+        }
+      });
+      if (activeIndex < 0) {
+        input.removeAttribute('aria-activedescendant');
+      }
+    };
+
+    const renderSuggestions = (list) => {
+      items = list;
+      suggestionBox.innerHTML = '';
+      if (!list.length) {
+        closeSuggestions();
+        return;
+      }
+      list.forEach((item, idx) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'dropdown-item text-start';
+        button.dataset.index = idx;
+        button.setAttribute('role', 'option');
+        const label = document.createElement('span');
+        label.className = 'd-block';
+        label.textContent = item.label || item.value || '';
+        button.appendChild(label);
+        if (item.type === 'product') {
+          const meta = document.createElement('span');
+          meta.className = 'text-muted small d-block';
+          meta.textContent = 'Product';
+          button.appendChild(meta);
+        }
+        suggestionBox.appendChild(button);
+      });
+      suggestionBox.classList.add('show');
+      input.setAttribute('aria-expanded', 'true');
+      activeIndex = -1;
+      updateActive();
+    };
+
+    const fetchSuggestions = (term) => {
+      if (controller) controller.abort();
+      controller = new AbortController();
+      const params = new URLSearchParams({
+        q: term,
+        l1: l1Select ? l1Select.value : '',
+        l2: l2Select ? l2Select.value : '',
+      });
+      fetch(`${suggestUrl}?${params.toString()}`, { signal: controller.signal })
+        .then(res => res.ok ? res.json() : Promise.reject(res))
+        .then(data => renderSuggestions(data.suggestions || []))
+        .catch(err => {
+          if (err.name !== 'AbortError') {
+            console.error('Suggestion fetch failed', err);
+          }
+        });
+    };
+
+    const applySuggestion = (index) => {
+      const item = items[index];
+      if (!item) return;
+      closeSuggestions();
+      if (item.type === 'product' && item.detail_url) {
+        window.location.href = item.detail_url;
+        return;
+      }
+      input.value = item.value || item.label || '';
+      if (item.l1 && l1Select) {
+        l1Select.value = item.l1;
+      }
+      if (window.updateSubcategoryOptions) {
+        window.updateSubcategoryOptions(item.l2 || '');
+      } else if (l2Select) {
+        if (item.l2) {
+          l2Select.disabled = false;
+          l2Select.value = item.l2;
+        } else {
+          l2Select.value = '';
+          l2Select.disabled = !(level2Map[l1Select.value || ''] || []).length;
+        }
+      }
+      if (form.requestSubmit) {
+        form.requestSubmit();
+      } else {
+        form.submit();
+      }
+    };
+
+    input.addEventListener('input', (e) => {
+      const term = e.target.value.trim();
+      if (term.length < 2) {
+        closeSuggestions();
+        return;
+      }
+      fetchSuggestions(term);
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (!items.length) return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        activeIndex = (activeIndex + 1) % items.length;
+        updateActive();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        activeIndex = (activeIndex - 1 + items.length) % items.length;
+        updateActive();
+      } else if (e.key === 'Enter' && activeIndex >= 0) {
+        e.preventDefault();
+        applySuggestion(activeIndex);
+      } else if (e.key === 'Escape') {
+        closeSuggestions();
+      }
+    });
+
+    suggestionBox.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-index]');
+      if (!btn) return;
+      const idx = Number(btn.dataset.index);
+      applySuggestion(idx);
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!suggestionBox.contains(e.target) && e.target !== input) {
+        closeSuggestions();
+      }
+    });
+  });
+</script>
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {
@@ -460,5 +667,3 @@ document.addEventListener('submit', function (e) {
 
 
 {% endblock %}
-
-
