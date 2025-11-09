@@ -1,6 +1,6 @@
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseServerError
 from django.shortcuts import render, redirect, get_object_or_404
-from urllib.parse import urlparse, quote_plus
+from urllib.parse import quote_plus
 from io import BytesIO
 import base64
 
@@ -17,6 +17,8 @@ import threading
 from _catalog.models import All_Products
 from _orders.models import Order, OrderItem
 from django.contrib import messages
+
+import ipaddress
 
 # Lazy import of WeasyPrint to avoid noisy import errors at startup on systems
 # where native libraries (cairo/pango/etc.) are not available.
@@ -144,13 +146,37 @@ def dl_leaflet(request):
 
 
 def _ensure_scheme(url: str) -> str:
-    try:
-        parsed = urlparse(url)
-        if not parsed.scheme:
-            return f"https://{url}"
-        return url
-    except Exception:
-        return url
+    """Ensure URLs have a scheme without forcing HTTPS for localhost/private IPs."""
+    cleaned = (url or "").strip()
+    if not cleaned:
+        return ""
+
+    if cleaned.startswith("//"):
+        cleaned = cleaned[2:]
+
+    if "://" in cleaned:
+        return cleaned
+
+    host_probe = cleaned
+    for stop in ("/", "?", "#"):
+        if stop in host_probe:
+            host_probe = host_probe.split(stop, 1)[0]
+    host_probe = host_probe.split(":", 1)[0].lower()
+
+    default_scheme = "https"
+    if not host_probe:
+        default_scheme = "http"
+    elif host_probe == "localhost":
+        default_scheme = "http"
+    else:
+        try:
+            ip = ipaddress.ip_address(host_probe)
+            if ip.is_loopback or ip.is_private:
+                default_scheme = "http"
+        except ValueError:
+            pass
+
+    return f"{default_scheme}://{cleaned}"
 
 
 def qr_svg(request):
