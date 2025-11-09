@@ -6,32 +6,29 @@ from _catalog.models import All_Products
 
 
 class Command(BaseCommand):
-    help = "Import products from a plain JSON list into All_Products."
+    help = "Import products from a JSON file into All_Products."
 
     def add_arguments(self, parser):
-      # path to the json file
-      parser.add_argument(
-          "json_path",
-          help="Path to JSON file (e.g. _product_management/management/commands/products6.json)",
-      )
-      # <-- THIS is the bit you don't have on Heroku yet
-      parser.add_argument(
-          "--update",
-          action="store_true",
-          help="Update existing products (matched by ga_product_id) instead of skipping.",
-      )
+        parser.add_argument(
+            "json_path",
+            help="Path to JSON file, e.g. _product_management/management/commands/products6.json",
+        )
+        parser.add_argument(
+            "--update",
+            action="store_true",
+            help="Update existing products (matched by ga_product_id) instead of skipping",
+        )
 
     def handle(self, *args, **options):
         json_path = options["json_path"]
         do_update = options["update"]
 
-        path = Path(json_path)
-        if not path.exists():
+        p = Path(json_path)
+        if not p.exists():
             raise CommandError(f"JSON file not found at {json_path}")
 
         self.stdout.write(f"Loading products from {json_path} ...")
-
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(p.read_text(encoding="utf-8"))
         if not isinstance(data, list):
             raise CommandError("JSON must be a list of objects")
 
@@ -65,22 +62,20 @@ class Command(BaseCommand):
             }
 
             if do_update:
-                # update-or-create path
-                _, created_flag = All_Products.objects.update_or_create(
+                _, was_created = All_Products.objects.update_or_create(
                     ga_product_id=ga_id,
                     defaults=defaults,
                 )
-                if created_flag:
+                if was_created:
                     created += 1
                 else:
                     updated += 1
             else:
-                # create-only path
-                _, created_flag = All_Products.objects.get_or_create(
+                _, was_created = All_Products.objects.get_or_create(
                     ga_product_id=ga_id,
                     defaults=defaults,
                 )
-                if created_flag:
+                if was_created:
                     created += 1
 
         self.stdout.write(self.style.SUCCESS(f"Done. Created: {created}, Updated: {updated}"))
