@@ -29,6 +29,8 @@ CSRF_TRUSTED_ORIGINS = [
     'https://www.kingstononlinegrocery.co.uk',
 ]
 
+SECURE_SSL_REDIRECT = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Check if running on Heroku
 
