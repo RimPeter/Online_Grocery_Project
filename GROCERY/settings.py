@@ -45,7 +45,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_extensions',
     '_accounts',
     '_catalog',
     '_employees',
@@ -55,6 +54,9 @@ INSTALLED_APPS = [
     '_payments',
     '_product_management',
     ]
+
+if DEBUG:
+    INSTALLED_APPS.append('django_extensions')
 
 LOGIN_URL = '/accounts/login/'  
 LOGIN_REDIRECT_URL = 'home'
