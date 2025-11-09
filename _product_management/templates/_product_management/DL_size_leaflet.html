@@ -15,7 +15,7 @@
     {% if leaflet_saved %}
     <div class="leaflet-alert">Default leaflet text saved.</div>
     {% endif %}
-    <a href="{% url 'home' %}" class="back-home" aria-label="Back to home">Back home</a>
+    <a href="{% url 'home' %}" class="btn-primary" aria-label="Back to home">Back home</a>
     <form class="lf-url-form" method="get" action="{% url '_product_management:dl' %}" aria-label="Customize leaflet sections">
       {% csrf_token %}
       <div class="lf-field-stack">
@@ -130,6 +130,9 @@
                   <span class="muted">Add a website URL above to render QR</span>
                 {% endif %}
               </div>
+              {% if cta_subtitle %}
+              <p class="qr-note">{{ cta_subtitle }}</p>
+              {% endif %}
               {% if normalized_site %}
               <div class="qr-url muted">{{ normalized_site }}</div>
               {% elif request.GET.site %}
