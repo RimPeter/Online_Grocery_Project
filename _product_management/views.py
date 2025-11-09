@@ -1,4 +1,4 @@
-from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseServerError
+﻿from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseServerError, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from urllib.parse import quote_plus, urlencode
@@ -80,22 +80,13 @@ def _inline_css(html: str, css_subpath: str) -> str:
         return html
 
 
-def _render_pdf_playwright(html: str, request) -> bytes:
-    """Render HTML to PDF using Playwright/Chromium.
-
-    - Inlines key CSS for reliable print styling.
-    - Adds a <base> tag so relative URLs (e.g., /static/...) resolve.
-    - Prints backgrounds and removes margins to allow full-bleed designs.
-    """
-    from playwright.sync_api import sync_playwright  # type: ignore
-
-    # Inline primary CSS files used by our templates
+def _prepare_playwright_html(html: str, request) -> str:
+    """Inline CSS and add <base> tag for Playwright renders."""
     if 'DL_size_leaflet' in html:
         html = _inline_css(html, 'css/leaflet.css')
     if 'Items To Order' in html or 'items-to-order' in html:
         html = _inline_css(html, 'css/main.css')
 
-    # Ensure relative URLs resolve (static, images)
     try:
         base_href = request.build_absolute_uri('/')
     except Exception:
@@ -112,6 +103,19 @@ def _render_pdf_playwright(html: str, request) -> bytes:
             html = html[:pos] + base_tag + html[pos:]
         else:
             html = base_tag + html
+    return html
+
+
+def _render_pdf_playwright(html: str, request) -> bytes:
+    """Render HTML to PDF using Playwright/Chromium.
+
+    - Inlines key CSS for reliable print styling.
+    - Adds a <base> tag so relative URLs (e.g., /static/...) resolve.
+    - Prints backgrounds and removes margins to allow full-bleed designs.
+    """
+    from playwright.sync_api import sync_playwright  # type: ignore
+
+    html = _prepare_playwright_html(html, request)
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -125,6 +129,32 @@ def _render_pdf_playwright(html: str, request) -> bytes:
         context.close()
         browser.close()
         return pdf_bytes
+
+
+def _render_png_playwright(html: str, request) -> bytes:
+    """Render HTML to a PNG screenshot using Playwright/Chromium."""
+    from playwright.sync_api import sync_playwright  # type: ignore
+
+    html = _prepare_playwright_html(html, request)
+    width_mm = 99
+    height_mm = 210
+    dpi = 144
+    width_px = int(round((width_mm / 25.4) * dpi))
+    height_px = int(round((height_mm / 25.4) * dpi))
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(
+            viewport={"width": width_px, "height": height_px},
+            device_scale_factor=2,
+        )
+        page = context.new_page()
+        page.set_content(html, wait_until='networkidle')
+        leaflet = page.locator(".leaflet")
+        png_bytes = leaflet.screenshot()
+        context.close()
+        browser.close()
+        return png_bytes
 
 
 # Backstop: ensure any lingering calls to _get_weasy() don't try to import.
@@ -151,17 +181,21 @@ def dl_leaflet(request):
     qr_kind = "svg" if active_renderer == "playwright" else "png"
     text_context = _leaflet_text_context(request)
     normalized_site = _normalized_leaflet_site(request)
+    raw_site = (request.GET.get("site") or "").strip()
     query_params = request.GET.copy()
     query_params.pop("saved", None)
     site_query_string = query_params.urlencode()
     can_save_leaflet = request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser)
+    override_present = any(key in request.GET for key in LEAFLET_TEXT_DEFAULTS.keys())
     context = {
         "pdf": False,
         "qr_kind": qr_kind,
         "leaflet_saved": request.GET.get("saved") == "1",
         "normalized_site": normalized_site,
         "site_query_string": site_query_string,
+        "current_site_raw": raw_site,
         "can_save_leaflet": can_save_leaflet,
+        "leaflet_overrides_active": override_present,
         **text_context,
     }
     return render(
@@ -193,6 +227,53 @@ def dl_leaflet_save(request):
     if query_string:
         target = f"{target}?{query_string}"
     return redirect(target)
+
+
+@staff_or_superuser_required
+@require_POST
+def dl_leaflet_snapshot(request):
+    active_renderer = _choose_renderer()
+    if active_renderer != 'playwright':
+        return JsonResponse(
+            {
+                "detail": "Leaflet snapshots require the Playwright renderer, which is unavailable.",
+                "requires_client": True,
+            },
+            status=200,
+        )
+
+    base_context = _leaflet_text_context(request)
+    overrides = _leaflet_payload(request.POST)
+    for key, value in overrides.items():
+        if value != "":
+            base_context[key] = value
+
+    raw_site = (request.POST.get("site") or request.GET.get("site") or "").strip()
+    normalized_site = _ensure_scheme(raw_site) if raw_site else ""
+    qr_data_uri = _qr_data_uri_for_site(normalized_site, active_renderer)
+
+    template = get_template("_product_management/DL_size_leaflet.html")
+    render_context = {
+        "pdf": True,
+        "qr_kind": "svg",
+        "qr_data_uri": qr_data_uri,
+        "leaflet_saved": False,
+        "normalized_site": normalized_site,
+        "current_site_raw": raw_site,
+        "site_query_string": "",
+        "can_save_leaflet": False,
+        "leaflet_overrides_active": False,
+        **base_context,
+    }
+    html = template.render(render_context, request=request)
+    try:
+        png_bytes = _render_png_playwright(html, request)
+    except Exception as exc:
+        return HttpResponseServerError(f"Leaflet snapshot renderer failed: {exc}")
+
+    response = HttpResponse(png_bytes, content_type="image/png")
+    response["Content-Disposition"] = "attachment; filename=leaflet-snapshot.png"
+    return response
 
 
 def _ensure_scheme(url: str) -> str:
@@ -314,48 +395,50 @@ def _choose_renderer():
     return 'playwright' if _has_playwright() else 'xhtml2pdf'
 
 
+def _qr_data_uri_for_site(site: str, renderer: str) -> str | None:
+    if not site:
+        return None
+    try:
+        import segno  # type: ignore
+        qr = segno.make(site)
+        if renderer == "playwright":
+            buf = BytesIO()
+            qr.save(buf, kind="svg", scale=3)
+            b64 = base64.b64encode(buf.getvalue()).decode("ascii")
+            return f"data:image/svg+xml;base64,{b64}"
+        buf = BytesIO()
+        qr.save(buf, kind="png", scale=6)
+        b64 = base64.b64encode(buf.getvalue()).decode("ascii")
+        return f"data:image/png;base64,{b64}"
+    except Exception:
+        placeholder = (
+            "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAAsSAAALEgHS3X78AAABcUlEQVR4nO3aMU7DQBAG4a8mJ8p+"
+            "r4XwZyX1y6fQbJx0C1qF+E1J6v6g3v5aB0L2w7m4w2gHc8m6j0g9Hf7kYkSIkSIkSIkSIkSIkSIv8m8k1m1u8Q4KpG6QnZ9m2DgqkZjg"
+            "i9wzv1h9u2H7g8g9m8Hq9w0g8g9m8Hq9w0g8g9m8Hq9w0g8g9m8Hq9w0g8g9m8Hq9w0g8g9m8Hq9w0XXz8j2z0mQkSZIkSZIkSZIkSZI"
+            "kSfIu7Qe8JY4s7X2q8X8pX9y4A6y4c8xgLJNDfR4y7zj7v0Z3J0O4W6f8R3QeQWw9wqgQ7i9xgYQ3i9wYIQ3i9wYIQ3i9wYIQ3mC2b2v9"
+            "r7r9g0mQkSZIkSZIkSZIkSZIkSW4B0tK0k2b+2a0AAAAASUVORK5CYII="
+        )
+        return f"data:image/png;base64,{placeholder}"
+
+
 def dl_leaflet_pdf(request):
     """Render the DL leaflet as a downloadable PDF, embedding the QR image."""
     site = request.GET.get("site", "").strip()
     site = _ensure_scheme(site) if site else ""
 
-    qr_data_uri = None
     active_renderer = _choose_renderer()
-    if site:
-        try:
-            import segno  # type: ignore
-            qr = segno.make(site)
-            if active_renderer == "playwright":
-                # Embed SVG for better fidelity
-                buf = BytesIO()
-                qr.save(buf, kind="svg", scale=3)
-                b64 = base64.b64encode(buf.getvalue()).decode("ascii")
-                qr_data_uri = f"data:image/svg+xml;base64,{b64}"
-            else:
-                buf = BytesIO()
-                qr.save(buf, kind="png", scale=6)
-                b64 = base64.b64encode(buf.getvalue()).decode("ascii")
-                qr_data_uri = f"data:image/png;base64,{b64}"
-        except Exception:
-            # Fallback placeholder if QR can't be generated locally
-            placeholder = (
-                "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAAsSAAALEgHS3X78AAABcUlEQVR4nO3aMU7DQBAG4a8mJ8p+"
-                "r4XwZyX1y6fQbJx0C1qF+E1J6v6g3v5aB0L2w7m4w2gHc8m6j0g9Hf7kYkSIkSIkSIkSIkSIkSIv8m8k1m1u8Q4KpG6QnZ9m2DgqkZjg"
-                "i9wzv1h9u2H7g8g9m8Hq9w0g8g9m8Hq9w0g8g9m8Hq9w0g8g9m8Hq9w0g8g9m8Hq9w0g8g9m8Hq9w0XXz8j2z0mQkSZIkSZIkSZIkSZI"
-                "kSfIu7Qe8JY4s7X2q8X8pX9y4A6y4c8xgLJNDfR4y7zj7v0Z3J0O4W6f8R3QeQWw9wqgQ7i9xgYQ3i9wYIQ3i9wYIQ3i9wYIQ3mC2b2v9"
-                "r7r9g0mQkSZIkSZIkSZIkSZIkSW4B0tK0k2b+2a0AAAAASUVORK5CYII="
-            )
-            qr_data_uri = f"data:image/png;base64,{placeholder}"
+    qr_data_uri = _qr_data_uri_for_site(site, active_renderer)
 
     template = get_template("_product_management/DL_size_leaflet.html")
     context = {
         "pdf": True,
         "qr_data_uri": qr_data_uri,
-        "request": request,
         "normalized_site": site,
+        "current_site_raw": (request.GET.get("site") or "").strip(),
+        "leaflet_overrides_active": False,
         **_leaflet_text_context(request),
     }
-    html = template.render(context)
+    html = template.render(context, request=request)
 
     # Prefer Playwright if available for best CSS fidelity
     if active_renderer == 'playwright':

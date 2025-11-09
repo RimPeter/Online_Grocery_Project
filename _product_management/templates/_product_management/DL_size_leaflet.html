@@ -20,9 +20,9 @@
       {% csrf_token %}
       <div class="lf-field-stack">
         <label for="site" class="visually-hidden">Website URL for QR code</label>
-        <input id="site" name="site" type="url" placeholder="https://example.com" value="{{ request.GET.site }}">
+        <input id="site" name="site" type="url" placeholder="https://example.com" value="{{ current_site_raw }}">
       </div>
-      <details class="lf-editor"{% if request.GET.company_name or request.GET.company_tagline or request.GET.headline or request.GET.bullet_1 or request.GET.bullet_2 or request.GET.bullet_3 or request.GET.cta_title or request.GET.cta_subtitle %} open{% endif %}>
+      <details class="lf-editor"{% if leaflet_overrides_active %} open{% endif %}>
         <summary>Edit leaflet copy</summary>
         <div class="lf-editor-grid">
           <div>
@@ -64,6 +64,7 @@
         {% if can_save_leaflet %}
         <button type="submit" class="btn-secondary" formmethod="post" formaction="{% url '_product_management:dl_save_copy' %}">Save as default</button>
         {% endif %}
+        <button type="button" id="leaflet-snapshot" class="btn-secondary" data-snapshot-url="{% url '_product_management:dl_snapshot' %}">Download snapshot</button>
       </div>
     </form>
     {% if normalized_site %}
@@ -123,9 +124,9 @@
           <section class="seg seg-qr">
               <div class="qr-wrap" aria-live="polite">
                 {% if pdf and qr_data_uri %}
-                  <img class="qr" src="{{ qr_data_uri }}" alt="QR code linking to {{ normalized_site|default:request.GET.site }}">
-                {% elif request.GET.site %}
-                  <img class="qr" src="{% url '_product_management:qr' %}?site={{ request.GET.site|urlencode }}{% if qr_kind %}&kind={{ qr_kind }}{% endif %}" alt="QR code linking to {{ normalized_site|default:request.GET.site }}" loading="lazy">
+                  <img class="qr" src="{{ qr_data_uri }}" alt="QR code linking to {{ normalized_site|default:current_site_raw }}">
+                {% elif current_site_raw %}
+                  <img class="qr" src="{% url '_product_management:qr' %}?site={{ current_site_raw|urlencode }}{% if qr_kind %}&kind={{ qr_kind }}{% endif %}" alt="QR code linking to {{ normalized_site|default:current_site_raw }}" loading="lazy">
                 {% else %}
                   <span class="muted">Add a website URL above to render QR</span>
                 {% endif %}
@@ -135,8 +136,8 @@
               {% endif %}
               {% if normalized_site %}
               <div class="qr-url muted">{{ normalized_site }}</div>
-              {% elif request.GET.site %}
-              <div class="qr-url muted">{{ request.GET.site }}</div>
+              {% elif current_site_raw %}
+              <div class="qr-url muted">{{ current_site_raw }}</div>
               {% endif %}
             </section>
         </div></div>
@@ -144,4 +145,124 @@
     </main>
   </div>
 </body>
+{% if not pdf %}
+<script>
+(function () {
+  const button = document.getElementById('leaflet-snapshot');
+  if (!button) {
+    return;
+  }
+  const form = document.querySelector('.lf-url-form');
+  const leafletEl = document.querySelector('.leaflet');
+  if (!form || !leafletEl) {
+    button.disabled = true;
+    return;
+  }
+  const snapshotUrl = button.dataset.snapshotUrl;
+  const csrfInput = form.querySelector('input[name="csrfmiddlewaretoken"]');
+  let html2CanvasLoader;
+
+  const resetLabel = () => {
+    button.disabled = false;
+    button.textContent = 'Download snapshot';
+  };
+
+  const ensureHtml2Canvas = () => {
+    if (window.html2canvas) {
+      return Promise.resolve(window.html2canvas);
+    }
+    if (!html2CanvasLoader) {
+      html2CanvasLoader = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+        script.integrity = 'sha256-W3v1hb5cfBr9L8zIXzx3yNzOzVLNATiOZCzWEyPoXj0=';
+        script.crossOrigin = 'anonymous';
+        script.onload = () => resolve(window.html2canvas);
+        script.onerror = () => reject(new Error('html2canvas failed to load'));
+        document.head.appendChild(script);
+      });
+    }
+    return html2CanvasLoader;
+  };
+
+  const triggerDownload = (blob) => {
+    const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19);
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `leaflet-${stamp}.png`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  };
+
+  const captureClientSide = async () => {
+    const html2canvas = await ensureHtml2Canvas();
+    if (!html2canvas) {
+      throw new Error('html2canvas unavailable');
+    }
+    const canvas = await html2canvas(leafletEl, {
+      backgroundColor: '#ffffff',
+      scale: window.devicePixelRatio > 1 ? 2 : 1.5,
+      useCORS: true,
+    });
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob((result) => (result ? resolve(result) : reject(new Error('Unable to encode canvas'))), 'image/png');
+    });
+    triggerDownload(blob);
+  };
+
+  const requestServerSnapshot = async () => {
+    const formData = new FormData(form);
+    const response = await fetch(snapshotUrl, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrfInput ? csrfInput.value : '',
+      },
+      body: formData,
+    });
+    const contentType = response.headers.get('content-type') || '';
+    if (response.ok && contentType.includes('image/')) {
+      const blob = await response.blob();
+      triggerDownload(blob);
+      return;
+    }
+
+    let payload = null;
+    if (contentType.includes('application/json')) {
+      try {
+        payload = await response.json();
+      } catch (err) {
+        payload = null;
+      }
+    }
+
+    if (payload && payload.requires_client) {
+      await captureClientSide();
+      return;
+    }
+
+    const detail = payload && payload.detail ? payload.detail : await response.text();
+    throw new Error(detail || `Snapshot request failed with status ${response.status}`);
+  };
+
+  button.addEventListener('click', async () => {
+    if (button.disabled) {
+      return;
+    }
+    button.disabled = true;
+    button.textContent = 'Preparing…';
+    try {
+      await requestServerSnapshot();
+    } catch (error) {
+      console.error('Failed to capture leaflet preview', error);
+      alert('Could not capture the leaflet preview. Please try again.');
+    } finally {
+      resetLabel();
+    }
+  });
+})();
+</script>
+{% endif %}
 </html>
