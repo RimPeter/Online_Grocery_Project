@@ -8,7 +8,7 @@ from django.template.loader import get_template
 from django.conf import settings
 from django.contrib.staticfiles import finders
 from xhtml2pdf import pisa
-from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.decorators import user_passes_test
 from django.db.models import Count, Sum, F, DecimalField, Value, ExpressionWrapper, Q, Max
 from django.db.models.functions import Coalesce, Cast
 from datetime import date, timedelta
@@ -143,6 +143,13 @@ def dl_leaflet(request):
         "_product_management/DL_size_leaflet.html",
         {"pdf": False, "qr_kind": qr_kind},
     )
+
+
+def staff_or_superuser_required(view_func):
+    """Allow both staff and superusers to reach management endpoints."""
+    return user_passes_test(
+        lambda u: u.is_active and (u.is_staff or u.is_superuser)
+    )(view_func)
 
 
 def _ensure_scheme(url: str) -> str:
@@ -335,7 +342,7 @@ def leaflet_status(request):
 # dl_leaflet_jpg feature removed per request
 
 
-@staff_member_required
+@staff_or_superuser_required
 def pending_orders(request):
     dec = DecimalField(max_digits=12, decimal_places=2)
     amount_expr = F('items__price') * Cast('items__quantity', output_field=dec)
@@ -369,7 +376,7 @@ def pending_orders(request):
     return render(request, '_product_management/pending_orders.html', ctx)
 
 
-@staff_member_required
+@staff_or_superuser_required
 def paid_orders(request):
     dec = DecimalField(max_digits=12, decimal_places=2)
     amount_expr = F('items__price') * Cast('items__quantity', output_field=dec)
@@ -403,7 +410,7 @@ def paid_orders(request):
     return render(request, '_product_management/paid_orders.html', ctx)
 
 
-@staff_member_required
+@staff_or_superuser_required
 def processed_orders(request):
     dec = DecimalField(max_digits=12, decimal_places=2)
     amount_expr = F('items__price') * Cast('items__quantity', output_field=dec)
@@ -437,7 +444,7 @@ def processed_orders(request):
     return render(request, '_product_management/processed_orders.html', ctx)
 
 
-@staff_member_required
+@staff_or_superuser_required
 def delivered_orders(request):
     dec = DecimalField(max_digits=12, decimal_places=2)
     amount_expr = F('items__price') * Cast('items__quantity', output_field=dec)
@@ -471,7 +478,7 @@ def delivered_orders(request):
     return render(request, '_product_management/delivered_orders.html', ctx)
 
 
-@staff_member_required
+@staff_or_superuser_required
 def mark_order_completed(request, order_id: int):
     if request.method != 'POST':
         return HttpResponseBadRequest('Invalid method')
@@ -497,7 +504,7 @@ def mark_order_completed(request, order_id: int):
     return redirect('_product_management:delivered_orders')
 
 
-@staff_member_required
+@staff_or_superuser_required
 def mark_all_orders_completed(request):
     if request.method != 'POST':
         return HttpResponseBadRequest('Invalid method')
@@ -512,7 +519,7 @@ def mark_all_orders_completed(request):
     return redirect('_product_management:paid_orders')
 
 
-@staff_member_required
+@staff_or_superuser_required
 def mark_order_active(request, order_id: int):
     if request.method != 'POST':
         return HttpResponseBadRequest('Invalid method')
@@ -537,7 +544,7 @@ def mark_order_active(request, order_id: int):
     return redirect('_product_management:processed_orders')
 
 
-@staff_member_required
+@staff_or_superuser_required
 def mark_order_paid(request, order_id: int):
     if request.method != 'POST':
         return HttpResponseBadRequest('Invalid method')
@@ -561,7 +568,7 @@ def mark_order_paid(request, order_id: int):
     return redirect('_product_management:paid_orders')
 
 
-@staff_member_required
+@staff_or_superuser_required
 def mark_order_processed(request, order_id: int):
     if request.method != 'POST':
         return HttpResponseBadRequest('Invalid method')
@@ -585,7 +592,7 @@ def mark_order_processed(request, order_id: int):
     return redirect('_product_management:processed_orders')
 
 
-@staff_member_required
+@staff_or_superuser_required
 def items_to_order(request):
     active_statuses = ('pending', 'paid', 'processed')
     items_qs = (
@@ -756,7 +763,7 @@ def items_to_order(request):
     return render(request, '_product_management/items_to_order.html', context)
 
 
-@staff_member_required
+@staff_or_superuser_required
 def items_to_order_pdf(request):
     """Generate a PDF of the aggregated items to order (active orders only)."""
     active_statuses = ('pending', 'paid', 'processed')
@@ -796,7 +803,7 @@ def items_to_order_pdf(request):
     return resp
 
 
-@staff_member_required
+@staff_or_superuser_required
 def set_delivery_slot(request, order_id: int):
     order = get_object_or_404(Order.objects.select_related('user'), id=order_id)
     today = date.today()
@@ -835,7 +842,7 @@ def set_delivery_slot(request, order_id: int):
     )
 
 
-@staff_member_required
+@staff_or_superuser_required
 @require_http_methods(["GET", "POST"])
 def commands(request):
     """Simple admin page to trigger management commands like datajob.
@@ -1045,7 +1052,7 @@ def _ensure_home_value_pillars():
     return list(HomeValuePillar.objects.order_by('sort_order', 'id'))
 
 
-@staff_member_required
+@staff_or_superuser_required
 @require_http_methods(["GET", "POST"])
 def home_categories(request):
     """Allow superusers/staff to curate which categories appear on the home page."""
