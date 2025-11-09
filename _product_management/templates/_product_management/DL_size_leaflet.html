@@ -12,14 +12,66 @@
   <!-- Controls outside the printable leaflet -->
   {% if not pdf %}
   <div class="leaflet-toolbar">
+    {% if leaflet_saved %}
+    <div class="leaflet-alert">Default leaflet text saved.</div>
+    {% endif %}
     <a href="{% url 'home' %}" class="back-home" aria-label="Back to home">Back home</a>
-    <form class="lf-url-form" method="get" action="{% url '_product_management:dl' %}" aria-label="Set website address for QR code">
-      <label for="site" class="visually-hidden">Website URL</label>
-      <input id="site" name="site" type="url" placeholder="https://example.com" value="{{ request.GET.site }}" required>
-      <button type="submit">Preview URL</button>
+    <form class="lf-url-form" method="get" action="{% url '_product_management:dl' %}" aria-label="Customize leaflet sections">
+      {% csrf_token %}
+      <div class="lf-field-stack">
+        <label for="site" class="visually-hidden">Website URL for QR code</label>
+        <input id="site" name="site" type="url" placeholder="https://example.com" value="{{ request.GET.site }}">
+      </div>
+      <details class="lf-editor"{% if request.GET.company_name or request.GET.company_tagline or request.GET.headline or request.GET.bullet_1 or request.GET.bullet_2 or request.GET.bullet_3 or request.GET.cta_title or request.GET.cta_subtitle %} open{% endif %}>
+        <summary>Edit leaflet copy</summary>
+        <div class="lf-editor-grid">
+          <div>
+            <label for="company_name">Company name</label>
+            <input id="company_name" name="company_name" type="text" value="{{ company_name }}">
+          </div>
+          <div>
+            <label for="company_tagline">Company tagline</label>
+            <input id="company_tagline" name="company_tagline" type="text" value="{{ company_tagline }}">
+          </div>
+          <div>
+            <label for="headline">Headline</label>
+            <input id="headline" name="headline" type="text" value="{{ headline }}">
+          </div>
+          <div>
+            <label for="bullet_1">Bullet 1</label>
+            <input id="bullet_1" name="bullet_1" type="text" value="{{ bullet_1 }}">
+          </div>
+          <div>
+            <label for="bullet_2">Bullet 2</label>
+            <input id="bullet_2" name="bullet_2" type="text" value="{{ bullet_2 }}">
+          </div>
+          <div>
+            <label for="bullet_3">Bullet 3</label>
+            <input id="bullet_3" name="bullet_3" type="text" value="{{ bullet_3 }}">
+          </div>
+          <div>
+            <label for="cta_title">CTA title</label>
+            <input id="cta_title" name="cta_title" type="text" value="{{ cta_title }}">
+          </div>
+          <div>
+            <label for="cta_subtitle">CTA description</label>
+            <textarea id="cta_subtitle" name="cta_subtitle" rows="2">{{ cta_subtitle }}</textarea>
+          </div>
+        </div>
+      </details>
+      <div class="lf-toolbar-actions">
+        <button type="submit" class="btn-primary">Update preview</button>
+        {% if can_save_leaflet %}
+        <button type="submit" class="btn-secondary" formmethod="post" formaction="{% url '_product_management:dl_save_copy' %}">Save as default</button>
+        {% endif %}
+      </div>
     </form>
-    {% if request.GET.site %}
-      <a class="back-home" href="{% url '_product_management:dl_pdf' %}?site={{ request.GET.site|urlencode }}" aria-label="Download PDF">Download PDF</a>
+    {% if normalized_site %}
+      {% if site_query_string %}
+        <a class="back-home" href="{% url '_product_management:dl_pdf' %}?{{ site_query_string }}" aria-label="Download PDF">Download PDF</a>
+      {% else %}
+        <a class="back-home" href="{% url '_product_management:dl_pdf' %}?site={{ normalized_site|urlencode }}" aria-label="Download PDF">Download PDF</a>
+      {% endif %}
     {% else %}
       <span class="back-home disabled" aria-disabled="true">Download PDF</span>
     {% endif %}
@@ -36,8 +88,8 @@
         <section class="seg seg-banner">
             <div class="banner-logo"><img src="{% static 'images/Kingston_Online_Grocery_logo.png' %}" alt="Kingston Online Grocery logo"></div>
             <div class="banner-text">
-              <p class="company-name">Kingston Online Grocery</p>
-              <p class="company-tag">Fresh. Local. Delivered.</p>
+              <p class="company-name">{{ company_name }}</p>
+              <p class="company-tag">{{ company_tagline }}</p>
             </div>
           </section>
 
@@ -50,18 +102,18 @@
 
         <!-- 2) Marketing slogans / deals -->
         <section class="seg seg-slogans">
-          <p class="headline">Weekly Specials You’ll Love</p>
+          <p class="headline">{{ headline }}</p>
           <ul class="bullets">
-            <li>Hand-picked fresh produce every day</li>
-            <li>Great value essentials and pantry staples</li>
-            <li>Fast local delivery to your door</li>
+            <li>{{ bullet_1 }}</li>
+            <li>{{ bullet_2 }}</li>
+            <li>{{ bullet_3 }}</li>
           </ul>
         </section>
 
         <!-- 3) Call to action for QR scan -->
         <section class="seg seg-cta">
-          <p class="cta-title">Scan to Shop Online</p>
-          <p class="cta-sub">Browse, order, and schedule delivery in minutes.</p>
+          <p class="cta-title">{{ cta_title }}</p>
+          <p class="cta-sub">{{ cta_subtitle }}</p>
         </section>
 
         </div></div>
@@ -71,14 +123,18 @@
           <section class="seg seg-qr">
               <div class="qr-wrap" aria-live="polite">
                 {% if pdf and qr_data_uri %}
-                  <img class="qr" src="{{ qr_data_uri }}" alt="QR code linking to {{ request.GET.site }}">
+                  <img class="qr" src="{{ qr_data_uri }}" alt="QR code linking to {{ normalized_site|default:request.GET.site }}">
                 {% elif request.GET.site %}
-                  <img class="qr" src="{% url '_product_management:qr' %}?site={{ request.GET.site|urlencode }}{% if qr_kind %}&kind={{ qr_kind }}{% endif %}" alt="QR code linking to {{ request.GET.site }}" loading="lazy">
+                  <img class="qr" src="{% url '_product_management:qr' %}?site={{ request.GET.site|urlencode }}{% if qr_kind %}&kind={{ qr_kind }}{% endif %}" alt="QR code linking to {{ normalized_site|default:request.GET.site }}" loading="lazy">
                 {% else %}
                   <span class="muted">Add a website URL above to render QR</span>
                 {% endif %}
               </div>
-              {% if request.GET.site %}<div class="qr-url muted">{{ request.GET.site }}</div>{% endif %}
+              {% if normalized_site %}
+              <div class="qr-url muted">{{ normalized_site }}</div>
+              {% elif request.GET.site %}
+              <div class="qr-url muted">{{ request.GET.site }}</div>
+              {% endif %}
             </section>
         </div></div>
       </div>

@@ -1,6 +1,7 @@
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseServerError
 from django.shortcuts import render, redirect, get_object_or_404
-from urllib.parse import quote_plus
+from django.urls import reverse
+from urllib.parse import quote_plus, urlencode
 from io import BytesIO
 import base64
 
@@ -12,9 +13,11 @@ from django.contrib.auth.decorators import user_passes_test
 from django.db.models import Count, Sum, F, DecimalField, Value, ExpressionWrapper, Q, Max
 from django.db.models.functions import Coalesce, Cast
 from datetime import date, timedelta
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods, require_POST
 import threading
 from _catalog.models import All_Products, HomeCategoryTile, HomeValuePillar
+from .models import LeafletCopy
+from .constants import LEAFLET_TEXT_DEFAULTS
 from _orders.models import Order, OrderItem
 from django.contrib import messages
 
@@ -134,22 +137,62 @@ def index(request):
     return HttpResponse("Product Management app is installed")
 
 
-def dl_leaflet(request):
-    # Choose QR image kind to mirror PDF renderer capabilities for visual parity
-    active_renderer = _choose_renderer()
-    qr_kind = "svg" if active_renderer == "playwright" else "png"
-    return render(
-        request,
-        "_product_management/DL_size_leaflet.html",
-        {"pdf": False, "qr_kind": qr_kind},
-    )
-
-
 def staff_or_superuser_required(view_func):
     """Allow both staff and superusers to reach management endpoints."""
     return user_passes_test(
         lambda u: u.is_active and (u.is_staff or u.is_superuser)
     )(view_func)
+
+
+@require_http_methods(["GET"])
+def dl_leaflet(request):
+    # Choose QR image kind to mirror PDF renderer capabilities for visual parity
+    active_renderer = _choose_renderer()
+    qr_kind = "svg" if active_renderer == "playwright" else "png"
+    text_context = _leaflet_text_context(request)
+    normalized_site = _normalized_leaflet_site(request)
+    query_params = request.GET.copy()
+    query_params.pop("saved", None)
+    site_query_string = query_params.urlencode()
+    can_save_leaflet = request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser)
+    context = {
+        "pdf": False,
+        "qr_kind": qr_kind,
+        "leaflet_saved": request.GET.get("saved") == "1",
+        "normalized_site": normalized_site,
+        "site_query_string": site_query_string,
+        "can_save_leaflet": can_save_leaflet,
+        **text_context,
+    }
+    return render(
+        request,
+        "_product_management/DL_size_leaflet.html",
+        context,
+    )
+
+
+@staff_or_superuser_required
+@require_POST
+def dl_leaflet_save(request):
+    payload = _leaflet_payload(request.POST)
+    copy = LeafletCopy.get_solo()
+    updated = False
+    for field, value in payload.items():
+        if getattr(copy, field) != value:
+            setattr(copy, field, value)
+            updated = True
+    if updated:
+        copy.save()
+
+    redirect_params = request.POST.copy()
+    for key in ("csrfmiddlewaretoken", "action"):
+        redirect_params.pop(key, None)
+    redirect_params["saved"] = "1"
+    query_string = redirect_params.urlencode()
+    target = reverse("_product_management:dl")
+    if query_string:
+        target = f"{target}?{query_string}"
+    return redirect(target)
 
 
 def _ensure_scheme(url: str) -> str:
@@ -305,7 +348,13 @@ def dl_leaflet_pdf(request):
             qr_data_uri = f"data:image/png;base64,{placeholder}"
 
     template = get_template("_product_management/DL_size_leaflet.html")
-    context = {"pdf": True, "qr_data_uri": qr_data_uri, "request": request}
+    context = {
+        "pdf": True,
+        "qr_data_uri": qr_data_uri,
+        "request": request,
+        "normalized_site": site,
+        **_leaflet_text_context(request),
+    }
     html = template.render(context)
 
     # Prefer Playwright if available for best CSS fidelity
@@ -1010,6 +1059,47 @@ HOME_PILLAR_DEFAULTS = [
         'sort_order': 30,
     },
 ]
+
+
+def _leaflet_text_context(request):
+    """Return leaflet text overrides pulled from GET parameters."""
+    data = {}
+    for key, default in LEAFLET_TEXT_DEFAULTS.items():
+        value = (request.GET.get(key) or "").strip()
+        data[key] = value or default
+    return data
+
+
+def _leaflet_text_context(request):
+    base = dict(LEAFLET_TEXT_DEFAULTS)
+    try:
+        saved = LeafletCopy.get_solo().as_dict()
+        base.update(saved)
+    except Exception:
+        pass
+
+    data = {}
+    for key, default_value in base.items():
+        if key in request.GET:
+            data[key] = (request.GET.get(key) or "").strip()
+        else:
+            data[key] = default_value
+    return data
+
+
+def _leaflet_payload(data):
+    payload = {}
+    for key in LEAFLET_TEXT_DEFAULTS.keys():
+        payload[key] = (data.get(key) or "").strip()
+    return payload
+
+
+def _normalized_leaflet_site(request):
+    site_value = (request.GET.get("site") or "").strip()
+    if not site_value:
+        return ""
+    return _ensure_scheme(site_value)
+
 
 def _available_home_categories(exclude_names=None):
     exclude_names = exclude_names or set()
