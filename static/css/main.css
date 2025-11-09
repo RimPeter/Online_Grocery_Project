@@ -1,8 +1,24 @@
 .navbar-button {
   margin-right: 0.5rem;
   border: white 2px solid ;
-  border-radius: 28px;
+  border-radius: 7px;
   background-color: #528941;
+}
+
+.link2 {
+  margin-right: 0.5rem;
+  border: white 2px solid ;
+  border-radius: 7px;
+  background-color: #528941;
+  border-color: white;
+}
+
+.create_account {
+  margin-right: 0.5rem;
+  border: white 2px solid ;
+  border-radius: 7px;
+  background-color: #528941;
+  color: white;
 }
 
 .pagecolor {
