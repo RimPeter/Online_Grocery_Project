@@ -391,7 +391,7 @@ def _build_invoice_pdf_bytes(request, order):
     elements.append(Paragraph(f"<b>Customer:</b> {request.user.get_full_name() or request.user.username}", styles['Normal']))
     elements.append(Paragraph(f"<b>Email:</b> {request.user.email}", styles['Normal']))
     if default_address:
-        addr_lines = f"{default_address.street_address}"
+        addr_lines = f"{default_address.street_address} {default_address.house_number}".strip()
         if default_address.apartment:
             addr_lines += f", {default_address.apartment}"
         addr_lines += f"<br/>{default_address.city}, {default_address.postal_code}"

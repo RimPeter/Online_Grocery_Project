@@ -98,7 +98,7 @@
                       <ul class="list-unstyled mb-0">
                         {% for a in o.user.addresses.all %}
                           <li>
-                            {{ a.street_address }}{% if a.apartment %}, {{ a.apartment }}{% endif %}, {{ a.city }}, {{ a.postal_code }}
+                            {{ a.street_address }} {{ a.house_number }}{% if a.apartment %}, {{ a.apartment }}{% endif %}, {{ a.city }}, {{ a.postal_code }}
                             {% if a.is_default %}<span class="badge bg-secondary ms-1">Default</span>{% endif %}
                           </li>
                         {% empty %}

@@ -1,13 +1,51 @@
 
+import json
+from pathlib import Path
+
 from django import forms
-from .models import Address, ContactMessage, User, Company
+from django.conf import settings
 from django.utils.text import slugify
+
+from .models import Address, ContactMessage, User, Company
+
+
+def _load_hu_districts():
+    """Return the set of allowed HU outward codes."""
+    base_path = Path(settings.BASE_DIR) / "_product_management" / "management" / "commands"
+    districts = set()
+
+    list_path = base_path / "hu_district_list.json"
+    try:
+        if list_path.exists():
+            with list_path.open("r", encoding="utf-8") as handle:
+                for item in json.load(handle):
+                    if isinstance(item, str) and item.strip():
+                        districts.add(item.strip().upper())
+    except (json.JSONDecodeError, OSError):
+        pass
+
+    structured_path = base_path / "hu_postcode_districts.json"
+    try:
+        if structured_path.exists():
+            with structured_path.open("r", encoding="utf-8") as handle:
+                for entry in json.load(handle):
+                    district = str(entry.get("district", "")).strip().upper()
+                    if district:
+                        districts.add(district)
+    except (json.JSONDecodeError, OSError):
+        pass
+
+    return districts
+
+
+HU_POSTCODE_DISTRICTS = _load_hu_districts() or {"HU"}
 
 class AddressForm(forms.ModelForm):
     class Meta:
         model = Address
         fields = [
             "street_address",
+            "house_number",
             "apartment",
             "city",
             "postal_code",
@@ -16,12 +54,22 @@ class AddressForm(forms.ModelForm):
         ]
         widgets = {
             "street_address": forms.TextInput(attrs={"class": "form-control"}),
+            "house_number": forms.TextInput(attrs={"class": "form-control"}),
             "apartment": forms.TextInput(attrs={"class": "form-control"}),
             "city": forms.TextInput(attrs={"class": "form-control"}),
             "postal_code": forms.TextInput(attrs={"class": "form-control"}),
             "delivery_instructions": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
             "is_default": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
+
+    def clean_postal_code(self):
+        code = (self.cleaned_data.get("postal_code") or "").strip().upper()
+        if code and not any(code.startswith(prefix) for prefix in HU_POSTCODE_DISTRICTS):
+            allowed = ", ".join(sorted(HU_POSTCODE_DISTRICTS))
+            raise forms.ValidationError(
+                f"Outside our delivery area. Postal codes must start with one of: {allowed}."
+            )
+        return code
 
 class ConfirmPasswordForm(forms.Form):
     password = forms.CharField(

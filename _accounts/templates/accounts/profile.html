@@ -51,7 +51,7 @@
     {% for a in addresses %}
       <div class='list-group-item d-flex justify-content-between align-items-start'>
         <div>
-          <div class='fw-semibold'>{{ a.street_address }}{% if a.apartment %}, {{ a.apartment }}{% endif %}</div>
+          <div class='fw-semibold'>{{ a.street_address }} {{ a.house_number }}{% if a.apartment %}, {{ a.apartment }}{% endif %}</div>
           <div class='text-muted small'>{{ a.city }} {{ a.postal_code }}</div>
           {% if a.is_default %}<span class='badge bg-success mt-1'>Default</span>{% endif %}
         </div>
@@ -78,11 +78,15 @@
 <form method='post' novalidate>
   {% csrf_token %}
   <div class='row g-3'>
-    <div class='col-md-8'>
+    <div class='col-md-6'>
       <label for='id_street_address' class='form-label'>Street address</label>
       {{ address_form.street_address }}
     </div>
-    <div class='col-md-4'>
+    <div class='col-md-3'>
+      <label for='id_house_number' class='form-label'>House number</label>
+      {{ address_form.house_number }}
+    </div>
+    <div class='col-md-3'>
       <label for='id_apartment' class='form-label'>Apartment</label>
       {{ address_form.apartment }}
     </div>
@@ -93,6 +97,10 @@
     <div class='col-md-6'>
       <label for='id_postal_code' class='form-label'>Postal code</label>
       {{ address_form.postal_code }}
+      <div class='form-text'>We currently deliver only to HU districts (e.g. HU1-HU19).</div>
+      {% if address_form.postal_code.errors %}
+        <div class='postal-error-callout' role='alert'>{{ address_form.postal_code.errors|striptags }}</div>
+      {% endif %}
     </div>
     <div class='col-12'>
       <label for='id_delivery_instructions' class='form-label'>Delivery instructions</label>

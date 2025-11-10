@@ -16,10 +16,17 @@
 
           {% if form %}
             {{ form.non_field_errors }}
-            <div class="mb-3">
-              <label class="form-label" for="id_street_address">Street address</label>
-              {{ form.street_address }}
-              {{ form.street_address.errors }}
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label" for="id_street_address">Street address</label>
+                {{ form.street_address }}
+                {{ form.street_address.errors }}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label" for="id_house_number">House number</label>
+                {{ form.house_number }}
+                {{ form.house_number.errors }}
+              </div>
             </div>
             <div class="mb-3">
               <label class="form-label" for="id_apartment">Apartment / Unit (optional)</label>
@@ -35,7 +42,10 @@
               <div class="col-md-6 mb-3">
                 <label class="form-label" for="id_postal_code">Postal code</label>
                 {{ form.postal_code }}
-                {{ form.postal_code.errors }}
+                <div class="form-text">We currently deliver only to HU districts (e.g. HU1-HU19).</div>
+                {% if form.postal_code.errors %}
+                  <div class="postal-error-callout mt-1">{{ form.postal_code.errors|striptags }}</div>
+                {% endif %}
               </div>
             </div>
             <div class="mb-3">
@@ -51,9 +61,15 @@
             </div> {% endcomment %}
             {% endif %}
           {% else %}
-            <div class="mb-3">
-              <label class="form-label" for="street_address">Street address</label>
-              <input type="text" class="form-control" id="street_address" name="street_address" required>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label" for="street_address">Street address</label>
+                <input type="text" class="form-control" id="street_address" name="street_address" required>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label" for="house_number">House number</label>
+                <input type="text" class="form-control" id="house_number" name="house_number" required>
+              </div>
             </div>
             <div class="mb-3">
               <label class="form-label" for="apartment">Apartment / Unit (optional)</label>
@@ -67,6 +83,7 @@
               <div class="col-md-6 mb-3">
                 <label class="form-label" for="postal_code">Postal code</label>
                 <input type="text" class="form-control" id="postal_code" name="postal_code" required>
+                <div class="form-text">We currently deliver only to HU districts (e.g. HU1-HU19).</div>
               </div>
             </div>
             <div class="mb-3">
@@ -104,7 +121,7 @@
               <div class="list-group-item d-flex justify-content-between align-items-start">
                 <div class="ms-2 me-auto">
                   <div class="fw-semibold">
-                    {{ addr.street_address }}{% if addr.apartment %}, {{ addr.apartment }}{% endif %}
+                    {{ addr.street_address }} {{ addr.house_number }}{% if addr.apartment %}, {{ addr.apartment }}{% endif %}
                     {% if addr.is_default %}
                       <span class="badge bg-success ms-2 align-self-start">Default</span>
                     {% endif %}

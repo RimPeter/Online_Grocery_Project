@@ -117,6 +117,7 @@ class User(AbstractUser):
 class Address(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='addresses')
     street_address = models.CharField(max_length=255)
+    house_number = models.CharField(max_length=20)
     apartment = models.CharField(max_length=50, null=True, blank=True)
     city = models.CharField(max_length=50)
     postal_code = models.CharField(max_length=20)
@@ -131,7 +132,8 @@ class Address(models.Model):
             ),
         ]
     def __str__(self):
-        return f"{self.street_address}, {self.city}"
+        street = f"{self.street_address} {self.house_number}".strip()
+        return f"{street}, {self.city}"
     
 
 class VerificationCode(models.Model):

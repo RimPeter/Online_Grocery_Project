@@ -71,7 +71,7 @@
           {% if default_address %}
           <div class="mb-0"><span class="text-muted">Address</span>
             <div>
-              {{ default_address.street_address }}{% if default_address.apartment %}, {{ default_address.apartment }}{% endif %},
+              {{ default_address.street_address }} {{ default_address.house_number }}{% if default_address.apartment %}, {{ default_address.apartment }}{% endif %},
               {{ default_address.city }}, {{ default_address.postal_code }}
             </div>
           </div>
