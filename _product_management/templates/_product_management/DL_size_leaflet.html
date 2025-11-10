@@ -119,26 +119,29 @@
 
         </div></div>
 
-        <!-- Bottom row: expands to remaining height; QR anchored to bottom -->
-        <div class="row qr-row"><div class="qr-row-cell">
+        <!-- Bottom row: expands to remaining height; QR centered vertically -->
+        <div class="row1 qr-row"><div class="row2 qr-row-cell">
           <section class="seg seg-qr">
-              <div class="qr-wrap" aria-live="polite">
-                {% if pdf and qr_data_uri %}
-                  <img class="qr" src="{{ qr_data_uri }}" alt="QR code linking to {{ normalized_site|default:current_site_raw }}">
-                {% elif current_site_raw %}
-                  <img class="qr" src="{% url '_product_management:qr' %}?site={{ current_site_raw|urlencode }}{% if qr_kind %}&kind={{ qr_kind }}{% endif %}" alt="QR code linking to {{ normalized_site|default:current_site_raw }}" loading="lazy">
-                {% else %}
-                  <span class="muted">Add a website URL above to render QR</span>
+              <div class="qr-cell">
+                <div class="qr-wrap" aria-live="polite">
+                  {% if pdf and qr_data_uri %}
+                    <img class="qr" src="{{ qr_data_uri }}" alt="QR code linking to {{ normalized_site|default:current_site_raw }}">
+                  {% elif current_site_raw %}
+                    <img class="qr1" src="{% url '_product_management:qr' %}?site={{ current_site_raw|urlencode }}{% if qr_kind %}&kind={{ qr_kind }}{% endif %}" alt="QR code linking to {{ normalized_site|default:current_site_raw }}" loading="lazy">
+                  {% else %}
+                    <span class="muted">Add a website URL above to render QR</span>
+                  {% endif %}
+                  {% if cta_subtitle %}
+                <p class="qr-note">{{ cta_subtitle }}</p>
                 {% endif %}
+                {% if normalized_site %}
+                <div class="qr-url muted">{{ normalized_site }}</div>
+                {% elif current_site_raw %}
+                <div class="qr-url muted">{{ current_site_raw }}</div>
+                {% endif %}
+                </div>
+                
               </div>
-              {% if cta_subtitle %}
-              <p class="qr-note">{{ cta_subtitle }}</p>
-              {% endif %}
-              {% if normalized_site %}
-              <div class="qr-url muted">{{ normalized_site }}</div>
-              {% elif current_site_raw %}
-              <div class="qr-url muted">{{ current_site_raw }}</div>
-              {% endif %}
             </section>
         </div></div>
       </div>
