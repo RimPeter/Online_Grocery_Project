@@ -11,7 +11,7 @@
 
   <div class="row">
     <!-- Left Column: Collapsible Category Menu -->
-    <div class="col-md-3 mb-4">
+    <div class="col-md-3 mb-4 d-none d-md-block">
       <div class="card">
         <div class="card-header">
           <strong>Categories</strong>
@@ -163,7 +163,7 @@
           </div>
         </div>
         <div class="mt-2">
-          <small class="text-white">Filters apply automatically. Need a fresh start? <a class="link2 link-light text-decoration-underline" href="{% url 'product_list' %}">Clear all filters</a>.</small>
+          <small class="text-white">Filters apply automatically.<a class="link2 link-light text-decoration-underline bg-warning text-dark px-1 rounded" href="{% url 'product_list' %}">Clear all filters</a>.</small>
         </div>
       </form>
 
