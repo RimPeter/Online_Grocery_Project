@@ -1,5 +1,5 @@
 {% load static %}
-<div class="col-lg-3 col-md-4 col-sm-6 col-6 d-flex align-items-stretch">
+<div class="col-lg-3 col-md-4 col-sm-6 col-6 d-flex align-items-stretch" data-bulk-item="{{ product.is_bulk|yesno:'true,false' }}">
   <div class="card mb-4 shadow-sm h-100 position-relative">
     {% if product.is_bulk %}
       <span class="position-absolute top-0 start-0 m-2 badge rounded-pill text-bg-warning" style="z-index:2;" aria-label="Bulk item" title="Bulk item">Bulk Item</span>

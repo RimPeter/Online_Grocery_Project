@@ -167,6 +167,14 @@
         </div>
       </form>
 
+      <div class="d-flex align-items-center flex-wrap gap-2 mt-3" id="bulk-toggle-wrapper">
+        <div class="form-check form-switch m-0">
+          <input class="form-check-input" type="checkbox" id="hide-bulk-toggle" role="switch">
+          <label class="form-check-label" for="hide-bulk-toggle">Hide bulk items</label>
+        </div>
+        <small class="text-muted mb-0" id="bulk-hidden-summary">No bulk items hidden.</small>
+      </div>
+
 {{ level2_map|json_script:"level2-map" }}
 
       <!-- Product Container -->
@@ -216,53 +224,113 @@
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     const mapEl = document.getElementById('level2-map');
-    if (!mapEl) return;
-    const level2Map = JSON.parse(mapEl.textContent);
     const l1Select = document.getElementById('filter-l1');
     const l2Select = document.getElementById('filter-l2');
     const form = document.getElementById('search-form');
-    if (!l1Select || !l2Select) return;
+    const hideBulkToggle = document.getElementById('hide-bulk-toggle');
+    const productContainer = document.getElementById('product-container');
+    const bulkHiddenSummary = document.getElementById('bulk-hidden-summary');
+    const bulkStorageKey = 'product-list-hide-bulk-items';
 
-    const submitFilters = () => {
-      if (!form) return;
-      if (typeof form.requestSubmit === 'function') {
-        form.requestSubmit();
-      } else {
-        form.submit();
-      }
-    };
+    if (mapEl && l1Select && l2Select) {
+      const level2Map = JSON.parse(mapEl.textContent);
+      window.level2Map = level2Map;
 
-    const updateSubcategories = (targetValue = '') => {
-      const selectedL1 = l1Select.value || '';
-      const currentValue = targetValue || l2Select.value || '';
-      const options = level2Map[selectedL1] || [];
-      l2Select.innerHTML = '<option value="">All subcategories</option>';
-      options.forEach(optionName => {
-        const option = document.createElement('option');
-        option.value = optionName;
-        option.textContent = optionName;
-        l2Select.appendChild(option);
-      });
-      if (!options.length) {
-        l2Select.value = '';
-        l2Select.disabled = true;
-      } else {
-        l2Select.disabled = false;
-        if (currentValue && options.includes(currentValue)) {
-          l2Select.value = currentValue;
+      const submitFilters = () => {
+        if (!form) return;
+        if (typeof form.requestSubmit === 'function') {
+          form.requestSubmit();
         } else {
-          l2Select.value = '';
+          form.submit();
         }
-      }
-    };
-    window.updateSubcategoryOptions = updateSubcategories;
+      };
 
-    updateSubcategories();
-    l1Select.addEventListener('change', () => {
+      const updateSubcategories = (targetValue = '') => {
+        const selectedL1 = l1Select.value || '';
+        const currentValue = targetValue || l2Select.value || '';
+        const options = level2Map[selectedL1] || [];
+        l2Select.innerHTML = '<option value="">All subcategories</option>';
+        options.forEach(optionName => {
+          const option = document.createElement('option');
+          option.value = optionName;
+          option.textContent = optionName;
+          l2Select.appendChild(option);
+        });
+        if (!options.length) {
+          l2Select.value = '';
+          l2Select.disabled = true;
+        } else {
+          l2Select.disabled = false;
+          if (currentValue && options.includes(currentValue)) {
+            l2Select.value = currentValue;
+          } else {
+            l2Select.value = '';
+          }
+        }
+      };
+      window.updateSubcategoryOptions = updateSubcategories;
+
       updateSubcategories();
-      submitFilters();
-    });
-    l2Select.addEventListener('change', submitFilters);
+      l1Select.addEventListener('change', () => {
+        updateSubcategories();
+        submitFilters();
+      });
+      l2Select.addEventListener('change', submitFilters);
+    }
+
+    if (hideBulkToggle && productContainer) {
+      const persistPreference = (state) => {
+        try {
+          localStorage.setItem(bulkStorageKey, state ? 'true' : 'false');
+        } catch (err) {
+          // Ignore storage issues (e.g., private browsing)
+        }
+      };
+
+      const readPreference = () => {
+        try {
+          return localStorage.getItem(bulkStorageKey) === 'true';
+        } catch (err) {
+          return false;
+        }
+      };
+
+      const pluralize = (count) => (count === 1 ? 'item' : 'items');
+
+      const updateHiddenSummary = (hiddenCount, totalCount, hide) => {
+        if (!bulkHiddenSummary) return;
+        if (!totalCount) {
+          bulkHiddenSummary.textContent = 'No bulk items on this page.';
+          return;
+        }
+        if (hide) {
+          bulkHiddenSummary.textContent = `Currently hiding ${hiddenCount} bulk ${pluralize(hiddenCount)}.`;
+        } else {
+          bulkHiddenSummary.textContent = `Currently hiding 0 bulk items; ${totalCount} ${pluralize(totalCount)} available to hide.`;
+        }
+      };
+
+      const applyBulkFilter = () => {
+        const hide = hideBulkToggle.checked;
+        const bulkCards = productContainer.querySelectorAll('[data-bulk-item="true"]');
+        const totalCount = bulkCards.length;
+        const hiddenCount = hide ? totalCount : 0;
+        bulkCards.forEach(card => {
+          card.classList.toggle('d-none', hide);
+        });
+        updateHiddenSummary(hiddenCount, totalCount, hide);
+      };
+
+      if (readPreference()) {
+        hideBulkToggle.checked = true;
+      }
+      applyBulkFilter();
+
+      hideBulkToggle.addEventListener('change', () => {
+        applyBulkFilter();
+        persistPreference(hideBulkToggle.checked);
+      });
+    }
   });
 </script>
 
