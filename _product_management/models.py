@@ -12,6 +12,7 @@ class LeafletCopy(models.Model):
     bullet_3 = models.CharField(max_length=255, blank=True, default=LEAFLET_TEXT_DEFAULTS["bullet_3"])
     cta_title = models.CharField(max_length=255, blank=True, default=LEAFLET_TEXT_DEFAULTS["cta_title"])
     cta_subtitle = models.TextField(blank=True, default=LEAFLET_TEXT_DEFAULTS["cta_subtitle"])
+    default_site_url = models.CharField(max_length=500, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -24,7 +25,9 @@ class LeafletCopy(models.Model):
 
     @classmethod
     def get_solo(cls):
-        obj, _ = cls.objects.get_or_create(pk=1, defaults=LEAFLET_TEXT_DEFAULTS)
+        defaults = dict(LEAFLET_TEXT_DEFAULTS)
+        defaults["default_site_url"] = ""
+        obj, _ = cls.objects.get_or_create(pk=1, defaults=defaults)
         return obj
 
     def as_dict(self):
@@ -37,5 +40,5 @@ class LeafletCopy(models.Model):
             "bullet_3": self.bullet_3,
             "cta_title": self.cta_title,
             "cta_subtitle": self.cta_subtitle,
+            "default_site_url": self.default_site_url,
         }
-

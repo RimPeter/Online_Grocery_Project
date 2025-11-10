@@ -179,9 +179,13 @@ def dl_leaflet(request):
     # Choose QR image kind to mirror PDF renderer capabilities for visual parity
     active_renderer = _choose_renderer()
     qr_kind = "svg" if active_renderer == "playwright" else "png"
-    text_context = _leaflet_text_context(request)
-    normalized_site = _normalized_leaflet_site(request)
+    leaflet_copy = _get_leaflet_copy()
+    text_context = _leaflet_text_context(request, leaflet_copy)
+    default_site = _default_site_url(leaflet_copy)
     raw_site = (request.GET.get("site") or "").strip()
+    if not raw_site:
+        raw_site = default_site
+    normalized_site = _ensure_scheme(raw_site) if raw_site else ""
     query_params = request.GET.copy()
     query_params.pop("saved", None)
     site_query_string = query_params.urlencode()
@@ -215,6 +219,11 @@ def dl_leaflet_save(request):
         if getattr(copy, field) != value:
             setattr(copy, field, value)
             updated = True
+    site_value = (request.POST.get("site") or "").strip()
+    site_value = _ensure_scheme(site_value) if site_value else ""
+    if site_value != copy.default_site_url:
+        copy.default_site_url = site_value
+        updated = True
     if updated:
         copy.save()
 
@@ -242,17 +251,25 @@ def dl_leaflet_snapshot(request):
             status=200,
         )
 
-    base_context = _leaflet_text_context(request)
+    leaflet_copy = _get_leaflet_copy()
+    base_context = _leaflet_text_context(request, leaflet_copy)
     overrides = _leaflet_payload(request.POST)
     for key, value in overrides.items():
         if value != "":
             base_context[key] = value
 
+    default_site = _default_site_url(leaflet_copy)
     raw_site = (request.POST.get("site") or request.GET.get("site") or "").strip()
+    if not raw_site:
+        raw_site = default_site
     normalized_site = _ensure_scheme(raw_site) if raw_site else ""
     qr_data_uri = _qr_data_uri_for_site(normalized_site, active_renderer)
 
     template = get_template("_product_management/DL_size_leaflet.html")
+    override_present = any(
+        ((request.POST.get(key) or request.GET.get(key) or "").strip())
+        for key in LEAFLET_TEXT_DEFAULTS.keys()
+    )
     render_context = {
         "pdf": True,
         "qr_kind": "svg",
@@ -262,18 +279,23 @@ def dl_leaflet_snapshot(request):
         "current_site_raw": raw_site,
         "site_query_string": "",
         "can_save_leaflet": False,
-        "leaflet_overrides_active": False,
+        "leaflet_overrides_active": override_present,
         **base_context,
     }
     html = template.render(render_context, request=request)
     try:
         png_bytes = _render_png_playwright(html, request)
-    except Exception as exc:
-        return HttpResponseServerError(f"Leaflet snapshot renderer failed: {exc}")
-
-    response = HttpResponse(png_bytes, content_type="image/png")
-    response["Content-Disposition"] = "attachment; filename=leaflet-snapshot.png"
-    return response
+        response = HttpResponse(png_bytes, content_type="image/png")
+        response["Content-Disposition"] = "attachment; filename=leaflet-snapshot.png"
+        return response
+    except Exception:
+        return JsonResponse(
+            {
+                "detail": "Leaflet snapshot renderer failed; please use client-side capture.",
+                "requires_client": True,
+            },
+            status=200,
+        )
 
 
 def _ensure_scheme(url: str) -> str:
@@ -423,8 +445,10 @@ def _qr_data_uri_for_site(site: str, renderer: str) -> str | None:
 
 def dl_leaflet_pdf(request):
     """Render the DL leaflet as a downloadable PDF, embedding the QR image."""
-    site = request.GET.get("site", "").strip()
-    site = _ensure_scheme(site) if site else ""
+    raw_site = (request.GET.get("site") or "").strip()
+    if not raw_site:
+        raw_site = _default_site_url()
+    site = _ensure_scheme(raw_site) if raw_site else ""
 
     active_renderer = _choose_renderer()
     qr_data_uri = _qr_data_uri_for_site(site, active_renderer)
@@ -434,7 +458,7 @@ def dl_leaflet_pdf(request):
         "pdf": True,
         "qr_data_uri": qr_data_uri,
         "normalized_site": site,
-        "current_site_raw": (request.GET.get("site") or "").strip(),
+        "current_site_raw": raw_site,
         "leaflet_overrides_active": False,
         **_leaflet_text_context(request),
     }
@@ -1144,22 +1168,28 @@ HOME_PILLAR_DEFAULTS = [
 ]
 
 
-def _leaflet_text_context(request):
-    """Return leaflet text overrides pulled from GET parameters."""
-    data = {}
-    for key, default in LEAFLET_TEXT_DEFAULTS.items():
-        value = (request.GET.get(key) or "").strip()
-        data[key] = value or default
-    return data
-
-
-def _leaflet_text_context(request):
-    base = dict(LEAFLET_TEXT_DEFAULTS)
+def _get_leaflet_copy():
     try:
-        saved = LeafletCopy.get_solo().as_dict()
-        base.update(saved)
+        return LeafletCopy.get_solo()
     except Exception:
-        pass
+        return None
+
+
+def _default_site_url(copy=None):
+    copy = copy or _get_leaflet_copy()
+    if copy and copy.default_site_url:
+        return copy.default_site_url
+    return ""
+
+
+def _leaflet_text_context(request, copy=None):
+    base = dict(LEAFLET_TEXT_DEFAULTS)
+    leaflet_copy = copy or _get_leaflet_copy()
+    if leaflet_copy:
+        saved = leaflet_copy.as_dict()
+        for key in LEAFLET_TEXT_DEFAULTS.keys():
+            if key in saved:
+                base[key] = saved[key]
 
     data = {}
     for key, default_value in base.items():
