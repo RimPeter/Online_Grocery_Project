@@ -121,28 +121,13 @@
           <a href="{% url 'delivery_slots' %}" class="btn btn-primary">
             Proceed to Checkout
           </a>
+          {% comment %} <a href="{% url 'delivery_slots' %}" class="btn btn-primary">
+            Proceed to Checkout
+          </a> {% endcomment %}
         {% endif %}
         <p>(Minimum £40 to spend to proceed to checkout)</p>
       </div>
     </div>
-
-    <!-- Total Price and Checkout Buttons -->
-    {% comment %} <div class="mt-3 d-flex justify-content-between align-items-center">
-      <h4>Total Price: £{{ total_price }}</h4>
-      <div>
-        <a href="{% url 'product_list' %}" class="btn btn-secondary">Continue Shopping</a>
-        {% if total_price < 40 %}
-          <button class="btn btn-primary" type="button" disabled aria-disabled="true" title="Minimum order £40.00">
-            Proceed to Checkout
-          </button>
-        {% else %}
-          <a href="{% url 'delivery_slots' %}" class="btn btn-primary"> 
-            Proceed to Checkout
-          </a>
-        {% endif %}
-          <p>(Minimum £40 to spend to proceed to checkout)</p>
-      </div>
-    </div> {% endcomment %}
     
   {% else %}
     <p>Your cart is empty. 
