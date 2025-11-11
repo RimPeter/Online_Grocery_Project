@@ -114,6 +114,11 @@
   .cart-page .list-group .row {
     row-gap: 12px;
   }
+
+  .bulk {
+    padding-bottom: 20px;
+  }
+
   .cart-page .list-group .row > [class*='col-'] {
     flex: 0 0 100%;
     max-width: 100%;
