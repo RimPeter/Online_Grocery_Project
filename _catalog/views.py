@@ -237,16 +237,16 @@ def _apply_category_filters(queryset, l1, l2):
     Shared helper to filter a queryset by level-1/level-2 names with trimmed/casefold logic.
     """
     if l2:
-        l1n = (l1 or '').strip().lower()
         l2n = l2.strip().lower()
-        return (
-            queryset
-            .annotate(
-                l1_norm=Lower(Trim('sub_category')),
-                l2_norm=Lower(Trim('sub_subcategory'))
-            )
-            .filter(l1_norm=l1n, l2_norm=l2n)
-        )
+        annotations = {
+            'l2_norm': Lower(Trim('sub_subcategory')),
+        }
+        filters = {'l2_norm': l2n}
+        if l1:
+            l1n = l1.strip().lower()
+            annotations['l1_norm'] = Lower(Trim('sub_category'))
+            filters['l1_norm'] = l1n
+        return queryset.annotate(**annotations).filter(**filters)
     if l1:
         l1n = l1.strip().lower()
         return (
@@ -273,13 +273,14 @@ def product_list(request):
 
     if l2:
         # Normalize DB fields with Trim+Lower to avoid mismatch on stray spaces/case
-        l1n = l1.strip().lower()
         l2n = l2.strip().lower()
-        products = (
-            products
-            .annotate(l1_norm=Lower(Trim('sub_category')), l2_norm=Lower(Trim('sub_subcategory')))
-            .filter(l1_norm=l1n, l2_norm=l2n)
-        )
+        annotations = {'l2_norm': Lower(Trim('sub_subcategory'))}
+        filters = {'l2_norm': l2n}
+        if l1:
+            l1n = l1.strip().lower()
+            annotations['l1_norm'] = Lower(Trim('sub_category'))
+            filters['l1_norm'] = l1n
+        products = products.annotate(**annotations).filter(**filters)
     elif l1:
         l1n = l1.strip().lower()
         products = (
@@ -311,7 +312,7 @@ def product_list(request):
                 Q(sub_subcategory__icontains=query)
             )
     elif l2:
-        products = products.filter(sub_category__iexact=l1, sub_subcategory__iexact=l2)
+        products = products.filter(sub_subcategory__iexact=l2)
     elif l1:
         products = products.filter(sub_category__iexact=l1)
     # Pagination
@@ -653,13 +654,14 @@ def load_more_products(request):
     level2_names = {name.casefold() for name in level2_name_list}
 
     if l2:
-        l1n = l1.strip().lower()
         l2n = l2.strip().lower()
-        products_qs = (
-            products_qs
-            .annotate(l1_norm=Lower(Trim('sub_category')), l2_norm=Lower(Trim('sub_subcategory')))
-            .filter(l1_norm=l1n, l2_norm=l2n)
-        )
+        annotations = {'l2_norm': Lower(Trim('sub_subcategory'))}
+        filters = {'l2_norm': l2n}
+        if l1:
+            l1n = l1.strip().lower()
+            annotations['l1_norm'] = Lower(Trim('sub_category'))
+            filters['l1_norm'] = l1n
+        products_qs = products_qs.annotate(**annotations).filter(**filters)
     elif l1:
         l1n = l1.strip().lower()
         products_qs = (
@@ -691,13 +693,7 @@ def load_more_products(request):
                 Q(sub_subcategory__icontains=query)
             )
     elif l2:
-        l1n = l1.strip().lower()
-        l2n = l2.strip().lower()
-        products_qs = (
-            products_qs
-            .annotate(l1_norm=Lower(Trim('sub_category')), l2_norm=Lower(Trim('sub_subcategory')))
-            .filter(l1_norm=l1n, l2_norm=l2n)
-        )
+        products_qs = products_qs.filter(sub_subcategory__iexact=l2)
     elif l1:
         l1n = l1.strip().lower()
         products_qs = (
