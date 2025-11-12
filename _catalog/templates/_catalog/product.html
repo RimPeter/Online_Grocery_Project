@@ -601,26 +601,7 @@
     // Preview handled in selectItem and initial preselect; nothing else to do
   });
 </script>
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    var form = document.getElementById('search-form');
-    var input = document.getElementById('search-input');
-    var l1 = document.getElementById('l1-field');
-    var l2 = document.getElementById('l2-field');
-    if (form && input && l1 && l2) {
-      form.addEventListener('submit', function () {
-        var v = (input.value || '').trim();
-        var sep = ' - ';
-        if (v.indexOf(sep) !== -1) {
-          var parts = v.split(sep);
-          l1.value = (parts[0] || '').trim();
-          l2.value = (parts[1] || '').trim();
-          input.value = '';
-        }
-      });
-    }
-  });
-}</script>
+<!-- Removed legacy hidden-field parser; selects are used instead -->
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     // Existing intersection observer code for infinite scroll ...
@@ -732,8 +713,38 @@ document.addEventListener('submit', function (e) {
   }
 }, true);
 </script>
-
-
-
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const form     = document.getElementById('search-form');
+  const input    = document.getElementById('search-input');
+  const l1Select = document.getElementById('filter-l1');
+  const l2Select = document.getElementById('filter-l2');
+  if (!form || !input) return;
+  const parseJSON = (id, fallback) => {
+    try { const el = document.getElementById(id); return el ? JSON.parse(el.textContent || '') : fallback; } catch (_) { return fallback; }
+  };
+  const L2 = parseJSON('level2-names', []);
+  const fold = s => (s || '').toLocaleLowerCase();
+  form.addEventListener('submit', function () {
+    const v = (input.value || '').trim();
+    if (!v) return;
+    const seps = ['›','>'];
+    for (const sep of seps) {
+      if (v.includes(sep)) {
+        const parts = v.split(sep).map(s => s.trim());
+        if (parts.length === 2) {
+          if (l1Select) l1Select.value = parts[0];
+          if (window.updateSubcategoryOptions) { window.updateSubcategoryOptions(parts[1]); }
+          else if (l2Select) { l2Select.disabled = false; l2Select.value = parts[1]; }
+          input.value = '';
+        }
+        return;
+      }
+    }
+    const m2 = (L2 || []).find(x => fold(x) === fold(v));
+    if (m2 && l2Select) { l2Select.disabled = false; l2Select.value = m2; input.value = ''; }
+  });
+});
+</script>
 
 {% endblock %}
