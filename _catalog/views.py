@@ -281,6 +281,13 @@ def product_list(request):
                 .annotate(l1_norm=Lower(Trim('sub_category')), l2_norm=Lower(Trim('sub_subcategory')))
                 .filter(l1_norm=l1n, l2_norm=l2n)
             )
+            # If taxonomy JSON and DB disagree on level-1, relax to l2-only
+            if not products.exists():
+                products = (
+                    All_Products.objects
+                    .annotate(l2_norm=Lower(Trim('sub_subcategory')))
+                    .filter(l2_norm=l2n)
+                )
         else:
             products = (
                 products
@@ -648,6 +655,14 @@ def load_more_products(request):
             annotations['l1_norm'] = Lower(Trim('sub_category'))
             filters['l1_norm'] = l1n
         products_qs = products_qs.annotate(**annotations).filter(**filters)
+        if l1 and not products_qs.exists():
+            # Relax to l2-only if the strict pair yields no results
+            products_qs = (
+                All_Products.objects
+                .annotate(l2_norm=Lower(Trim('sub_subcategory')))
+                .filter(l2_norm=l2n)
+                .order_by('id')
+            )
     elif l1:
         l1n = l1.strip().lower()
         products_qs = (
