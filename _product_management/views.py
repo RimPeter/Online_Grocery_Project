@@ -10,7 +10,7 @@ from django.conf import settings
 from django.contrib.staticfiles import finders
 from xhtml2pdf import pisa
 from django.contrib.auth.decorators import user_passes_test
-from django.db.models import Count, Sum, F, DecimalField, Value, ExpressionWrapper, Q, Max
+from django.db.models import Count, Sum, F, DecimalField, Value, ExpressionWrapper, Q, Max, Case, When
 from django.db.models.functions import Coalesce, Cast
 from datetime import date, timedelta
 from django.views.decorators.http import require_http_methods, require_POST
@@ -774,6 +774,20 @@ def items_to_order(request):
     if items:
         prod_ids = [it['product_id'] for it in items]
         products_map = {p.id: p for p in All_Products.objects.filter(id__in=prod_ids)}
+        # Ensure each product has an RSP when DB did not provide it (None or 0)
+        try:
+            from decimal import Decimal as _D
+            for _p in products_map.values():
+                try:
+                    cur = getattr(_p, 'rsp', None)
+                    if cur is None or _D(str(cur)) == _D('0'):
+                        price = getattr(_p, 'price', None)
+                        if price is not None:
+                            _p.rsp = (_D(str(price)) * _D('1.30')).quantize(_D('0.01'))
+                except Exception:
+                    continue
+        except Exception:
+            pass
         from decimal import Decimal
         # Running totals built from the same logic used for per-row display
         sum_cost_net = Decimal('0')
@@ -1409,3 +1423,47 @@ def missing_retail_ean(request):
         'count': products.count(),
     }
     return render(request, '_product_management/missing_retail_ean.html', context)
+
+
+@staff_or_superuser_required
+def over_50_products(request):
+    """List products whose displayed unit price exceeds £50.
+
+    Display price logic: use rsp when rsp > 0; else use price * 1.3.
+    This mirrors the catalog view’s hiding logic.
+    """
+    from decimal import Decimal
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
+    display_expr = ExpressionWrapper(
+        F('price') * Value(Decimal('1.30')),
+        output_field=DecimalField(max_digits=10, decimal_places=2),
+    )
+    qs = (
+        All_Products.objects
+        .annotate(
+            display_rsp=Case(
+                When(rsp__gt=0, then=F('rsp')),
+                default=display_expr,
+                output_field=DecimalField(max_digits=10, decimal_places=2),
+            )
+        )
+        .filter(display_rsp__gt=Decimal('50.00'))
+        .order_by('name', 'id')
+    )
+
+    paginator = Paginator(qs, 50)
+    page_number = request.GET.get('page')
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    context = {
+        'products': page_obj,
+        'page_obj': page_obj,
+        'total_results': paginator.count,
+    }
+    return render(request, '_product_management/over_50_products.html', context)

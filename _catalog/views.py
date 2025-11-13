@@ -6,11 +6,11 @@ from django.contrib import messages
 import json
 import os
 from django.db import connection
-from django.db.models import Q
-from django.db.models.functions import Lower, Trim, Greatest
+from django.db.models import Q, F, Value, DecimalField, ExpressionWrapper, Case, When
+from django.db.models.functions import Lower, Trim, Greatest, Coalesce
 from django.db.utils import DatabaseError
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
 from django.views.decorators.http import require_GET
 from _orders.models import Order, OrderItem
 from django.contrib.auth.decorators import login_required
@@ -168,6 +168,24 @@ def home(request):
         'value_pillars': value_pillars,
     })
 
+def _ensure_rsp(product):
+    """Ensure RSP is set for display.
+
+    If DB did not provide an RSP (None or 0), compute as price * 1.3.
+    Mutates only the in-memory instance for rendering.
+    """
+    try:
+        if not product:
+            return product
+        cur = getattr(product, 'rsp', None)
+        if cur is None or Decimal(str(cur)) == Decimal('0'):
+            price = getattr(product, 'price', None)
+            if price is not None:
+                product.rsp = (Decimal(str(price)) * Decimal('1.30')).quantize(Decimal('0.01'))
+    except Exception:
+        pass
+    return product
+
 def _load_category_json():
     """Load category JSON from whichever app path exists.
     Tries `_catalog/management/commands/` first, then `_product_management/...`.
@@ -258,6 +276,15 @@ def _apply_category_filters(queryset, l1, l2):
 
 def product_detail(request, pk):
     product = get_object_or_404(All_Products, pk=pk)
+    # Fallback RSP if missing for display and hiding logic
+    _ensure_rsp(product)
+    # Hide items with unit RSP over £50
+    try:
+        rsp_val = Decimal(str(product.rsp)) if product.rsp is not None else None
+    except Exception:
+        rsp_val = None
+    if rsp_val is not None and rsp_val > Decimal('50.00'):
+        raise Http404("Product not available")
     return render(request, '_catalog/product_detail.html', {'product': product})
 
 def product_list(request):
@@ -329,6 +356,20 @@ def product_list(request):
                         Q(sub_subcategory__icontains=query)
                     )
 
+    # Hide items with display RSP over £50 (use rsp or price*1.3 fallback)
+    display_expr = ExpressionWrapper(F('price') * Value(Decimal('1.30')), output_field=DecimalField(max_digits=10, decimal_places=2))
+    products = (
+        products
+        .annotate(
+            display_rsp=Case(
+                When(rsp__gt=0, then=F('rsp')),
+                default=display_expr,
+                output_field=DecimalField(max_digits=10, decimal_places=2),
+            )
+        )
+        .filter(display_rsp__lte=Decimal('50.00'))
+    )
+
     # Final stable ordering
     products = products.order_by('name', 'id')
 
@@ -341,6 +382,13 @@ def product_list(request):
         page_obj = paginator.page(1)
     except EmptyPage:
         page_obj = paginator.page(paginator.num_pages)
+
+    # Ensure each product has an RSP for display if DB did not provide one
+    try:
+        for p in page_obj:
+            _ensure_rsp(p)
+    except Exception:
+        pass
 
     context = {
         'products': page_obj,
@@ -717,7 +765,17 @@ def load_more_products(request):
             .annotate(l1_norm=Lower(Trim('sub_category')))
             .filter(l1_norm=l1n)
         )
-        
+    
+    # Hide items with display RSP over £50 (use rsp>0 else price*1.3)
+    display_expr = ExpressionWrapper(F('price') * Value(Decimal('1.30')), output_field=DecimalField(max_digits=10, decimal_places=2))
+    products_qs = products_qs.annotate(
+        display_rsp=Case(
+            When(rsp__gt=0, then=F('rsp')),
+            default=display_expr,
+            output_field=DecimalField(max_digits=10, decimal_places=2),
+        )
+    ).filter(display_rsp__lte=Decimal('50.00'))
+
     paginator = Paginator(products_qs, 8)
     page_obj = paginator.get_page(page_number)
 
