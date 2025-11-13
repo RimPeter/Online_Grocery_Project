@@ -370,8 +370,40 @@ def product_list(request):
         .filter(display_rsp__lte=Decimal('50.00'))
     )
 
+    # If a category is selected but this strict DB filter yields no results,
+    # retry with a Python-side unit price calculation that divides by pack size
+    # inferred from the variant text. This avoids hiding valid multipacks.
+    if (l1n or l2n):
+        try:
+            has_results = products.exists()
+        except Exception:
+            # If products is a list already, treat as having results/non-empty
+            has_results = bool(products)
+        if not has_results:
+            base_qs = _apply_category_filters(All_Products.objects.all(), l1, l2)
+            recovered = []
+            for p in base_qs:
+                try:
+                    if p.rsp is not None and Decimal(str(p.rsp)) > Decimal('0'):
+                        display_val = Decimal(str(p.rsp))
+                    else:
+                        try:
+                            pack = max(1, int(p.pack_amount()))
+                        except Exception:
+                            pack = 1
+                        price_val = Decimal(str(getattr(p, 'price', '0') or '0'))
+                        display_val = (price_val * Decimal('1.30')) / Decimal(pack)
+                    if display_val <= Decimal('50.00'):
+                        recovered.append(p)
+                except Exception:
+                    recovered.append(p)
+            products = recovered
+
     # Final stable ordering
-    products = products.order_by('name', 'id')
+    if isinstance(products, list):
+        products.sort(key=lambda x: (getattr(x, 'name', '').casefold(), getattr(x, 'id', 0)))
+    else:
+        products = products.order_by('name', 'id')
 
     # Pagination
     paginator = Paginator(products, 24)

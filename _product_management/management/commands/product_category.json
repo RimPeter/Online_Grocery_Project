@@ -322,5 +322,53 @@
     "Shaving": "https://www.bestwaywholesale.co.uk/grocery/221/502561",
     "Skin Care": "https://www.bestwaywholesale.co.uk/grocery/221/502581",
     "Soap & Handwash": "https://www.bestwaywholesale.co.uk/grocery/221/502551"
-  }
+  },
+  "World Foods": {
+    "Carribean": "https://www.bestwaywholesale.co.uk/grocery/251/502785",
+    "Chinese & Thai": "https://www.bestwaywholesale.co.uk/grocery/251/502781",
+    "Indian": "https://www.bestwaywholesale.co.uk/grocery/251/502855",
+    "Coconut Milk & Cream": "https://www.bestwaywholesale.co.uk/grocery/251/502871",
+    "Mexican": "https://www.bestwaywholesale.co.uk/grocery/251/502853",
+    "Eastern European": "hhttps://www.bestwaywholesale.co.uk/grocery/251/502851"
+  },
+  "Beers, Wines & Spirits": {
+    "Beers": "https://www.bestwaywholesale.co.uk/beers-wines-spirits/791",
+    "Alcohol_free": "https://www.bestwaywholesale.co.uk/beers-wines-spirits/825/504915",
+    "Cider": "https://www.bestwaywholesale.co.uk/beers-wines-spirits/801",
+    "Lager": [
+      "https://www.bestwaywholesale.co.uk/beers-wines-spirits/781/504831",
+      "https://www.bestwaywholesale.co.uk/beers-wines-spirits/781/504815",
+      "https://www.bestwaywholesale.co.uk/beers-wines-spirits/781/504811",
+      "https://www.bestwaywholesale.co.uk/beers-wines-spirits/781/504821"
+    ],
+    "Perrys": "https://www.bestwaywholesale.co.uk/beers-wines-spirits/821",
+    "Spirits": [
+      "https://www.bestwaywholesale.co.uk/beers-wines-spirits/741",
+      "https://www.bestwaywholesale.co.uk/beers-wines-spirits/741?s=100",
+      "https://www.bestwaywholesale.co.uk/beers-wines-spirits/741?s=200",
+      "https://www.bestwaywholesale.co.uk/beers-wines-spirits/741?s=300",
+      "https://www.bestwaywholesale.co.uk/beers-wines-spirits/741?s=400",
+      "https://www.bestwaywholesale.co.uk/beers-wines-spirits/741?s=500",
+      "https://www.bestwaywholesale.co.uk/beers-wines-spirits/741?s=600",
+      "https://www.bestwaywholesale.co.uk/beers-wines-spirits/741?s=700"
+    ],
+    "Red Wine": [
+      "https://www.bestwaywholesale.co.uk/beers-wines-spirits/751",
+      "https://www.bestwaywholesale.co.uk/beers-wines-spirits/751?s=100"
+    ],
+    "Rose Wine": "https://www.bestwaywholesale.co.uk/beers-wines-spirits/755",
+    "White Wine": [
+      "https://www.bestwaywholesale.co.uk/beers-wines-spirits/761",
+      "https://www.bestwaywholesale.co.uk/beers-wines-spirits/761?s=100"
+    ]
+  },
+  "Tobacco": {
+    "Cigarettes": [
+      "https://www.bestwaywholesale.co.uk/cigarettes-tobacco/cigarettes",
+      "https://www.bestwaywholesale.co.uk/cigarettes-tobacco/cigarettes?s=100"
+    ],
+    "Cigars": "https://www.bestwaywholesale.co.uk/cigarettes-tobacco/cigars",
+    "Rolling Tobacco & Papers": "https://www.bestwaywholesale.co.uk/tobacco/911"
+  },
+  "Paper, Wrap, Foil & Bags": "https://www.bestwaywholesale.co.uk/non-food/961"
 }
