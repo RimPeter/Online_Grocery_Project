@@ -33,7 +33,27 @@
             <td>{{ p.sku|default:"-" }}</td>
             <td>{% if p.price %}&pound;{{ p.price|floatformat:2 }}{% else %}-{% endif %}</td>
             <td>{% if p.display_rsp %}&pound;{{ p.display_rsp|floatformat:2 }}{% else %}-{% endif %}</td>
-            <td>{% if p.rsp %}&pound;{{ p.rsp|floatformat:2 }}{% else %}-{% endif %}</td>
+            <td>
+              <form method="post" action="{% url '_product_management:over_50_products' %}" class="d-flex align-items-center gap-2">
+                {% csrf_token %}
+                <input type="hidden" name="product_id" value="{{ p.id }}">
+                <input type="hidden" name="page" value="{{ page_obj.number }}">
+                <div class="input-group input-group-sm" style="max-width: 170px;">
+                  <span class="input-group-text">&pound;</span>
+                  <input
+                    type="number"
+                    name="new_rsp"
+                    step="0.01"
+                    min="0"
+                    class="form-control form-control-sm"
+                    value="{% if p.rsp %}{{ p.rsp|floatformat:2 }}{% endif %}"
+                    placeholder="e.g., 59.99"
+                    aria-label="New RSP"
+                  />
+                </div>
+                <button type="submit" class="btn btn-sm btn-primary">Save</button>
+              </form>
+            </td>
           </tr>
           {% empty %}
           <tr>

@@ -1432,8 +1432,50 @@ def over_50_products(request):
     Display price logic: use rsp when rsp > 0; else use price * 1.3.
     This mirrors the catalog view’s hiding logic.
     """
-    from decimal import Decimal
+    from decimal import Decimal, InvalidOperation
     from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
+    # Handle inline RSP updates submitted from the table
+    if request.method == 'POST':
+        product_id = request.POST.get('product_id')
+        raw_rsp = (request.POST.get('new_rsp') or '').strip()
+        current_page = request.POST.get('page') or ''
+
+        try:
+            pid = int(product_id)
+        except (TypeError, ValueError):
+            pid = None
+
+        if not pid:
+            messages.error(request, 'Invalid product selection.')
+        else:
+            product = get_object_or_404(All_Products, pk=pid)
+            if raw_rsp == '':
+                # Blank input clears RSP back to NULL
+                product.rsp = None
+                product.save(update_fields=['rsp'])
+                messages.success(request, f'Cleared RSP for "{product.name}".')
+            else:
+                cleaned = raw_rsp.replace('£', '').replace(',', '').strip()
+                try:
+                    new_value = Decimal(cleaned)
+                    if new_value < 0:
+                        raise InvalidOperation()
+                except Exception:
+                    messages.error(request, 'Enter a valid non-negative number for RSP.')
+                else:
+                    if product.rsp != new_value:
+                        product.rsp = new_value
+                        product.save(update_fields=['rsp'])
+                        messages.success(request, f'Updated RSP for "{product.name}" to £{new_value:.2f}.')
+                    else:
+                        messages.info(request, 'No change to RSP detected.')
+
+        # Redirect to avoid form re-submission; keep pagination
+        target = reverse('_product_management:over_50_products')
+        if current_page:
+            target = f"{target}?page={current_page}"
+        return redirect(target)
 
     display_expr = ExpressionWrapper(
         F('price') * Value(Decimal('1.30')),
