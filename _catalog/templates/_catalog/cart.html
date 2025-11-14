@@ -53,7 +53,7 @@
               <h6 class="price">{{ item.product.name }}</h6>
               <div class="small text-muted">
               {{ item.product.variant|default:"" }}
-              {% if item.product.is_bulk %} �� Pack of {{ item.product.pack_amount }}{% endif %}
+              {% if item.product.is_bulk %} -- Pack of {{ item.product.pack_amount }}{% endif %}
             </div>
             </div>
             
@@ -136,3 +136,4 @@
   {% endif %}
 </div>
 {% endblock %}
+

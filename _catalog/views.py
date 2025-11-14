@@ -471,17 +471,23 @@ def cart_view(request):
         for pid, quantity in cart.items():
             product = products_by_id.get(str(pid))
             if product:
-                # ensure Decimal math
-                # Charge using RSP when available; fallback to cost price
-                unit_price = product.rsp if (product.rsp is not None and product.rsp > 0) else product.price
-                item_price = Decimal(str(unit_price))
+                # Base unit is RSP when available; otherwise fallback to cost price
+                base_unit = product.rsp if (product.rsp is not None and product.rsp > 0) else product.price
+                price_dec = Decimal(str(base_unit))
+                # For bulk items, charge for the whole pack (multiply by pack size)
+                try:
+                    pack = int(product.pack_amount()) if callable(product.pack_amount) else int(getattr(product, 'pack_amount', 1) or 1)
+                except Exception:
+                    pack = 1
+                if pack > 1:
+                    price_dec *= Decimal(pack)
                 qty = int(quantity)
-                item_total = item_price * qty
+                item_total = price_dec * qty
                 total_price += item_total
                 cart_items.append({
                     'product': product,
                     'quantity': qty,
-                    'unit_price': unit_price,
+                    'unit_price': price_dec,
                     'item_total': item_total,
                 })
 
@@ -492,12 +498,19 @@ def cart_view(request):
     for pid, quantity in cart.items():
         product = products_by_id.get(str(pid))
         if product:
-            unit_price = product.rsp if (product.rsp is not None and product.rsp > 0) else product.price
+            base_unit = product.rsp if (product.rsp is not None and product.rsp > 0) else product.price
+            price_dec = Decimal(str(base_unit))
+            try:
+                pack = int(product.pack_amount()) if callable(product.pack_amount) else int(getattr(product, 'pack_amount', 1) or 1)
+            except Exception:
+                pack = 1
+            if pack > 1:
+                price_dec *= Decimal(pack)
             OrderItem.objects.create(
                 order=order,
                 product=product,
                 quantity=quantity,
-                price=unit_price
+                price=price_dec
             )
 
     # Fixed delivery charge applied on cart totals display
