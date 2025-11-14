@@ -472,13 +472,16 @@ def cart_view(request):
             product = products_by_id.get(str(pid))
             if product:
                 # ensure Decimal math
-                item_price = Decimal(str(product.price))
+                # Charge using RSP when available; fallback to cost price
+                unit_price = product.rsp if (product.rsp is not None and product.rsp > 0) else product.price
+                item_price = Decimal(str(unit_price))
                 qty = int(quantity)
                 item_total = item_price * qty
                 total_price += item_total
                 cart_items.append({
                     'product': product,
                     'quantity': qty,
+                    'unit_price': unit_price,
                     'item_total': item_total,
                 })
 
@@ -489,11 +492,12 @@ def cart_view(request):
     for pid, quantity in cart.items():
         product = products_by_id.get(str(pid))
         if product:
+            unit_price = product.rsp if (product.rsp is not None and product.rsp > 0) else product.price
             OrderItem.objects.create(
                 order=order,
                 product=product,
                 quantity=quantity,
-                price=product.price
+                price=unit_price
             )
 
     # Fixed delivery charge applied on cart totals display

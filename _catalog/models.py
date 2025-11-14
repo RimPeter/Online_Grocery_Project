@@ -35,10 +35,6 @@ class All_Products(models.Model):
     ingredients_nutrition = models.TextField(blank=True)
     other_info = models.TextField(blank=True)
     
-    # level1_category = models.CharField(max_length=255, blank=True)   # temp
-    # level2_category = models.CharField(max_length=255, blank=True)   # temp
-    # category        = models.CharField(max_length=255, blank=True)   # temp
-    
     VAT_RATE_CHOICES = [
         ('standard', 'Standard'),
         ('reduced', 'Reduced'),

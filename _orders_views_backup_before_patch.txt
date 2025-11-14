@@ -98,7 +98,7 @@ def delivery_slots_view(request):
         shortfall = (MIN_ORDER_TOTAL - total_price).quantize(Decimal('0.01'))
         messages.error(
             request,
-            f"Minimum order is \u00A3{MIN_ORDER_TOTAL:.2f}. Add \u00A3{shortfall:.2f} more to proceed."
+            f"Minimum order is £{MIN_ORDER_TOTAL:.2f}. Add £{shortfall:.2f} more to proceed."
         )
         return redirect('cart_view')
 
@@ -378,14 +378,14 @@ def _build_invoice_pdf_bytes(request, order):
         if company.vat_number: meta_bits.append(f"VAT: {company.vat_number}")
         if company.company_number: meta_bits.append(f"Company No: {company.company_number}")
         if meta_bits:
-            elements.append(Paragraph(" | ".join(meta_bits), styles['Normal']))
+            elements.append(Paragraph(" · ".join(meta_bits), styles['Normal']))
 
         contact_bits = []
         if company.email: contact_bits.append(company.email)
         if company.phone: contact_bits.append(company.phone)
         if company.website: contact_bits.append(company.website)
         if contact_bits:
-            elements.append(Paragraph(" | ".join(contact_bits), styles['Normal']))
+            elements.append(Paragraph(" · ".join(contact_bits), styles['Normal']))
         elements.append(Spacer(1, 12))
 
     # Header
@@ -407,7 +407,7 @@ def _build_invoice_pdf_bytes(request, order):
     # Items table
     data = [["Item", "Qty", "Price", "Subtotal"]]
     for it in order_items:
-        data.append([it.product.name, str(it.quantity), f"\u00A3{it.price:.2f}", f"\u00A3{it.subtotal:.2f}"])
+        data.append([it.product.name, str(it.quantity), f"£{it.price:.2f}", f"£{it.subtotal:.2f}"])
 
     table = Table(data, colWidths=[260, 60, 80, 80])
     table.setStyle(TableStyle([
@@ -423,42 +423,9 @@ def _build_invoice_pdf_bytes(request, order):
     elements.append(table)
     elements.append(Spacer(1, 12))
 
-    # Totals + VAT (included) and delivery
+    # Totals
     total_val = sum(getattr(i, "subtotal", i.price * i.quantity) for i in order_items)
-    # Compute VAT included per line (assumes VAT-inclusive prices)
-    rate_map = {
-        'standard': Decimal('0.20'),
-        'reduced': Decimal('0.05'),
-        'zero': Decimal('0.00'),
-        'exempt': Decimal('0.00'),
-    }
-    vat_included = Decimal('0.00')
-    try:
-        for it in order_items:
-            r = rate_map.get(getattr(it.product, 'vat_rate', 'standard'), Decimal('0.00'))
-            if r > 0:
-                line_vat = (it.subtotal * r) / (Decimal('1.00') + r)
-                vat_included += line_vat
-    except Exception:
-        pass
-    # Round VAT to 2dp for display
-    try:
-        vat_included = vat_included.quantize(Decimal('0.01'))
-    except Exception:
-        vat_included = Decimal('0.00')
-
-    delivery_charge = Decimal('1.50') if order_items else Decimal('0.00')
-    try:
-        grand_total = (Decimal(total_val) + delivery_charge).quantize(Decimal('0.01'))
-    except Exception:
-        grand_total = Decimal('0.00')
-
-    # Summary block
-    elements.append(Paragraph(f"Subtotal: \u00A3{total_val:.2f}", styles['Normal']))
-    elements.append(Paragraph(f"VAT (included): \u00A3{vat_included:.2f}", styles['Normal']))
-    elements.append(Paragraph(f"Delivery: \u00A3{delivery_charge:.2f}", styles['Normal']))
-    elements.append(Spacer(1, 4))
-    elements.append(Paragraph(f"<b>Total:</b> \u00A3{grand_total:.2f}", styles['Heading3']))
+    elements.append(Paragraph(f"<b>Total:</b> £{total_val:.2f}", styles['Heading3']))
 
     # Delivery slot
     if order.delivery_date or order.delivery_time:
@@ -514,5 +481,6 @@ def reorder_order_view(request, order_id):
     # redirect back to history by default
     return_to = request.POST.get('return_to') or reverse('order_history')
     return redirect(return_to)
+
 
 

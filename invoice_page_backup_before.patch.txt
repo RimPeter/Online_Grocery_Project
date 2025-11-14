@@ -49,37 +49,109 @@
     margin: 0;
   }
   .muted { color: var(--muted); }
-  .meta { text-align: right; }
-  .meta h2 { font-size: 1.25rem; margin: 0 0 .25rem 0; }
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: .75rem; }
-  .card { border: 1px solid var(--border); border-radius: 10px; padding: 1rem; }
-  .card h3 { margin: 0 0 .5rem 0; font-size: 1rem; }
+  .meta {
+    text-align: right;
+  }
+  .meta h2 {
+    font-size: 1.25rem;
+    margin: 0 0 .25rem 0;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    margin-bottom: .75rem;
+  }
+  .card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+  }
+  .card h3 {
+    margin: 0 0 .5rem 0;
+    font-size: 1rem;
+  }
   .addr p { margin: .15rem 0; }
-  table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: .95rem; }
-  thead th { text-align: left; border-bottom: 2px solid var(--border); padding: .625rem .5rem; }
-  tbody td { border-bottom: 1px solid var(--border); padding: .625rem .5rem; vertical-align: top; }
-  tfoot td { padding: .625rem .5rem; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    font-size: .95rem;
+  }
+  thead th {
+    text-align: left;
+    border-bottom: 2px solid var(--border);
+    padding: .625rem .5rem;
+  }
+  tbody td {
+    border-bottom: 1px solid var(--border);
+    padding: .625rem .5rem;
+    vertical-align: top;
+  }
+  tfoot td {
+    padding: .625rem .5rem;
+  }
   .text-right { text-align: right; }
-  .totals { margin-top: .5rem; display: grid; grid-template-columns: 1fr 300px; gap: 1rem; align-items: start; }
-  .summary { border: 1px solid var(--border); border-radius: 10px; padding: 1rem; }
-  .summary .row { display: flex; justify-content: space-between; padding: .35rem 0; }
-  .summary .row.total { font-weight: 700; border-top: 2px solid var(--border); margin-top: .35rem; padding-top: .6rem; }
-  .footer-note { margin-top: 1.25rem; color: var(--muted); font-size: .9rem; }
-  .actions { display: flex; gap: .5rem; margin-bottom: 1rem; justify-content: flex-end; }
-  .btn { display: inline-block; background: #111827; color: #fff; padding: .6rem .9rem; border-radius: 8px; text-decoration: none; border: 1px solid #111827; }
-  .btn.secondary { background: #fff; color: #111827; }
+  .totals {
+    margin-top: .5rem;
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 1rem;
+    align-items: start;
+  }
+  .summary {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+  }
+  .summary .row {
+    display: flex;
+    justify-content: space-between;
+    padding: .35rem 0;
+  }
+  .summary .row.total {
+    font-weight: 700;
+    border-top: 2px solid var(--border);
+    margin-top: .35rem;
+    padding-top: .6rem;
+  }
+  .footer-note {
+    margin-top: 1.25rem;
+    color: var(--muted);
+    font-size: .9rem;
+  }
+  .actions {
+    display: flex;
+    gap: .5rem;
+    margin-bottom: 1rem;
+    justify-content: flex-end;
+  }
+  .btn {
+    display: inline-block;
+    background: #111827;
+    color: #fff;
+    padding: .6rem .9rem;
+    border-radius: 8px;
+    text-decoration: none;
+    border: 1px solid #111827;
+  }
+  .btn.secondary {
+    background: #fff;
+    color: #111827;
+  }
 </style>
 
 <div class="invoice-wrap">
   <!-- Action buttons -->
   <div class="actions no-print">
+    {% comment %} Update this URL name if yours differs {% endcomment %}
     <a class="btn secondary" href="{% url 'order_summery' order.id %}">Back to order</a>
     {% if order.status == 'paid' or order.status == 'processed' or order.status == 'delivered' %}
       <a class="btn" href="{% url 'invoice_pdf' order.id %}">Download PDF</a>
       <form action="{% url 'invoice_email' order.id %}" method="post" style="display:inline;">
-        {% csrf_token %}
-        <button class="btn secondary" type="submit">Email PDF</button>
-      </form>
+      {% csrf_token %}
+      <button class="btn secondary" type="submit">Email PDF</button>
+    </form>
     {% endif %}
     <button class="btn secondary" type="button" onclick="window.print()">Print</button>
   </div>
@@ -103,10 +175,10 @@
             {{ company.address_line1 }}{% if company.address_line2 %}, {{ company.address_line2 }}{% endif %},
             {{ company.city }}{% if company.region %}, {{ company.region }}{% endif %} {{ company.postal_code }}, {{ company.country }}
             {% if company.vat_number %}<br>VAT: {{ company.vat_number }}{% endif %}
-            {% if company.company_number %} &bull; Company No: {{ company.company_number }}{% endif %}
+            {% if company.company_number %} Â· Company No: {{ company.company_number }}{% endif %}
             {% if company.email %}<br>{{ company.email }}{% endif %}
-            {% if company.phone %} &bull; {{ company.phone }}{% endif %}
-            {% if company.website %} &bull; {{ company.website }}{% endif %}
+            {% if company.phone %} Â· {{ company.phone }}{% endif %}
+            {% if company.website %} Â· {{ company.website }}{% endif %}
           </div>
         {% endif %}
       </div>
@@ -172,9 +244,9 @@
         <tr>
           <td>{{ it.product.name }}</td>
           <td class="text-right">{{ it.quantity }}</td>
-          <td class="text-right">&pound;{{ it.price|floatformat:2 }}</td>
-          <td class="text-right">&pound;{{ it.vat_included|default:0|floatformat:2 }}</td>
-          <td class="text-right">&pound;{{ it.subtotal|floatformat:2 }}</td>
+          <td class="text-right">Â£{{ it.price|floatformat:2 }}</td>
+          <td class="text-right">Â£{{ it.vat_included|default:0|floatformat:2 }}</td>
+          <td class="text-right">Â£{{ it.subtotal|floatformat:2 }}</td>
         </tr>
       {% empty %}
         <tr>
@@ -188,10 +260,10 @@
   <div class="totals">
     <div></div>
     <div class="summary">
-      <div class="row"><div>Subtotal</div><div>&pound;{{ total|floatformat:2 }}</div></div>
-      <div class="row"><div>VAT (included)</div><div>&pound;{{ vat_included|default:0|floatformat:2 }}</div></div>
-      <div class="row"><div>Delivery</div><div>&pound;{{ delivery_charge|floatformat:2 }}</div></div>
-      <div class="row total"><div>Total</div><div>&pound;{{ grand_total|floatformat:2 }}</div></div>
+      <div class="row"><div>Subtotal</div><div>Â£{{ total|floatformat:2 }}</div></div>
+      <div class="row"><div>VAT (included)</div><div>Â£{{ vat_included|default:0|floatformat:2 }}</div></div>
+      <div class="row"><div>Delivery</div><div>Â£{{ delivery_charge|floatformat:2 }}</div></div>
+      <div class="row total"><div>Total</div><div>Â£{{ grand_total|floatformat:2 }}</div></div>
     </div>
   </div>
 
@@ -202,4 +274,5 @@
   {% endif %}
 </div>
 {% endblock %}
+
 

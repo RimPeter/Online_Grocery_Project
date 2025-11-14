@@ -65,3 +65,17 @@ def display_bulk_total(product):
         return (unit * Decimal(pack)).quantize(Decimal('0.01'))
     except Exception:
         return Decimal('0.00')
+
+
+@register.filter
+def fix_currency(text):
+    """Fix common mojibake for the pound symbol in rendered text.
+
+    Replaces occurrences like 'Â£' or '��' with the proper '£'.
+    Safe for plain strings; does not mark output as safe HTML.
+    """
+    try:
+        s = str(text)
+    except Exception:
+        return text
+    return s.replace('Â£', '£').replace('��', '£')

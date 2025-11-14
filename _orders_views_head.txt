@@ -1,0 +1,254 @@
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from .models import Order, OrderItem
+from _accounts.models import Address, Company   
+from _catalog.models import All_Products
+from decimal import Decimal
+from datetime import date, timedelta
+from django.contrib import messages
+from io import BytesIO
+from django.conf import settings
+from django.core.mail import EmailMessage
+from reportlab.platypus import Image
+from django.http import HttpResponse
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from django.urls import reverse
+from django.db.models import Sum, F, DecimalField, ExpressionWrapper
+
+# Statuses that permit invoice access/download/email
+ALLOWED_INVOICE_STATUSES = ('paid', 'processed', 'delivered')
+
+@login_required
+def order_history_view(request):
+    # Annotate with a computed total from items to avoid stale stored totals
+    amount_expr = ExpressionWrapper(F('items__price') * F('items__quantity'), output_field=DecimalField(max_digits=12, decimal_places=2))
+    orders = (
+        Order.objects
+        .filter(user=request.user, status__in=('paid', 'processed', 'delivered'))
+        .annotate(computed_total=Sum(amount_expr))
+        .prefetch_related('items__product')
+        .order_by('-created_at')
+    )
+    return render(request, '_orders/order_history.html', {'orders': orders})
+
+@login_required
+def order_summery_view(request, order_id):
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    order_items = order.items.select_related('product').all()
+
+    # Calculate per-item subtotal and total
+    for item in order_items:
+        item.subtotal = item.price * item.quantity
+    total = sum(item.subtotal for item in order_items)
+    # Fixed delivery charge to match cart display
+    delivery_charge = Decimal('1.50') if order_items else Decimal('0.00')
+    grand_total = (Decimal(total) + delivery_charge).quantize(Decimal('0.01'))
+
+    # Get the user's default address (fallback to first if none marked default)
+    addresses = Address.objects.filter(user=request.user)
+    if not addresses.exists():
+        messages.error(request, "Please add a delivery address before checking out.")
+        return redirect('manage_addresses')
+    default_address = addresses.filter(is_default=True).first() or addresses.first()
+
+    context = {
+        'order': order,
+        'order_items': order_items,
+        'total': total,
+        'delivery_charge': delivery_charge,
+        'grand_total': grand_total,
+        'default_address': default_address, 
+    }
+    return render(request, '_orders/order_summery.html', context)
+
+@login_required
+def delivery_slots_view(request):
+    order_id = request.GET.get('order_id')
+
+    # Enforce minimum order total before allowing checkout
+    try:
+        MIN_ORDER_TOTAL = Decimal('40.00')
+    except Exception:
+        MIN_ORDER_TOTAL = Decimal('40.00')
+
+    # Compute current cart total from session
+    cart = request.session.get('cart', {})
+    total_price = Decimal('0.00')
+    if cart:
+        product_ids = list(cart.keys())
+        products = All_Products.objects.filter(pk__in=product_ids)
+        price_by_id = {str(p.pk): Decimal(str(p.price)) for p in products}
+        for pid, qty in cart.items():
+            price = price_by_id.get(str(pid))
+            if price is not None:
+                try:
+                    q = int(qty)
+                except (TypeError, ValueError):
+                    q = 0
+                total_price += price * q
+
+    if total_price < MIN_ORDER_TOTAL:
+        shortfall = (MIN_ORDER_TOTAL - total_price).quantize(Decimal('0.01'))
+        messages.error(
+            request,
+            f"Minimum order is £{MIN_ORDER_TOTAL:.2f}. Add £{shortfall:.2f} more to proceed."
+        )
+        return redirect('cart_view')
+
+    # Try to get an order by ID, or get the latest pending order
+    if order_id:
+        try:
+            order = Order.objects.get(id=order_id, user=request.user)
+        except Order.DoesNotExist:
+            messages.error(request, "That order does not exist or is not yours.")
+            return redirect('cart_view')
+    else:
+        try:
+            order = Order.objects.filter(user=request.user, status='pending').latest('created_at')
+        except Order.DoesNotExist:
+            order = None
+
+    # If order is missing or has no order items, create one from the session cart
+    if not order or order.items.count() == 0:
+        cart = request.session.get('cart', {})
+        if not cart:
+            messages.error(request, "Your cart is empty. Please add items before checking out.")
+            return redirect('cart_view')
+
+        total_price = 0
+        product_ids = list(cart.keys())
+        products = All_Products.objects.filter(pk__in=product_ids)
+        for product in products:
+            quantity = cart[str(product.pk)]
+            total_price += product.price * quantity
+
+        order = Order.objects.create(
+            user=request.user,
+            total=total_price,
+            status='pending'
+        )
+
+        for product in products:
+            quantity = cart[str(product.pk)]
+            OrderItem.objects.create(
+                order=order,
+                product=product,
+                quantity=quantity,
+                price=product.price
+            )
+
+    # Now proceed with delivery slot selection
+    # Compute max date constraint (today + 14 days)
+    today = date.today()
+    max_date = today + timedelta(days=14)
+    max_date_str = max_date.strftime('%Y-%m-%d')
+
+    if request.method == 'POST':
+        delivery_date_str = request.POST.get('delivery_date')
+        delivery_time = request.POST.get('delivery_time')
+        if delivery_date_str and delivery_time:
+            try:
+                # Parse and validate date range
+                year, month, day = map(int, delivery_date_str.split('-'))
+                dd = date(year, month, day)
+            except Exception:
+                dd = None
+
+            if not dd:
+                messages.error(request, "Invalid delivery date format.")
+            elif dd < today:
+                messages.error(request, "Delivery date cannot be in the past.")
+            elif dd > max_date:
+                messages.error(request, "Delivery date cannot be more than 2 weeks from today.")
+            else:
+                # Save using validated values
+                order.delivery_date = dd
+                order.delivery_time = delivery_time
+                order.save()
+
+                messages.success(request, f"Delivery slot saved for Order #{order.id}!")
+                return redirect('order_summery', order_id=order.id)
+
+        if not delivery_date_str or not delivery_time:
+            messages.error(request, "Please provide both a valid delivery date and time.")
+        return render(request, '_orders/delivery_slots.html', {'order': order, 'max_date': max_date_str})
+
+    return render(request, '_orders/delivery_slots.html', {'order': order, 'max_date': max_date_str})
+
+@login_required
+def delete_order_view(request, order_id):
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    if request.method == 'POST':
+        # Make sure only the owner can delete
+        order.delete()
+        messages.success(request, f"Order #{order_id} has been deleted.")
+        return redirect('order_history')
+    else:
+        messages.error(request, "Invalid request method.")
+        return redirect('order_history')
+
+@login_required
+def pending_order_view(request):
+    """
+    Displays the 'pending' order details before the user selects a delivery slot.
+    """
+    # Try retrieving an existing pending order for this user
+    try:
+        order = Order.objects.get(user=request.user, status='pending')
+    except Order.DoesNotExist:
+        messages.error(request, "You have no pending order.")
+        return redirect('cart_view')  # or wherever makes sense
+
+    # Fetch related order items (assuming you have an OrderItem model)
+    order_items = order.items.select_related('product').all()
+
+    # Calculate totals or retrieve from your model logic
+    total = sum(item.price * item.quantity for item in order_items)
+
+    # Pass order and items to the template
+    context = {
+        'order': order,
+        'order_items': order_items,
+        'total': total,
+    }
+    return render(request, '_orders/pending_order.html', context)
+
+@login_required
+def invoice_page_view(request, order_id):
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+
+    # Only allow invoices for paid/processed/delivered orders
+    if order.status not in ALLOWED_INVOICE_STATUSES:
+        messages.error(request, "Invoice is available after payment.")
+        return redirect('order_summery', order_id=order.id)
+
+    order_items = order.items.select_related('product').all()
+
+    # VAT rate map and per-line VAT calculation (assumes VAT-inclusive prices)
+    rate_map = {
+        'standard': Decimal('0.20'),
+        'reduced': Decimal('0.05'),
+        'zero': Decimal('0.00'),
+        'exempt': Decimal('0.00'),
+    }
+    vat_included = Decimal('0.00')
+
+    for item in order_items:
+        item.subtotal = item.price * item.quantity
+        try:
+            r = rate_map.get(getattr(item.product, 'vat_rate', 'standard'), Decimal('0.00'))
+            if r > 0:
+                item.vat_included = (item.subtotal * r) / (Decimal('1.00') + r)
+                vat_included += item.vat_included
+            else:
+                item.vat_included = Decimal('0.00')
+        except Exception:
+            item.vat_included = Decimal('0.00')
+
+    total = sum(i.subtotal for i in order_items)
+    vat_included = vat_included.quantize(Decimal('0.01'))
+    delivery_charge = Decimal('1.50') if order_items else Decimal('0.00')
+    grand_total = (Decimal(total) + deliver

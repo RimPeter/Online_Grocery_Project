@@ -1,0 +1,6 @@
+# Items table
+    data = [["Item", "Qty", "Price", "Subtotal"]]
+    for it in order_items:
+        data.append([it.product.name, str(it.quantity), f"£{it.price:.2f}", f"£{it.subtotal:.2f}"])
+
+    table = Table(data, colWidths=
