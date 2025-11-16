@@ -278,15 +278,16 @@ def product_detail(request, pk):
     product = get_object_or_404(All_Products, pk=pk)
     # Fallback RSP if missing for display and hiding logic
     _ensure_rsp(product)
+    is_internal = request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser)
     # Hide products that are not meant for customers (superusers can still see them)
-    if not request.user.is_superuser and not getattr(product, 'is_visible_to_customers', True):
+    if not is_internal and not getattr(product, 'is_visible_to_customers', True):
         raise Http404("Product not available")
     # Hide items with unit RSP over £50
     try:
         rsp_val = Decimal(str(product.rsp)) if product.rsp is not None else None
     except Exception:
         rsp_val = None
-    if rsp_val is not None and rsp_val > Decimal('50.00'):
+    if not is_internal and rsp_val is not None and rsp_val > Decimal('50.00'):
         raise Http404("Product not available")
     return render(request, '_catalog/product_detail.html', {'product': product})
 
