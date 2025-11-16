@@ -10,13 +10,13 @@ from django.db.models import Q, F, Value, DecimalField, ExpressionWrapper, Case,
 from django.db.models.functions import Lower, Trim, Greatest, Coalesce
 from django.db.utils import DatabaseError
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.http import JsonResponse, Http404
-from django.views.decorators.http import require_GET
+from django.http import JsonResponse, Http404, HttpResponseForbidden
+from django.views.decorators.http import require_GET, require_POST
 from _orders.models import Order, OrderItem
 from django.contrib.auth.decorators import login_required
 from pathlib import Path
 from django.urls import reverse
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from django.utils.http import url_has_allowed_host_and_scheme
 
 try:
@@ -278,6 +278,9 @@ def product_detail(request, pk):
     product = get_object_or_404(All_Products, pk=pk)
     # Fallback RSP if missing for display and hiding logic
     _ensure_rsp(product)
+    # Hide products that are not meant for customers (superusers can still see them)
+    if not request.user.is_superuser and not getattr(product, 'is_visible_to_customers', True):
+        raise Http404("Product not available")
     # Hide items with unit RSP over £50
     try:
         rsp_val = Decimal(str(product.rsp)) if product.rsp is not None else None
@@ -295,7 +298,11 @@ def product_list(request):
     l1 = (request.GET.get('l1') or '').strip()
     l2 = (request.GET.get('l2') or '').strip()
 
-    products = All_Products.objects.all()
+    # Superusers see all products; customers see only visible ones
+    if request.user.is_superuser:
+        products = All_Products.objects.all()
+    else:
+        products = All_Products.objects.filter(is_visible_to_customers=True)
 
     # ---- 1) Apply category filters first (AND) ----
     l1n = l1.lower() if l1 else ''
@@ -616,7 +623,10 @@ def search_api(request):
         page_size = 12
     page_size = max(1, min(page_size, 48))
 
-    products_qs = All_Products.objects.all()
+    if request.user.is_superuser:
+        products_qs = All_Products.objects.all()
+    else:
+        products_qs = All_Products.objects.filter(is_visible_to_customers=True)
     products_qs = _apply_category_filters(products_qs, l1, l2)
 
     use_trigram = bool(query) and TrigramSimilarity is not None and connection.vendor == 'postgresql'
@@ -735,8 +745,12 @@ def load_more_products(request):
     l1 = request.GET.get('l1', '').strip()
     l2 = request.GET.get('l2', '').strip()
 
-    # Show all products; handle placeholder images in template
-    products_qs = All_Products.objects.all().order_by('id')
+    # Show all products to superusers; hide non-visible items from customers.
+    # Placeholder images are handled in the template.
+    if request.user.is_superuser:
+        products_qs = All_Products.objects.all().order_by('id')
+    else:
+        products_qs = All_Products.objects.filter(is_visible_to_customers=True).order_by('id')
 
     # Rebuild the category name sets using helper metadata
     _, level1_name_list, level2_name_list, _ = _category_metadata()
@@ -833,5 +847,53 @@ def load_more_products(request):
         '_catalog/partial_products.html',
         {'page_obj': page_obj, 'products': page_obj}
     )
+
+
+@require_POST
+@login_required
+def product_admin_update(request, pk):
+    """
+    Inline admin endpoint for superusers to toggle customer visibility
+    and update RSP from the product listing/cards.
+    """
+    if not request.user.is_superuser:
+        return HttpResponseForbidden("Admins only")
+
+    product = get_object_or_404(All_Products, pk=pk)
+    action = (request.POST.get('action') or '').strip()
+    return_to = request.POST.get('return_to') or request.META.get('HTTP_REFERER') or reverse('product_list')
+
+    if not url_has_allowed_host_and_scheme(return_to, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        return_to = reverse('product_list')
+
+    if action == 'toggle_visibility':
+        current = getattr(product, 'is_visible_to_customers', True)
+        product.is_visible_to_customers = not current
+        product.save(update_fields=['is_visible_to_customers'])
+        if product.is_visible_to_customers:
+            messages.success(request, "Product is now visible to customers.")
+        else:
+            messages.success(request, "Product is now invisible for customers.")
+    elif action == 'change_rsp':
+        rsp_raw = (request.POST.get('rsp') or '').strip()
+        if rsp_raw == "":
+            product.rsp = None
+            product.save(update_fields=['rsp'])
+            messages.success(request, "RSP cleared for this product.")
+        else:
+            try:
+                rsp_val = Decimal(rsp_raw)
+                if rsp_val < 0:
+                    raise InvalidOperation
+            except (InvalidOperation, ValueError):
+                messages.error(request, "Invalid RSP value. Please enter a non-negative number.")
+            else:
+                product.rsp = rsp_val
+                product.save(update_fields=['rsp'])
+                messages.success(request, "RSP updated successfully.")
+    else:
+        messages.error(request, "Unknown admin action.")
+
+    return redirect(return_to)
 
 

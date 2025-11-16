@@ -1,8 +1,54 @@
 {% load static %}
 <div class="col-lg-3 col-md-4 col-sm-6 col-6 d-flex align-items-stretch" data-bulk-item="{{ product.is_bulk|yesno:'true,false' }}">
-  <div class="card mb-4 shadow-sm h-100 position-relative">
+  <div class="card mb-4 shadow-sm h-100 position-relative {% if user.is_superuser and not product.is_visible_to_customers %}border border-warning bg-light{% endif %}">
     {% if product.is_bulk %}
       <span class="position-absolute top-0 start-0 m-2 badge rounded-pill text-bg-warning" style="z-index:2;" aria-label="Bulk item" title="Bulk item">Bulk Item</span>
+    {% endif %}
+
+    {% if user.is_superuser %}
+      <div class="dropdown position-absolute top-0 end-0 m-2" style="z-index:3;">
+        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="adminMenu{{ product.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+          Admin
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="adminMenu{{ product.id }}" style="min-width: 220px;">
+          <li class="px-3 py-2">
+            <form method="post" action="{% url 'product_admin_update' product.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="toggle_visibility">
+              <input type="hidden" name="return_to" value="{{ request.get_full_path }}">
+              <button type="submit" class="btn btn-link p-0">
+                {% if product.is_visible_to_customers %}
+                  Make invisible for customers
+                {% else %}
+                  Make visible for customers
+                {% endif %}
+              </button>
+            </form>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li class="px-3 py-2">
+            <form method="post" action="{% url 'product_admin_update' product.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="change_rsp">
+              <input type="hidden" name="return_to" value="{{ request.get_full_path }}">
+              <label for="id_rsp_{{ product.id }}" class="form-label mb-1 small">Change RSP</label>
+              <div class="input-group input-group-sm">
+                <span class="input-group-text">£</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  name="rsp"
+                  id="id_rsp_{{ product.id }}"
+                  class="form-control"
+                  value="{{ product.rsp|default_if_none:'' }}"
+                >
+                <button type="submit" class="btn btn-primary btn-sm">Save</button>
+              </div>
+            </form>
+          </li>
+        </ul>
+      </div>
     {% endif %}
 
 {% if product.image_url and product.image_url != '/img/products/no-image.png' %}
@@ -14,6 +60,9 @@
 {% endif %}
 
     <div class="card-body d-flex flex-column">
+      {% if user.is_superuser and not product.is_visible_to_customers %}
+        <p class="card-text text-danger small mb-1">Invisible for customers</p>
+      {% endif %}
       <h6 class="card-title text-break"><a href="{% url 'product_detail' product.pk %}" class="text-decoration-none text-reset">{{ product.name }}</a></h6>
       <p class="card-text text-muted text-truncate">{{ product.variant|default:"No description available" }}</p>
 

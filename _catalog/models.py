@@ -29,6 +29,11 @@ class All_Products(models.Model):
     multi_buy = models.BooleanField(default=False)
     # Allow up to GTIN-14 (and room for flexibility)
     retail_EAN = models.CharField(max_length=18, blank=True)
+    is_visible_to_customers = models.BooleanField(
+        default=True,
+        db_index=True,
+        help_text="If unchecked, product is hidden from customers but still visible to superusers."
+    )
 
     # Product detail fields scraped from product pages
     description = models.TextField(blank=True)
