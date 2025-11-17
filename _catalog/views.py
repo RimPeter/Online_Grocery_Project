@@ -103,6 +103,40 @@ def _home_value_pillars():
     ]
 
 
+def _load_category_structure_raw():
+    """
+    Load the nested category structure from category_structure.json if available.
+
+    Returns a dict in the shape:
+        {main_category: [
+            {sub_category: [
+                {sub_subcategory: [ga_product_id, ...]},
+                ...
+            ]},
+            ...
+        ]}
+
+    or None if the file is missing or unreadable.
+    """
+    base_dir = Path(settings.BASE_DIR)
+    cat_struct_path = (
+        base_dir
+        / "_product_management"
+        / "management"
+        / "commands"
+        / "category_structure.json"
+    )
+    try:
+        if cat_struct_path.exists():
+            with open(cat_struct_path, "r", encoding="utf-8") as f:
+                raw = json.load(f)
+            if isinstance(raw, dict):
+                return raw
+    except Exception:
+        pass
+    return None
+
+
 def _group_home_tiles(subcats):
     if not subcats:
         return []
@@ -212,44 +246,33 @@ def _load_category_json():
     previous sources (sub_subcategories.json, then product_category.json).
     Returns an empty dict on complete failure.
     """
-    base_dir = Path(settings.BASE_DIR)
-
     # 1) Try category_structure.json (preferred).
-    cat_struct_path = (
-        base_dir
-        / "_product_management"
-        / "management"
-        / "commands"
-        / "category_structure.json"
-    )
+    raw_struct = _load_category_structure_raw()
     try:
-        if cat_struct_path.exists():
-            with open(cat_struct_path, "r", encoding="utf-8") as f:
-                raw = json.load(f)
+        if raw_struct is not None:
             flat = {}
-            if isinstance(raw, dict):
-                # raw: {main_category: [ {sub_category: [ {sub_subcategory: [ids]}, ... ]}, ... ]}
-                for _main_cat, level2_list in raw.items():
-                    if not isinstance(level2_list, list):
+            # raw_struct: {main_category: [ {sub_category: [ {sub_subcategory: [ids]}, ... ]}, ... ]}
+            for _main_cat, level2_list in raw_struct.items():
+                if not isinstance(level2_list, list):
+                    continue
+                for level2_obj in level2_list:
+                    if not isinstance(level2_obj, dict):
                         continue
-                    for level2_obj in level2_list:
-                        if not isinstance(level2_obj, dict):
+                    for sub_cat, level3_list in level2_obj.items():
+                        sub_cat_name = (sub_cat or "").strip()
+                        if not sub_cat_name or not isinstance(level3_list, list):
                             continue
-                        for sub_cat, level3_list in level2_obj.items():
-                            sub_cat_name = (sub_cat or "").strip()
-                            if not sub_cat_name or not isinstance(level3_list, list):
+                        out_level2 = flat.setdefault(sub_cat_name, {})
+                        for level3_obj in level3_list:
+                            if not isinstance(level3_obj, dict):
                                 continue
-                            out_level2 = flat.setdefault(sub_cat_name, {})
-                            for level3_obj in level3_list:
-                                if not isinstance(level3_obj, dict):
+                            for sub_sub_cat, _ids in level3_obj.items():
+                                sub_sub_name = (sub_sub_cat or "").strip()
+                                if not sub_sub_name:
                                     continue
-                                for sub_sub_cat, _ids in level3_obj.items():
-                                    sub_sub_name = (sub_sub_cat or "").strip()
-                                    if not sub_sub_name:
-                                        continue
-                                    # We only need a stable key; the value is not
-                                    # used for navigation, so a placeholder is fine.
-                                    out_level2[sub_sub_name] = ""
+                                # We only need a stable key; the value is not
+                                # used for navigation, so a placeholder is fine.
+                                out_level2[sub_sub_name] = ""
             if flat:
                 return flat
     except Exception:
@@ -257,6 +280,7 @@ def _load_category_json():
         pass
 
     # 2) Try the newer sub_subcategories.json and flatten it.
+    base_dir = Path(settings.BASE_DIR)
     sub_sub_path = (
         base_dir
         / "_product_management"
@@ -310,6 +334,72 @@ def _load_category_json():
             # If a candidate exists but can't be read/parsed, try the next.
             continue
     return {}
+
+
+def _build_main_category_groups():
+    """
+    Build a grouped category structure keyed by main category.
+
+    Returns a list of groups in the shape:
+        [
+            {
+                'main': main_category_name,
+                'items': [
+                    {
+                        'level1': sub_category_name,
+                        'children': [sub_subcategory_name, ...],
+                    },
+                    ...
+                ],
+            },
+            ...
+        ]
+
+    If the nested structure cannot be loaded, returns an empty list.
+    """
+    raw_struct = _load_category_structure_raw()
+    if raw_struct is None:
+        return []
+
+    groups = []
+    try:
+        for main_cat, level2_list in raw_struct.items():
+            if not isinstance(level2_list, list):
+                continue
+            subcats = {}
+            for level2_obj in level2_list:
+                if not isinstance(level2_obj, dict):
+                    continue
+                for sub_cat, level3_list in level2_obj.items():
+                    sub_cat_name = (sub_cat or "").strip()
+                    if not sub_cat_name or not isinstance(level3_list, list):
+                        continue
+                    children = subcats.setdefault(sub_cat_name, [])
+                    for level3_obj in level3_list:
+                        if not isinstance(level3_obj, dict):
+                            continue
+                        for sub_sub_cat in level3_obj.keys():
+                            sub_sub_name = (sub_sub_cat or "").strip()
+                            if not sub_sub_name:
+                                continue
+                            if sub_sub_name not in children:
+                                children.append(sub_sub_name)
+            if not subcats:
+                continue
+            items = []
+            for sub_cat_name, children in subcats.items():
+                items.append({
+                    'level1': sub_cat_name,
+                    'children': children,
+                })
+            groups.append({
+                'main': main_cat,
+                'items': items,
+            })
+    except Exception:
+        return []
+
+    return groups
 
 def _pick_best_url(url_or_list):
     if isinstance(url_or_list, list):
@@ -391,6 +481,7 @@ def product_detail(request, pk):
 
 def product_list(request):
     category_tree, level1_names, level2_names, level2_map = _category_metadata()
+    main_category_groups = _build_main_category_groups()
 
     # Inputs
     query = (request.GET.get('q') or '').strip()
@@ -533,6 +624,7 @@ def product_list(request):
         'page_obj': page_obj,
         'query': query,
         'category_tree': category_tree,
+        'main_category_groups': main_category_groups,
         'level1_names': level1_names,
         'level2_names': level2_names,
         'level2_map': level2_map,

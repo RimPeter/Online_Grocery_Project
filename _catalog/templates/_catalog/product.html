@@ -17,45 +17,100 @@
           <strong>Categories</strong>
         </div>
 
-        <ul class="list-group list-group-flush">
-          {% for level1, node in category_tree.items %}
-            <li class="list-group-item">
-              {% if node.items %}
-                <a
-                  class="d-flex justify-content-between align-items-center text-decoration-none"
-                  data-bs-toggle="collapse"
-                  href="#cat-{{ forloop.counter }}"
-                  role="button"
-                  aria-expanded="false"
-                  aria-controls="cat-{{ forloop.counter }}"
-                >
-                  <strong>{{ level1 }}</strong>
-                  <span class="ms-2"><i class="bi bi-caret-down-fill"></i></span>
-                </a>
+        {% if main_category_groups %}
+          <div class="accordion" id="mainCategoryAccordion">
+            {% for group in main_category_groups %}
+              <div class="accordion-item">
+                <h2 class="accordion-header" id="heading-main-{{ forloop.counter }}">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-main-{{ forloop.counter }}" aria-expanded="false" aria-controls="collapse-main-{{ forloop.counter }}">
+                    {{ group.main }}
+                  </button>
+                </h2>
+                <div id="collapse-main-{{ forloop.counter }}" class="accordion-collapse collapse" aria-labelledby="heading-main-{{ forloop.counter }}" data-bs-parent="#mainCategoryAccordion">
+                  <div class="accordion-body p-0">
+                    <ul class="list-group list-group-flush">
+                      {% for item in group.items %}
+                        <li class="list-group-item">
+                          {% if item.children %}
+                            <a
+                              class="d-flex justify-content-between align-items-center text-decoration-none"
+                              data-bs-toggle="collapse"
+                              href="#cat-{{ forloop.parentloop.counter }}-{{ forloop.counter }}"
+                              role="button"
+                              aria-expanded="false"
+                              aria-controls="cat-{{ forloop.parentloop.counter }}-{{ forloop.counter }}"
+                            >
+                              <strong>{{ item.level1 }}</strong>
+                              <span class="ms-2"><i class="bi bi-caret-down-fill"></i></span>
+                            </a>
 
-                <ul class="collapse ms-4 mt-2" id="cat-{{ forloop.counter }}" style="list-style-type: disc;">
-                  {% for level2, _ in node.items %}
-                    <li style="list-style-position: outside;">
-                      <a class="text-decoration-none {% if request.GET.l1 == level1 and request.GET.l2 == level2 %}fw-bold{% endif %}"
-                         href="?l1={{ level1|urlencode }}&l2={{ level2|urlencode }}"
-                         {% if request.GET.l1 == level1 and request.GET.l2 == level2 %}aria-current="page"{% endif %}>
-                        {{ level2 }}
-                      </a>
-                    </li>
-                  {% endfor %}
-                </ul>
-              {% else %}
-                <a class="text-decoration-none d-block {% if request.GET.l1 == level1 and not request.GET.l2 %}fw-bold{% endif %}"
-                   href="?l1={{ level1|urlencode }}"
-                   {% if request.GET.l1 == level1 and not request.GET.l2 %}aria-current="page"{% endif %}>
-                  <strong>{{ level1 }}</strong>
-                </a>
-              {% endif %}
-            </li>
-          {% empty %}
-            <li class="list-group-item text-muted">No categories found.</li>
-          {% endfor %}
-        </ul>
+                            <ul class="collapse ms-4 mt-2" id="cat-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" style="list-style-type: disc;">
+                              {% for level2 in item.children %}
+                                <li style="list-style-position: outside;">
+                                  <a class="text-decoration-none {% if request.GET.l1 == item.level1 and request.GET.l2 == level2 %}fw-bold{% endif %}"
+                                     href="?l1={{ item.level1|urlencode }}&l2={{ level2|urlencode }}"
+                                     {% if request.GET.l1 == item.level1 and request.GET.l2 == level2 %}aria-current="page"{% endif %}>
+                                    {{ level2 }}
+                                  </a>
+                                </li>
+                              {% endfor %}
+                            </ul>
+                          {% else %}
+                            <a class="text-decoration-none d-block {% if request.GET.l1 == item.level1 and not request.GET.l2 %}fw-bold{% endif %}"
+                               href="?l1={{ item.level1|urlencode }}"
+                               {% if request.GET.l1 == item.level1 and not request.GET.l2 %}aria-current="page"{% endif %}>
+                              <strong>{{ item.level1 }}</strong>
+                            </a>
+                          {% endif %}
+                        </li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <ul class="list-group list-group-flush">
+            {% for level1, node in category_tree.items %}
+              <li class="list-group-item">
+                {% if node.items %}
+                  <a
+                    class="d-flex justify-content-between align-items-center text-decoration-none"
+                    data-bs-toggle="collapse"
+                    href="#cat-{{ forloop.counter }}"
+                    role="button"
+                    aria-expanded="false"
+                    aria-controls="cat-{{ forloop.counter }}"
+                  >
+                    <strong>{{ level1 }}</strong>
+                    <span class="ms-2"><i class="bi bi-caret-down-fill"></i></span>
+                  </a>
+
+                  <ul class="collapse ms-4 mt-2" id="cat-{{ forloop.counter }}" style="list-style-type: disc;">
+                    {% for level2, _ in node.items %}
+                      <li style="list-style-position: outside;">
+                        <a class="text-decoration-none {% if request.GET.l1 == level1 and request.GET.l2 == level2 %}fw-bold{% endif %}"
+                           href="?l1={{ level1|urlencode }}&l2={{ level2|urlencode }}"
+                           {% if request.GET.l1 == level1 and request.GET.l2 == level2 %}aria-current="page"{% endif %}>
+                          {{ level2 }}
+                        </a>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  <a class="text-decoration-none d-block {% if request.GET.l1 == level1 and not request.GET.l2 %}fw-bold{% endif %}"
+                     href="?l1={{ level1|urlencode }}"
+                     {% if request.GET.l1 == level1 and not request.GET.l2 %}aria-current="page"{% endif %}>
+                    <strong>{{ level1 }}</strong>
+                  </a>
+                {% endif %}
+              </li>
+            {% empty %}
+              <li class="list-group-item text-muted">No categories found.</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
 
       </div>
     </div>
