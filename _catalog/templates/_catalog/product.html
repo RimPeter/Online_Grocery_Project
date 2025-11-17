@@ -202,9 +202,19 @@
             <label for="filter-l1" class="form-label">Category</label>
             <select class="form-select" id="filter-l1" name="l1">
               <option value="">All categories</option>
-              {% for level1 in level1_names %}
-                <option value="{{ level1 }}" {% if request.GET.l1 == level1 %}selected{% endif %}>{{ level1 }}</option>
-              {% endfor %}
+              {% if main_category_groups %}
+                {% for group in main_category_groups %}
+                  <optgroup label="{{ group.main }}">
+                    {% for item in group.items %}
+                      <option value="{{ item.level1 }}" {% if request.GET.l1 == item.level1 %}selected{% endif %}>{{ item.level1 }}</option>
+                    {% endfor %}
+                  </optgroup>
+                {% endfor %}
+              {% else %}
+                {% for level1 in level1_names %}
+                  <option value="{{ level1 }}" {% if request.GET.l1 == level1 %}selected{% endif %}>{{ level1 }}</option>
+                {% endfor %}
+              {% endif %}
             </select>
           </div>
           <div class="col-md-3">

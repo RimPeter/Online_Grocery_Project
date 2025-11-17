@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from collections import defaultdict
-from .models import All_Products, HomeCategoryTile, HomeValuePillar
+from .models import All_Products, HomeCategoryTile, HomeValuePillar, CategoryNodeSetting
 from django.conf import settings
 from django.contrib import messages
 import json
@@ -220,6 +220,76 @@ def _ensure_rsp(product):
         pass
     return product
 
+
+def _exclude_hidden_category_products(queryset):
+    """
+    Exclude products that belong to sub-subcategories marked as invisible.
+
+    Intended for customer-facing listings; superusers bypass this via the
+    calling view logic.
+    """
+    try:
+        hidden_nodes = list(
+            CategoryNodeSetting.objects.filter(
+                is_visible_to_customers=False
+            ).exclude(sub_subcategory="")
+        )
+    except Exception:
+        return queryset
+
+    if not hidden_nodes:
+        return queryset
+
+    cond = Q()
+    for node in hidden_nodes:
+        main_cat = (node.main_category or "").strip()
+        sub_cat = (node.sub_category or "").strip()
+        sub_sub = (node.sub_subcategory or "").strip()
+        sub_q = Q()
+        if main_cat:
+            sub_q &= Q(main_category=main_cat)
+        if sub_cat:
+            sub_q &= Q(sub_category=sub_cat)
+        if sub_sub:
+            sub_q &= Q(sub_subcategory=sub_sub)
+        cond |= sub_q
+
+    if not cond:
+        return queryset
+    try:
+        return queryset.exclude(cond)
+    except Exception:
+        return queryset
+
+
+def _is_product_category_visible(product) -> bool:
+    """
+    Check whether a product's category node is visible to customers.
+
+    Superusers and staff bypass this check at the view level; this helper
+    is focused on the CategoryNodeSetting overrides.
+    """
+    try:
+        main_cat = (getattr(product, "main_category", "") or "").strip()
+        sub_cat = (getattr(product, "sub_category", "") or "").strip()
+        sub_sub = (getattr(product, "sub_subcategory", "") or "").strip()
+        if not (main_cat or sub_cat or sub_sub):
+            return True
+        node = (
+            CategoryNodeSetting.objects.filter(
+                main_category=main_cat,
+                sub_category=sub_cat,
+                sub_subcategory=sub_sub,
+            )
+            .only("is_visible_to_customers")
+            .first()
+        )
+        if node is None:
+            return True
+        return node.is_visible_to_customers
+    except Exception:
+        return True
+
 def _load_category_json():
     """
     Load category JSON for the product listing/category UI.
@@ -361,6 +431,23 @@ def _build_main_category_groups():
     if raw_struct is None:
         return []
 
+    # Preload node settings to apply visibility and subcategory sort/headings.
+    leaf_visibility = {}
+    sub_settings = {}
+    try:
+        for node in CategoryNodeSetting.objects.all():
+            main_cat = (node.main_category or "").strip()
+            sub_cat = (node.sub_category or "").strip()
+            leaf = (node.sub_subcategory or "").strip()
+            key = (main_cat, sub_cat, leaf)
+            if leaf:
+                leaf_visibility[key] = node.is_visible_to_customers
+            else:
+                sub_settings[key] = node
+    except Exception:
+        leaf_visibility = {}
+        sub_settings = {}
+
     groups = []
     try:
         for main_cat, level2_list in raw_struct.items():
@@ -382,20 +469,35 @@ def _build_main_category_groups():
                             sub_sub_name = (sub_sub_cat or "").strip()
                             if not sub_sub_name:
                                 continue
-                            if sub_sub_name not in children:
-                                children.append(sub_sub_name)
+                            key = (main_cat, sub_cat_name, sub_sub_name)
+                            # Default to visible when no explicit setting exists.
+                            if leaf_visibility.get(key, True):
+                                if sub_sub_name not in children:
+                                    children.append(sub_sub_name)
             if not subcats:
                 continue
             items = []
             for sub_cat_name, children in subcats.items():
-                items.append({
-                    'level1': sub_cat_name,
-                    'children': children,
-                })
-            groups.append({
-                'main': main_cat,
-                'items': items,
-            })
+                base_key = (main_cat, sub_cat_name, "")
+                setting = sub_settings.get(base_key)
+                sort_order = setting.sort_order if setting else 0
+                heading = (setting.heading_override or "").strip() if setting else ""
+                items.append(
+                    {
+                        "level1": sub_cat_name,
+                        "children": children,
+                        "sort_order": sort_order,
+                        "heading_override": heading,
+                    }
+                )
+            # Sort subcategories by sort_order then name for stable navigation.
+            items.sort(key=lambda item: (item.get("sort_order", 0), item["level1"].casefold()))
+            groups.append(
+                {
+                    "main": main_cat,
+                    "items": items,
+                }
+            )
     except Exception:
         return []
 
@@ -493,6 +595,8 @@ def product_list(request):
         products = All_Products.objects.all()
     else:
         products = All_Products.objects.filter(is_visible_to_customers=True)
+        # Also hide products in sub-subcategories that have been switched off.
+        products = _exclude_hidden_category_products(products)
 
     # ---- 1) Apply category filters first (AND) ----
     l1n = l1.lower() if l1 else ''

@@ -15,7 +15,7 @@ from django.db.models.functions import Coalesce, Cast
 from datetime import date, timedelta
 from django.views.decorators.http import require_http_methods, require_POST
 import threading
-from _catalog.models import All_Products, HomeCategoryTile, HomeValuePillar
+from _catalog.models import All_Products, HomeCategoryTile, HomeValuePillar, CategoryNodeSetting
 from .models import LeafletCopy, SubcategoryPipelineRun
 from .constants import LEAFLET_TEXT_DEFAULTS
 from _orders.models import Order, OrderItem
@@ -172,6 +172,215 @@ def staff_or_superuser_required(view_func):
     return user_passes_test(
         lambda u: u.is_active and (u.is_staff or u.is_superuser)
     )(view_func)
+
+
+@staff_or_superuser_required
+@require_http_methods(["GET", "POST"])
+def product_categories(request):
+    """
+    Internal view to inspect and control the main/sub/sub-sub category tree.
+
+    Uses the same structured taxonomy as the storefront product listing and
+    persists visibility/sort/heading overrides via CategoryNodeSetting.
+    """
+    try:
+        from _catalog.views import _build_main_category_groups  # type: ignore
+
+        raw_groups = _build_main_category_groups()
+    except Exception:
+        raw_groups = []
+
+    # Load existing settings once for the whole tree.
+    settings_by_key = {}
+    try:
+        for node in CategoryNodeSetting.objects.all():
+            key = (
+                (node.main_category or "").strip(),
+                (node.sub_category or "").strip(),
+                (node.sub_subcategory or "").strip(),
+            )
+            settings_by_key[key] = node
+    except Exception:
+        settings_by_key = {}
+
+    if request.method == "POST":
+        action = request.POST.get("action") or "save_categories"
+        if action == "save_categories":
+            # 1) Persist leaf visibility (per sub-subcategory).
+            updated_nodes = []
+            created_nodes = []
+            seen_leaf_keys = set()
+
+            for key, value in request.POST.items():
+                if not key.startswith("path_"):
+                    continue
+                slug = key[len("path_") :]
+                path = (value or "").strip()
+                if not path:
+                    continue
+                parts = [p.strip() for p in path.split("|||")]
+                if len(parts) != 3:
+                    # Only treat 3-part paths as leaf nodes for visibility.
+                    continue
+                main_cat, sub_cat, sub_sub = parts
+                leaf_key = (main_cat, sub_cat, sub_sub)
+                seen_leaf_keys.add(leaf_key)
+
+                visible = bool(request.POST.get(f"visible_{slug}"))
+                node = settings_by_key.get(leaf_key)
+                if node is None:
+                    node = CategoryNodeSetting(
+                        main_category=main_cat,
+                        sub_category=sub_cat,
+                        sub_subcategory=sub_sub,
+                    )
+                    created_nodes.append(node)
+                if node.is_visible_to_customers != visible:
+                    node.is_visible_to_customers = visible
+                    updated_nodes.append(node)
+
+            if created_nodes:
+                CategoryNodeSetting.objects.bulk_create(created_nodes)
+                for node in created_nodes:
+                    key = (
+                        (node.main_category or "").strip(),
+                        (node.sub_category or "").strip(),
+                        (node.sub_subcategory or "").strip(),
+                    )
+                    settings_by_key[key] = node
+
+            if updated_nodes:
+                CategoryNodeSetting.objects.bulk_update(
+                    updated_nodes,
+                    ["is_visible_to_customers"],
+                )
+
+            # 2) Persist subcategory sort order and heading overrides.
+            updated_subnodes = []
+            created_subnodes = []
+
+            for key, value in request.POST.items():
+                if not key.startswith("sort_"):
+                    continue
+                slug = key[len("sort_") :]
+                sort_raw = (value or "").strip()
+                # Subcategory nodes use 2-part paths: main|||sub.
+                path = (request.POST.get(f"path_{slug}") or "").strip()
+                parts = [p.strip() for p in path.split("|||")]
+                if len(parts) != 2:
+                    continue
+                main_cat, sub_cat = parts
+                sub_key = (main_cat, sub_cat, "")
+
+                try:
+                    sort_val = int(sort_raw) if sort_raw != "" else 0
+                except (TypeError, ValueError):
+                    sort_val = 0
+
+                heading_val = (request.POST.get(f"heading_{slug}") or "").strip()
+
+                node = settings_by_key.get(sub_key)
+                if node is None:
+                    node = CategoryNodeSetting(
+                        main_category=main_cat,
+                        sub_category=sub_cat,
+                        sub_subcategory="",
+                    )
+                    created_subnodes.append(node)
+                if (
+                    node.sort_order != sort_val
+                    or (node.heading_override or "").strip() != heading_val
+                ):
+                    node.sort_order = sort_val
+                    node.heading_override = heading_val
+                    updated_subnodes.append(node)
+
+            if created_subnodes:
+                CategoryNodeSetting.objects.bulk_create(created_subnodes)
+                for node in created_subnodes:
+                    key = (
+                        (node.main_category or "").strip(),
+                        (node.sub_category or "").strip(),
+                        (node.sub_subcategory or "").strip(),
+                    )
+                    settings_by_key[key] = node
+
+            if updated_subnodes:
+                CategoryNodeSetting.objects.bulk_update(
+                    updated_subnodes,
+                    ["sort_order", "heading_override"],
+                )
+
+            messages.success(request, "Category settings updated.")
+            return redirect("_product_management:product_categories")
+
+    # Precompute product counts for each (main, sub, sub_sub) combination.
+    product_counts = {}
+    try:
+        qs_counts = (
+            All_Products.objects
+            .values("main_category", "sub_category", "sub_subcategory")
+            .annotate(total=Count("id"))
+        )
+        for row in qs_counts:
+            key = (
+                (row.get("main_category") or "").strip(),
+                (row.get("sub_category") or "").strip(),
+                (row.get("sub_subcategory") or "").strip(),
+            )
+            product_counts[key] = row.get("total") or 0
+    except Exception:
+        product_counts = {}
+
+    # Build a management-friendly structure with settings applied.
+    main_category_groups = []
+    for group in raw_groups:
+        main_name = (group.get("main") or "").strip()
+        items = []
+        for item in group.get("items", []):
+            sub_name = (item.get("level1") or "").strip()
+            sub_key = (main_name, sub_name, "")
+            sub_settings = settings_by_key.get(sub_key)
+            sort_order = sub_settings.sort_order if sub_settings else 0
+            heading_override = (sub_settings.heading_override or "").strip() if sub_settings else ""
+
+            children = []
+            for child_name in item.get("children", []):
+                leaf_name = (child_name or "").strip()
+                leaf_key = (main_name, sub_name, leaf_name)
+                leaf_settings = settings_by_key.get(leaf_key)
+                is_visible = True
+                if leaf_settings is not None:
+                    is_visible = leaf_settings.is_visible_to_customers
+                count_value = product_counts.get(leaf_key, 0)
+                children.append(
+                    {
+                        "name": child_name,
+                        "is_visible": is_visible,
+                        "product_count": count_value,
+                    }
+                )
+
+            items.append(
+                {
+                    "level1": sub_name,
+                    "children": children,
+                    "sort_order": sort_order,
+                    "heading_override": heading_override,
+                }
+            )
+
+        main_category_groups.append(
+            {
+                "main": main_name,
+                "items": items,
+            }
+        )
+
+    context = {
+        "main_category_groups": main_category_groups,
+    }
+    return render(request, "_product_management/product_categories.html", context)
 
 
 @require_http_methods(["GET"])

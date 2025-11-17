@@ -180,3 +180,48 @@ class HomeValuePillar(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class CategoryNodeSetting(models.Model):
+    """
+    Per-node category overrides for visibility, sort order, and headings.
+
+    - (main_category, sub_category, sub_subcategory="") rows describe
+      subcategory-level settings (sort order, heading override).
+    - Rows with sub_subcategory set describe leaf visibility overrides.
+    """
+
+    main_category = models.CharField(max_length=255, blank=True)
+    sub_category = models.CharField(max_length=255, blank=True)
+    sub_subcategory = models.CharField(max_length=255, blank=True)
+
+    is_visible_to_customers = models.BooleanField(
+        default=True,
+        db_index=True,
+        help_text=(
+            "If unchecked and sub_subcategory is set, hides all products in that "
+            "leaf category from customers (staff/superusers still see them)."
+        ),
+    )
+    sort_order = models.PositiveIntegerField(
+        default=0,
+        db_index=True,
+        help_text="Optional sort order applied within a main/subcategory grouping.",
+    )
+    heading_override = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Optional override for the label shown for this category node.",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("sort_order", "main_category", "sub_category", "sub_subcategory")
+        unique_together = ("main_category", "sub_category", "sub_subcategory")
+        verbose_name = "Category node setting"
+        verbose_name_plural = "Category node settings"
+
+    def __str__(self):
+        parts = [p for p in (self.main_category, self.sub_category, self.sub_subcategory) if p]
+        path = " / ".join(parts) or "(root)"
+        return f"{path} ({'visible' if self.is_visible_to_customers else 'hidden'})"

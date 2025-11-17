@@ -215,3 +215,7 @@ STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 # Leaflet PDF rendering configuration
 # Values: 'auto' (default), 'weasyprint', 'xhtml2pdf'
 LEAFLET_PDF_RENDERER = os.getenv("LEAFLET_PDF_RENDERER", "auto").lower()
+
+# Allow large management forms (e.g. product category matrix)
+# Default Django limit is 1000; this can be overridden via env var.
+DATA_UPLOAD_MAX_NUMBER_FIELDS = int(os.getenv("DATA_UPLOAD_MAX_NUMBER_FIELDS", "20000"))

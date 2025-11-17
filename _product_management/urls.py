@@ -7,6 +7,7 @@ app_name = "_product_management"
 
 urlpatterns = [
     path("", views.index, name="index"),
+    path("product-categories/", views.product_categories, name="product_categories"),
     path("dl/", views.dl_leaflet, name="dl"),
     path("dl/save/", views.dl_leaflet_save, name="dl_save_copy"),
     path("dl/snapshot/", views.dl_leaflet_snapshot, name="dl_snapshot"),

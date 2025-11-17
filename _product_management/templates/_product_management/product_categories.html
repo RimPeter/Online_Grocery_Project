@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Product Categories{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div class="flex-grow-1">
+      <h1 class="h3 mb-1">Product categories</h1>
+      <p class="text-muted mb-0">
+        Review the full category tree used on the storefront and control which categories are visible to customers.
+      </p>
+    </div>
+    <a href="{% url 'product_list' %}" class="btn btn-outline-secondary btn-sm ms-auto" target="_blank" rel="noopener">
+      View storefront
+    </a>
+  </div>
+
+  <div class="alert alert-info small">
+    Categories shown below are derived from the structured taxonomy (main category &rarr; subcategory &rarr; sub-subcategory)
+    used on the product listing page. Use the visibility tick-boxes to hide individual sub-subcategories from customers without
+    deleting any products. Sort order and heading overrides are optional.
+  </div>
+
+  <div class="card mt-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span class="fw-semibold">Category visibility &amp; ordering</span>
+      {% if main_category_groups %}
+      <span class="badge text-bg-secondary">{{ main_category_groups|length }} main categories</span>
+      {% endif %}
+    </div>
+    <div class="card-body p-0">
+      {% if main_category_groups %}
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="save_categories">
+
+        <div class="table-responsive">
+          <table class="table table-sm table-striped align-middle mb-0">
+            <thead>
+              <tr>
+                <th style="width: 220px;">Main category</th>
+                <th style="width: 220px;">Subcategory</th>
+                <th>Sub-subcategories (visibility)</th>
+                <th style="width: 120px;">Sort order <span class="text-muted small">(optional)</span></th>
+                <th>Heading override <span class="text-muted small">(optional)</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for group in main_category_groups %}
+                {% for item in group.items %}
+                  {% with main_slug=group.main|slugify sub_slug=item.level1|slugify %}
+                  <tr>
+                    <td class="fw-semibold">
+                      {{ group.main }}
+                    </td>
+                    <td>
+                      {{ item.level1 }}
+                    </td>
+                    <td>
+                      {% if item.children %}
+                      <ul class="mb-0 small list-unstyled">
+                        {% for child in item.children %}
+                        {% with child_slug=child.name|slugify %}
+                        <li class="d-flex align-items-center gap-2">
+                          <input
+                            class="form-check-input"
+                            type="checkbox"
+                            name="visible_{{ main_slug }}__{{ sub_slug }}__{{ child_slug }}"
+                            {% if child.is_visible %}checked{% endif %}
+                          >
+                          <span>
+                            {{ child.name }}
+                            <span class="text-muted">({{ child.product_count }})</span>
+                          </span>
+                          <input
+                            type="hidden"
+                            name="path_{{ main_slug }}__{{ sub_slug }}__{{ child_slug }}"
+                            value="{{ group.main }}|||{{ item.level1 }}|||{{ child.name }}"
+                          >
+                        </li>
+                        {% endwith %}
+                        {% endfor %}
+                      </ul>
+                      {% else %}
+                      <span class="text-muted small">No sub-subcategories</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        name="sort_{{ main_slug }}__{{ sub_slug }}"
+                        class="form-control form-control-sm"
+                        value="{{ item.sort_order }}"
+                        placeholder="Auto"
+                      >
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        name="heading_{{ main_slug }}__{{ sub_slug }}"
+                        class="form-control form-control-sm"
+                        value="{{ item.heading_override }}"
+                        placeholder="{{ group.main }} › {{ item.level1 }}"
+                      >
+                    </td>
+                    <input
+                      type="hidden"
+                      name="path_{{ main_slug }}__{{ sub_slug }}"
+                      value="{{ group.main }}|||{{ item.level1 }}"
+                    >
+                  </tr>
+                  {% endwith %}
+                {% endfor %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="p-3 border-top d-flex flex-wrap justify-content-between align-items-center gap-3">
+          <div class="text-muted small">
+            Sort order is applied within each main category; lower numbers appear first.
+            Heading overrides update labels in the storefront category navigation.
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm">
+            Save category settings
+          </button>
+        </div>
+      </form>
+      {% else %}
+      <div class="p-4 text-center text-muted">
+        No category structure found. Ensure that <code>category_structure.json</code> has been generated and is readable.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
