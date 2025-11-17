@@ -10,182 +10,40 @@
 
     <div class="card">
       <div class="card-body">
-        <h5 class="card-title">Run Data Job</h5>
-        <p class="text-muted">Kick off catalog data pipeline steps. Runs in the background.</p>
+        <h5 class="card-title">Run Subcategory Pipeline</h5>
+        <p class="text-muted">
+          Run the Bestway subcategory scraping pipeline
+          (scrape_subcategories, scrape_sub_subcategories,
+          scraper_for_sub_subcategory, load_sub_subcategory_products).
+        </p>
         <form method="post" class="vstack gap-3">
           {% csrf_token %}
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" value="1" id="all" name="all" title="Run 'datajob' to trigger all steps">
-            <label class="form-check-label" for="all" title="Runs management command 'datajob' (_catalog/management/commands/datajob.py), which orchestrates: scrape_bestway, backfill_variants, update_vat_rates, populate_home_subcategories">Run all steps</label>
-          </div>
-
-          <div class="row g-3">
-            <div class="col-md-6">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" value="1" id="scrape" name="scrape" title="Include 'scrape_bestway' step">
-                <label class="form-check-label" for="scrape" title="Runs management command 'scrape_bestway' (_catalog/management/commands/scrape_bestway.py)">Scrape products</label>
-              </div>
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" value="1" id="no_scrape" name="no_scrape" title="Skip calling 'scrape_bestway' even if 'all' is selected">
-                <label class="form-check-label" for="no_scrape" title="Skips the 'scrape_bestway' step">Skip scrape</label>
-              </div>
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" value="1" id="vat" name="vat" title="Include 'update_vat_rates' step">
-                <label class="form-check-label" for="vat" title="Runs management command 'update_vat_rates' (_catalog/management/commands/update_vat_rates.py)">Update VAT rates</label>
-              </div>
-              {% comment %} <div class="ms-4 mt-1 text-muted small">
-                <div class="fw-semibold">VAT updater usage</div>
-                <ul class="mb-1">
-                  <li>Fresh run with periodic checkpoints: <code>python manage.py update_vat_rates --save-every 200</code></li>
-                  <li>Resume from last checkpoint: <code>python manage.py update_vat_rates --resume</code></li>
-                  <li>Start from a specific PK: <code>python manage.py update_vat_rates --start-from-pk 15000</code></li>
-                  <li>Start from a specific GAID: <code>python manage.py update_vat_rates --start-from-gaid 822104-1</code></li>
-                </ul>
-              </div> {% endcomment %}
-            </div>
-            <div class="col-md-6">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" value="1" id="variants" name="variants" title="Include 'backfill_variants' step">
-                <label class="form-check-label" for="variants" title="Runs management command 'backfill_variants' (_catalog/management/commands/backfill_variants.py)">Backfill variants</label>
-              </div>
-              <div class="input-group input-group-sm mt-1">
-                <span class="input-group-text" title="Passes --limit to 'backfill_variants'">Variants limit</span>
-                <input type="number" min="0" step="1" class="form-control" name="variants_limit" placeholder="0 = no limit" title="Limit passed to 'backfill_variants' (--limit)">
-              </div>
-              <div class="form-check mt-1">
-                <input class="form-check-input" type="checkbox" value="1" id="variants_dry_run" name="variants_dry_run" title="Run 'backfill_variants' without saving (--dry-run)">
-                <label class="form-check-label" for="variants_dry_run" title="Passes --dry-run to 'backfill_variants'">Variants dry-run</label>
-              </div>
-              <div class="form-check mt-2">
-                <input class="form-check-input" type="checkbox" value="1" id="home_subcats" name="home_subcats" title="Include 'populate_home_subcategories' step">
-                <label class="form-check-label" for="home_subcats" title="Runs management command 'populate_home_subcategories' (_catalog/management/commands/populate_home_subcategories.py)">Populate home subcategories</label>
-              </div>
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" value="1" id="home_inactive" name="home_inactive" title="Passes active=False to 'populate_home_subcategories'">
-                <label class="form-check-label" for="home_inactive" title="Creates home subcategories as inactive when running 'populate_home_subcategories'">Create home subcategories as inactive</label>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-md-3 mt-2">
-            <label for="datajob_verbosity" class="form-label" title="Passes --verbosity to the invoked management commands">Verbosity</label>
-            <select id="datajob_verbosity" name="verbosity" class="form-select form-select-sm" title="Verbosity level for underlying management commands">
-              <option value="0">0 - errors</option>
-              <option value="1" selected>1 - normal</option>
-              <option value="2">2 - verbose</option>
-              <option value="3">3 - very verbose</option>
-            </select>
-          </div>
-
-          <div class="mt-3">
-            <button type="submit" class="btn btn-success" title="Runs management command 'datajob' (_catalog/management/commands/datajob.py) with selected steps">Run Data Job</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <div class="card mt-4">
-      <div class="card-body">
-        <h5 class="card-title">VAT Updater</h5>
-        <p class="text-muted">Run <code>update_vat_rates</code> with optional resume and start offsets.</p>
-        <form method="post" class="vstack gap-3">
-          {% csrf_token %}
-          <input type="hidden" name="action" value="update_vat_rates">
+          <input type="hidden" name="action" value="run_subcategory_pipeline">
 
           <div class="row g-3">
             <div class="col-md-4">
-              <label class="form-label" for="vat_save_every" title="Write checkpoint every N products (--save-every)">Save every</label>
-              <div class="input-group input-group-sm">
-                <span class="input-group-text">N</span>
-                <input id="vat_save_every" name="vat_save_every" type="number" min="1" step="1" class="form-control" placeholder="200">
-              </div>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label" for="vat_start_from_pk" title="Start after this PK (--start-from-pk)">Start from PK</label>
-              <div class="input-group input-group-sm">
-                <span class="input-group-text">&gt;</span>
-                <input id="vat_start_from_pk" name="vat_start_from_pk" type="number" min="0" step="1" class="form-control" placeholder="e.g. 15000">
-              </div>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label" for="vat_start_from_gaid" title="Start after this GAID (--start-from-gaid)">Start from GAID</label>
-              <input id="vat_start_from_gaid" name="vat_start_from_gaid" type="text" class="form-control form-control-sm" placeholder="e.g. 822104-1">
-            </div>
-          </div>
-
-          <div class="row g-3 align-items-end">
-            <div class="col-md-3">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" value="1" id="vat_resume" name="vat_resume" title="Resume from last checkpoint (--resume)">
-                <label class="form-check-label" for="vat_resume">Resume from checkpoint</label>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <label for="vat_verbosity" class="form-label" title="Passes --verbosity to update_vat_rates">Verbosity</label>
-              <select id="vat_verbosity" name="verbosity" class="form-select form-select-sm" title="Verbosity level for update_vat_rates">
-                <option value="0">0 - errors</option>
-                <option value="1" selected>1 - normal</option>
-                <option value="2">2 - verbose</option>
-                <option value="3">3 - very verbose</option>
+              <label for="subcat_from_step" class="form-label">From step</label>
+              <select id="subcat_from_step" name="from_step" class="form-select form-select-sm">
+                <option value="">First step</option>
+                <option value="scrape_subcategories">scrape_subcategories</option>
+                <option value="scrape_sub_subcategories">scrape_sub_subcategories</option>
+                <option value="scraper_for_sub_subcategory">scraper_for_sub_subcategory</option>
+                <option value="load_sub_subcategory_products">load_sub_subcategory_products</option>
               </select>
             </div>
-            <div class="col-md-6 text-end">
-              <button type="submit" class="btn btn-primary" title="Runs management command 'update_vat_rates' (_catalog/management/commands/update_vat_rates.py) with provided options">
-                Run VAT Updater
-              </button>
-            </div>
-          </div>
-
-          <div class="text-muted small">
-            Examples:
-            <div><code>python manage.py update_vat_rates --save-every 200</code></div>
-            <div><code>python manage.py update_vat_rates --resume</code></div>
-            <div><code>python manage.py update_vat_rates --start-from-pk 15000</code></div>
-            <div><code>python manage.py update_vat_rates --start-from-gaid 822104-1</code></div>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <div class="card mt-4">
-      <div class="card-body">
-        <h5 class="card-title">Scrape Retail EAN</h5>
-        <p class="text-muted">Fetch product pages and populate missing Retail EANs. Runs in the background.</p>
-        <form method="post" class="vstack gap-3">
-          {% csrf_token %}
-          <input type="hidden" name="action" value="scrape_retail_ean">
-
-          <div class="row g-3">
             <div class="col-md-4">
-              <label for="ean_limit" class="form-label" title="Passes --limit to 'scrape_retail_ean'">Limit</label>
-              <input id="ean_limit" type="number" min="0" step="1" name="limit" class="form-control" placeholder="0 = no limit" title="Limit passed to 'scrape_retail_ean' (--limit)">
+              <label for="subcat_to_step" class="form-label">To step</label>
+              <select id="subcat_to_step" name="to_step" class="form-select form-select-sm">
+                <option value="">Last step</option>
+                <option value="scrape_subcategories">scrape_subcategories</option>
+                <option value="scrape_sub_subcategories">scrape_sub_subcategories</option>
+                <option value="scraper_for_sub_subcategory">scraper_for_sub_subcategory</option>
+                <option value="load_sub_subcategory_products">load_sub_subcategory_products</option>
+              </select>
             </div>
             <div class="col-md-4">
-              <label for="ean_sleep" class="form-label" title="Passes --sleep between requests">Sleep (seconds)</label>
-              <input id="ean_sleep" type="number" min="0" step="0.1" name="sleep" class="form-control" value="0.5" title="Seconds to sleep between requests (--sleep)">
-            </div>
-            <div class="col-md-4">
-              <label for="ean_domain" class="form-label" title="Filter to URLs containing this domain">Only domain contains</label>
-              <input id="ean_domain" type="text" name="only_domain" class="form-control" placeholder="e.g. bestwaywholesale.co.uk" title="Passes --only-domain to 'scrape_retail_ean'">
-            </div>
-          </div>
-
-          <div class="row g-3 mt-1">
-            <div class="col-md-4">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="ean_force" name="force" title="Overwrite existing EANs (--force)">
-                <label class="form-check-label" for="ean_force" title="Passes --force to 'scrape_retail_ean'">Force overwrite existing EAN</label>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="ean_dry" name="dry_run" title="Do not write changes (--dry-run)">
-                <label class="form-check-label" for="ean_dry" title="Passes --dry-run to 'scrape_retail_ean'">Dry-run (no save)</label>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <label for="ean_verbosity" class="form-label" title="Passes --verbosity to 'scrape_retail_ean'">Verbosity</label>
-              <select id="ean_verbosity" name="verbosity" class="form-select form-select-sm" title="Verbosity level for 'scrape_retail_ean'">
+              <label for="subcat_verbosity" class="form-label">Verbosity</label>
+              <select id="subcat_verbosity" name="verbosity" class="form-select form-select-sm">
                 <option value="0">0 - errors</option>
                 <option value="1" selected>1 - normal</option>
                 <option value="2">2 - verbose</option>
@@ -194,8 +52,35 @@
             </div>
           </div>
 
+          <div class="form-check mt-2">
+            <input class="form-check-input" type="checkbox" id="subcat_continue_on_error" name="continue_on_error" value="1">
+            <label class="form-check-label" for="subcat_continue_on_error">
+              Continue on error
+            </label>
+          </div>
+
+          {% if subcategory_last_run %}
           <div class="mt-3">
-            <button type="submit" class="btn btn-primary" title="Runs management command 'scrape_retail_ean' (_catalog/management/commands/scrape_retail_ean.py) with provided options">Start EAN Scrape</button>
+            <label for="subcat_errors" class="form-label">Last run errors</label>
+            <textarea id="subcat_errors" class="form-control font-monospace" rows="6" readonly>
+{% if subcategory_last_run.errors %}{{ subcategory_last_run.errors }}{% else %}No errors recorded for the last subcategory pipeline run.{% endif %}</textarea>
+            <div class="form-text">
+              Last run started at {{ subcategory_last_run.started_at }}
+              {% if subcategory_last_run.finished_at %}, finished at {{ subcategory_last_run.finished_at }}{% endif %}.
+              Status:
+              {% if subcategory_last_run.succeeded %}
+                success
+              {% else %}
+                failed
+              {% endif %}.
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="mt-3">
+            <button type="submit" class="btn btn-primary">
+              Run Subcategory Pipeline
+            </button>
           </div>
         </form>
       </div>

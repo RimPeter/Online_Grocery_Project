@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 from .constants import LEAFLET_TEXT_DEFAULTS
 
@@ -42,3 +43,30 @@ class LeafletCopy(models.Model):
             "cta_subtitle": self.cta_subtitle,
             "default_site_url": self.default_site_url,
         }
+
+
+class SubcategoryPipelineRun(models.Model):
+    """Record metadata and errors for run_subcategory_pipeline executions."""
+
+    started_at = models.DateTimeField(default=timezone.now, db_index=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    from_step = models.CharField(max_length=64, blank=True)
+    to_step = models.CharField(max_length=64, blank=True)
+    steps = models.TextField(
+        blank=True,
+        help_text="Comma-separated list of step names executed in this run.",
+    )
+    succeeded = models.BooleanField(default=False)
+    errors = models.TextField(
+        blank=True,
+        help_text="Captured error messages for this pipeline run (if any).",
+    )
+
+    class Meta:
+        ordering = ("-started_at",)
+        verbose_name = "Subcategory pipeline run"
+        verbose_name_plural = "Subcategory pipeline runs"
+
+    def __str__(self):
+        status = "ok" if self.succeeded else "failed"
+        return f"Subcategory pipeline {status} at {self.started_at:%Y-%m-%d %H:%M:%S}"

@@ -16,7 +16,7 @@ from datetime import date, timedelta
 from django.views.decorators.http import require_http_methods, require_POST
 import threading
 from _catalog.models import All_Products, HomeCategoryTile, HomeValuePillar
-from .models import LeafletCopy
+from .models import LeafletCopy, SubcategoryPipelineRun
 from .constants import LEAFLET_TEXT_DEFAULTS
 from _orders.models import Order, OrderItem
 from django.contrib import messages
@@ -1020,6 +1020,7 @@ def commands(request):
     Runs datajob in a background thread so the request does not block.
     """
     product_count = All_Products.objects.count()
+    last_subcat_run = SubcategoryPipelineRun.objects.order_by("-started_at").first()
 
     if request.method == 'POST':
         action = request.POST.get('action') or 'datajob'
@@ -1125,6 +1126,33 @@ def commands(request):
             messages.success(request, 'VAT updater started in background. Check logs for progress.')
             return redirect('_product_management:commands')
 
+        elif action == 'run_subcategory_pipeline':
+            from_step = (request.POST.get('from_step') or "").strip() or None
+            to_step = (request.POST.get('to_step') or "").strip() or None
+            continue_on_error = bool(request.POST.get('continue_on_error'))
+            verbosity = int(request.POST.get('verbosity') or 1)
+
+            def _run_subcategory_pipeline():
+                try:
+                    from django.core.management import call_command
+                    call_kwargs = {
+                        'verbosity': verbosity,
+                    }
+                    if from_step:
+                        call_kwargs['from_step'] = from_step
+                    if to_step:
+                        call_kwargs['to_step'] = to_step
+                    if continue_on_error:
+                        call_kwargs['continue_on_error'] = True
+                    call_command('run_subcategory_pipeline', **call_kwargs)
+                except Exception:
+                    # Keep background thread errors from crashing request
+                    pass
+
+            threading.Thread(target=_run_subcategory_pipeline, daemon=True).start()
+            messages.success(request, 'Subcategory pipeline started in background. Check logs for progress.')
+            return redirect('_product_management:commands')
+
         elif action == 'clear_all_products':
             # Extra safety: only superusers may execute
             if not request.user.is_superuser:
@@ -1152,7 +1180,14 @@ def commands(request):
             messages.success(request, 'Clear all products started. This is destructive; check logs for progress.')
             return redirect('_product_management:commands')
 
-    return render(request, '_product_management/commands.html', {'product_count': product_count})
+    return render(
+        request,
+        '_product_management/commands.html',
+        {
+            'product_count': product_count,
+            'subcategory_last_run': last_subcat_run,
+        },
+    )
 
 
 def _normalize_home_category(value: str) -> str:
