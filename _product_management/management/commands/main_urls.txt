@@ -1,0 +1,19 @@
+use '_product_management\management\commands\main_urls.json'!
+main_urls = 'https://www.bestwaywholesale.co.uk/'+'/'+'category'
+
+#loop through main categories by adding category name to the end of the website link.
+
+search for subcategories such as:
+`
+<ul class="caps chevron">
+<li><a href="/bread-cakes/401">Bread &amp; Morning Goods</a></li>
+<li><a href="/bread-cakes/381">Cakes</a></li>
+</ul>
+`
+extract/scrape subcategories to _product_management\management\commands\subcategories.json
+
+format:
+{
+    "category": "subcategory"
+    ...
+}
