@@ -8,13 +8,14 @@
   <div class="col-12 col-lg-8">
     <h1 class="mb-4">Product Management Commands</h1>
 
-    <div class="card">
+        <div class="card">
       <div class="card-body">
         <h5 class="card-title">Run Subcategory Pipeline</h5>
         <p class="text-muted">
           Run the Bestway subcategory scraping pipeline
           (scrape_subcategories, scrape_sub_subcategories,
-          scraper_for_sub_subcategory, load_sub_subcategory_products).
+          scraper_for_sub_subcategory, load_sub_subcategory_products,
+          generate_category_json).
         </p>
         <form method="post" class="vstack gap-3">
           {% csrf_token %}
@@ -29,6 +30,7 @@
                 <option value="scrape_sub_subcategories">scrape_sub_subcategories</option>
                 <option value="scraper_for_sub_subcategory">scraper_for_sub_subcategory</option>
                 <option value="load_sub_subcategory_products">load_sub_subcategory_products</option>
+                <option value="generate_category_json">generate_category_json</option>
               </select>
             </div>
             <div class="col-md-4">
@@ -39,6 +41,7 @@
                 <option value="scrape_sub_subcategories">scrape_sub_subcategories</option>
                 <option value="scraper_for_sub_subcategory">scraper_for_sub_subcategory</option>
                 <option value="load_sub_subcategory_products">load_sub_subcategory_products</option>
+                <option value="generate_category_json">generate_category_json</option>
               </select>
             </div>
             <div class="col-md-4">
@@ -80,6 +83,61 @@
           <div class="mt-3">
             <button type="submit" class="btn btn-primary">
               Run Subcategory Pipeline
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-body">
+        <h5 class="card-title">Backfill Variants</h5>
+        <p class="text-muted">
+          Populate missing variant fields by parsing pack information from product names
+          (e.g. <code>500ml x 12</code>).
+        </p>
+        <form method="post" class="vstack gap-3">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="backfill_variants">
+
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label for="backfill_limit" class="form-label">Limit (0 = all)</label>
+              <input
+                type="number"
+                min="0"
+                class="form-control form-control-sm"
+                id="backfill_limit"
+                name="limit"
+                placeholder="0">
+            </div>
+            <div class="col-md-4">
+              <label for="backfill_verbosity" class="form-label">Verbosity</label>
+              <select id="backfill_verbosity" name="verbosity" class="form-select form-select-sm">
+                <option value="0">0 - errors</option>
+                <option value="1" selected>1 - normal</option>
+                <option value="2">2 - verbose</option>
+                <option value="3">3 - very verbose</option>
+              </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+              <div class="form-check">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  id="backfill_dry_run"
+                  name="dry_run"
+                  value="1">
+                <label class="form-check-label" for="backfill_dry_run">
+                  Dry run (no DB changes)
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <button type="submit" class="btn btn-secondary">
+              Run Backfill Variants
             </button>
           </div>
         </form>

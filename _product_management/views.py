@@ -1153,6 +1153,30 @@ def commands(request):
             messages.success(request, 'Subcategory pipeline started in background. Check logs for progress.')
             return redirect('_product_management:commands')
 
+        elif action == 'backfill_variants':
+            limit = int(request.POST.get('limit') or 0)
+            dry_run = bool(request.POST.get('dry_run'))
+            verbosity = int(request.POST.get('verbosity') or 1)
+
+            def _run_backfill_variants():
+                try:
+                    from django.core.management import call_command
+                    call_kwargs = {
+                        'verbosity': verbosity,
+                    }
+                    if limit:
+                        call_kwargs['limit'] = limit
+                    if dry_run:
+                        call_kwargs['dry_run'] = True
+                    call_command('backfill_variants', **call_kwargs)
+                except Exception:
+                    # Keep background thread errors from crashing request
+                    pass
+
+            threading.Thread(target=_run_backfill_variants, daemon=True).start()
+            messages.success(request, 'Variant backfill started in background. Check logs for progress.')
+            return redirect('_product_management:commands')
+
         elif action == 'clear_all_products':
             # Extra safety: only superusers may execute
             if not request.user.is_superuser:

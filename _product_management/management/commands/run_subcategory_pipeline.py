@@ -6,6 +6,7 @@ This command runs, in order:
     python manage.py scrape_sub_subcategories
     python manage.py scraper_for_sub_subcategory
     python manage.py load_sub_subcategory_products
+    python manage.py generate_category_json
 
 Usage:
     python manage.py run_subcategory_pipeline
@@ -34,6 +35,7 @@ class Command(BaseCommand):
         ("scrape_sub_subcategories", "Discover sub-subcategory listing URLs"),
         ("scraper_for_sub_subcategory", "Scrape sub-subcategory product listings to JSON"),
         ("load_sub_subcategory_products", "Load scraped JSON into All_Products"),
+        ("generate_category_json", "Regenerate derived category_structure.json from latest products"),
     ]
 
     def add_arguments(self, parser):

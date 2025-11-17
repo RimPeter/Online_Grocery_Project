@@ -187,23 +187,121 @@ def _ensure_rsp(product):
     return product
 
 def _load_category_json():
-    """Load category JSON from whichever app path exists.
-    Tries `_catalog/management/commands/` first, then `_product_management/...`.
-    Returns an empty dict if not found to avoid 500s.
     """
-    candidates = [
-        Path(settings.BASE_DIR)
+    Load category JSON for the product listing/category UI.
+
+    Preferred source is the derived category structure in
+    `_product_management/management/commands/category_structure.json`,
+    which looks like:
+
+        {main_category: [
+            {sub_category: [
+                {sub_subcategory: [ga_product_id, ...]},
+                ...
+            ]},
+            ...
+        ]}
+
+    For the UI we flatten this to the older two-level shape expected
+    by the templates and helpers, using sub_category as level-1 and
+    sub_subcategory as level-2:
+
+        {sub_category: {sub_subcategory: placeholder_url}}
+
+    If that file is missing or unreadable, we fall back to the
+    previous sources (sub_subcategories.json, then product_category.json).
+    Returns an empty dict on complete failure.
+    """
+    base_dir = Path(settings.BASE_DIR)
+
+    # 1) Try category_structure.json (preferred).
+    cat_struct_path = (
+        base_dir
+        / "_product_management"
+        / "management"
+        / "commands"
+        / "category_structure.json"
+    )
+    try:
+        if cat_struct_path.exists():
+            with open(cat_struct_path, "r", encoding="utf-8") as f:
+                raw = json.load(f)
+            flat = {}
+            if isinstance(raw, dict):
+                # raw: {main_category: [ {sub_category: [ {sub_subcategory: [ids]}, ... ]}, ... ]}
+                for _main_cat, level2_list in raw.items():
+                    if not isinstance(level2_list, list):
+                        continue
+                    for level2_obj in level2_list:
+                        if not isinstance(level2_obj, dict):
+                            continue
+                        for sub_cat, level3_list in level2_obj.items():
+                            sub_cat_name = (sub_cat or "").strip()
+                            if not sub_cat_name or not isinstance(level3_list, list):
+                                continue
+                            out_level2 = flat.setdefault(sub_cat_name, {})
+                            for level3_obj in level3_list:
+                                if not isinstance(level3_obj, dict):
+                                    continue
+                                for sub_sub_cat, _ids in level3_obj.items():
+                                    sub_sub_name = (sub_sub_cat or "").strip()
+                                    if not sub_sub_name:
+                                        continue
+                                    # We only need a stable key; the value is not
+                                    # used for navigation, so a placeholder is fine.
+                                    out_level2[sub_sub_name] = ""
+            if flat:
+                return flat
+    except Exception:
+        # If anything goes wrong, fall through to older sources.
+        pass
+
+    # 2) Try the newer sub_subcategories.json and flatten it.
+    sub_sub_path = (
+        base_dir
+        / "_product_management"
+        / "management"
+        / "commands"
+        / "sub_subcategories.json"
+    )
+    try:
+        if sub_sub_path.exists():
+            with open(sub_sub_path, "r", encoding="utf-8") as f:
+                raw = json.load(f)
+            flat = {}
+            if isinstance(raw, dict):
+                for level1, middle_map in raw.items():
+                    if not isinstance(middle_map, dict):
+                        continue
+                    out_level2 = flat.setdefault(level1, {})
+                    for _middle, level2_map in middle_map.items():
+                        if not isinstance(level2_map, dict):
+                            continue
+                        for level2, urls in level2_map.items():
+                            # Last one wins if duplicates exist; values can be
+                            # a URL string or list, and _pick_best_url will
+                            # normalise when building metadata.
+                            out_level2[level2] = urls
+            if flat:
+                return flat
+    except Exception:
+        # If anything goes wrong, fall back to legacy files below.
+        pass
+
+    # 3) Fallback to legacy product_category.json locations.
+    legacy_candidates = [
+        base_dir
         / "_catalog"
         / "management"
         / "commands"
         / "product_category.json",
-        Path(settings.BASE_DIR)
+        base_dir
         / "_product_management"
         / "management"
         / "commands"
         / "product_category.json",
     ]
-    for p in candidates:
+    for p in legacy_candidates:
         try:
             if p.exists():
                 with open(p, "r", encoding="utf-8") as f:

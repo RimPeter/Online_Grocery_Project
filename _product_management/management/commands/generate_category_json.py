@@ -3,44 +3,107 @@
 
 
 from django.core.management.base import BaseCommand
-from _catalog.models import All_Products
+from django.conf import settings
 import json
 from collections import defaultdict
+from pathlib import Path
+
 
 class Command(BaseCommand):
-    help = 'Generate a JSON file from product categories'
+    help = 'Generate a JSON file from sub_subcategory_products.json into category_structure.json'
 
     def handle(self, *args, **kwargs):
-        # Initialize the nested dictionary structure
-        category_hierarchy = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+        base_dir = Path(settings.BASE_DIR)
+        source_path = (
+            base_dir
+            / "_product_management"
+            / "management"
+            / "commands"
+            / "sub_subcategory_products.json"
+        )
 
-        # Fetch all products
-        all_products = All_Products.objects.all()
+        if not source_path.exists():
+            self.stderr.write(
+                self.style.ERROR(f"Source file not found: {source_path}")
+            )
+            return
 
-        # Build the hierarchy
-        for product in all_products:
-            category_parts = product.category.split(' > ')
-            if len(category_parts) < 3:
-                self.stdout.write(f"Skipping invalid category: {product.category}")
+        try:
+            raw = source_path.read_text(encoding="utf-8")
+            data = json.loads(raw)
+        except Exception as exc:
+            self.stderr.write(
+                self.style.ERROR(f"Failed to read/parse {source_path}: {exc}")
+            )
+            return
+
+        if not isinstance(data, list):
+            self.stderr.write(
+                self.style.ERROR("Expected a list of product objects in sub_subcategory_products.json")
+            )
+            return
+
+        # Build hierarchy: main_category -> sub_category -> sub_subcategory -> [ga_product_id,...]
+        category_hierarchy = defaultdict(
+            lambda: defaultdict(lambda: defaultdict(list))
+        )
+
+        for obj in data:
+            try:
+                level1 = (obj.get("main_category") or "").strip()
+                level2 = (obj.get("sub_category") or "").strip()
+                level3 = (obj.get("sub_subcategory") or "").strip()
+                ga_id = (obj.get("ga_product_id") or "").strip()
+            except AttributeError:
                 continue
 
-            level1, level2, level3 = category_parts
-            ga_product_id = product.ga_product_id
+            if not (level1 and level2 and level3 and ga_id):
+                # Skip incomplete rows; they don't help the structure.
+                continue
 
-            # Append the product ID to the appropriate Level 3 category
-            category_hierarchy[level1][level2][level3].append(ga_product_id)
+            category_hierarchy[level1][level2][level3].append(ga_id)
 
-        # Convert the defaultdict to a standard dictionary for JSON serialization
+        # Convert to the existing category_structure.json shape:
+        # {
+        #   "Level1": [
+        #     { "Level2": [
+        #         { "Level3": ["ga_id1", "ga_id2", ...] },
+        #         ...
+        #     ]},
+        #     ...
+        #   ],
+        #   ...
+        # }
         result = {}
         for level1, level2_dict in category_hierarchy.items():
-            result[level1] = [
-                {level2: [{level3: product_ids} for level3, product_ids in level3_dict.items()]}
-                for level2, level3_dict in level2_dict.items()
-            ]
+            level2_list = []
+            for level2, level3_dict in level2_dict.items():
+                level3_list = []
+                for level3, product_ids in level3_dict.items():
+                    # Ensure deterministic ordering of IDs
+                    sorted_ids = sorted(product_ids)
+                    level3_list.append({level3: sorted_ids})
+                # Sort Level3 entries by key for stable output
+                level3_list.sort(key=lambda d: next(iter(d.keys())).casefold())
+                level2_list.append({level2: level3_list})
+            # Sort Level2 entries by key for stable output
+            level2_list.sort(key=lambda d: next(iter(d.keys())).casefold())
+            result[level1] = level2_list
 
-        # Write to JSON file
-        output_file = 'category_structure.json'
-        with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(result, f, indent=4, ensure_ascii=False)
+        output_path = (
+            base_dir
+            / "_product_management"
+            / "management"
+            / "commands"
+            / "category_structure.json"
+        )
+        output_path.write_text(
+            json.dumps(result, indent=4, ensure_ascii=False),
+            encoding="utf-8",
+        )
 
-        self.stdout.write(self.style.SUCCESS(f"JSON file successfully generated at: {output_file}"))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"category_structure.json successfully generated at: {output_path}"
+            )
+        )
