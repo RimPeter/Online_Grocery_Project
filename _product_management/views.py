@@ -1362,6 +1362,21 @@ def commands(request):
             messages.success(request, 'Subcategory pipeline started in background. Check logs for progress.')
             return redirect('_product_management:commands')
 
+        elif action == 'load_sub_subcategory_products':
+            verbosity = int(request.POST.get('verbosity') or 1)
+
+            def _run_load_sub_subcategory_products():
+                try:
+                    from django.core.management import call_command
+                    call_command('load_sub_subcategory_products', verbosity=verbosity)
+                except Exception:
+                    # Keep background thread errors from crashing request
+                    pass
+
+            threading.Thread(target=_run_load_sub_subcategory_products, daemon=True).start()
+            messages.success(request, 'Loading products from sub_subcategory_products.json started in background.')
+            return redirect('_product_management:commands')
+
         elif action == 'backfill_variants':
             limit = int(request.POST.get('limit') or 0)
             dry_run = bool(request.POST.get('dry_run'))
