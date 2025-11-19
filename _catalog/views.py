@@ -723,6 +723,33 @@ def product_list(request):
     except Exception:
         pass
 
+    # Build recent_purchased_items for quick reorder widget
+    recent_purchased_items = []
+    if request.user.is_authenticated:
+        try:
+            recent_orders = (
+                Order.objects
+                .filter(user=request.user)
+                .exclude(status__in=['pending', 'canceled'])
+                .order_by('-created_at')[:3]
+            )
+            seen_product_ids = set()
+            for order in recent_orders:
+                for item in order.items.select_related('product'):
+                    pid = item.product_id
+                    if pid in seen_product_ids:
+                        continue
+                    seen_product_ids.add(pid)
+                    product = item.product
+                    recent_purchased_items.append({
+                        'product_id': pid,
+                        'name': getattr(product, 'name', '') or '',
+                        'image_url': getattr(product, 'image_url', '') or '',
+                        'quantity': item.quantity,
+                    })
+        except Exception:
+            recent_purchased_items = []
+
     context = {
         'products': page_obj,
         'page_obj': page_obj,
@@ -735,8 +762,7 @@ def product_list(request):
         'initial_level2_options': level2_map.get(l1, []) if l1 else [],
     }
 
-    # recent_purchased_items block unchanged
-    ...
+    context['recent_purchased_items'] = recent_purchased_items
     return render(request, '_catalog/product.html', context)
 
 

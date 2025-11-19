@@ -126,29 +126,29 @@
             {% csrf_token %}
             <input type="hidden" name="return_to" value="{{ request.get_full_path }}" />
             <input type="hidden" id="recent-reorder-id" />
-            <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
               <label class="form-label mb-0">Reorder from last 3 orders</label>
               <button type="button" id="recent-add-all" class="btn btn-sm btn-success">Add All To Cart</button>
             </div>
-            <div class="input-group align-items-center">
+            <div class="input-group align-items-center flex-wrap">
               <span class="input-group-text p-1" style="background:white;border:none;">
                 <img id="recent-reorder-img" src="{% static 'images/fresh_products.jpg' %}" alt="preview" style="width:40px;height:40px;object-fit:contain;" onerror="this.onerror=null;this.src='{% static 'images/fresh_products.jpg' %}';" />
               </span>
-              <div class="dropdown">
-                <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="recent-reorder-button" data-bs-toggle="dropdown" aria-expanded="false">
+              <div class="dropdown flex-grow-1" style="min-width: 0;">
+                <button class="btn btn-outline-secondary dropdown-toggle w-100 text-truncate" type="button" id="recent-reorder-button" data-bs-toggle="dropdown" aria-expanded="false">
                   Select item
                 </button>
-                <ul class="dropdown-menu" aria-labelledby="recent-reorder-button" id="recent-reorder-menu" style="max-height: 260px; overflow-y: auto;">
+                <ul class="dropdown-menu w-100" aria-labelledby="recent-reorder-button" id="recent-reorder-menu" style="max-height: 260px; overflow-y: auto; max-width: 100vw;">
                   {% for it in recent_purchased_items %}
                   <li class="px-1">
                     <div class="d-flex align-items-center justify-content-between gap-2">
-                      <a class="dropdown-item d-inline-flex align-items-center w-auto flex-grow-1" href="#" data-role="select" data-id="{{ it.product_id }}" data-img="{{ it.image_url }}" data-qty="{{ it.quantity }}">
+                      <a class="dropdown-item d-flex align-items-center w-100" href="#" data-role="select" data-id="{{ it.product_id }}" data-img="{{ it.image_url }}" data-qty="{{ it.quantity }}" style="white-space: normal;">
                         {% if it.image_url and it.image_url != '/img/products/no-image.png' %}
                           <img src="{{ it.image_url }}" alt="{{ it.name }}" class="me-2" style="width:28px;height:28px;object-fit:contain;" onerror="this.onerror=null;this.src='{% static 'images/fresh_products.jpg' %}';" />
                         {% else %}
                           <img src="{% static 'images/fresh_products.jpg' %}" alt="{{ it.name }}" class="me-2" style="width:28px;height:28px;object-fit:contain;" />
                         {% endif %}
-                        <span>{{ it.name }} (last qty {{ it.quantity }})</span>
+                        <span class="flex-grow-1">{{ it.name }} (last qty {{ it.quantity }})</span>
                       </a>
                       <a class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" href="{% url 'product_detail' it.product_id %}" title="View product details">
                         <i class="bi bi-eye"></i>
@@ -159,8 +159,8 @@
                   {% endfor %}
                 </ul>
               </div>
-              <input type="number" id="recent-reorder-qty" class="form-control" min="1" value="1" aria-label="Quantity" />
-              <button class="btn btn-primary" type="submit">Add</button>
+              <input type="number" id="recent-reorder-qty" class="form-control flex-grow-0" style="margin: 0 0 0 10px; width: 100px;" min="1" value="1" aria-label="Quantity" />
+              <button class="btn btn-primary flex-grow-0" type="submit">Add</button>
             </div>
           </form>
         </div>
@@ -579,9 +579,20 @@
     const addAllBtn = document.getElementById('recent-add-all');
     const addUrlTemplate = "{% url 'add_to_cart' 999999 %}".replace('999999', '__ID__');
 
+    const formatButtonLabel = (fullLabel) => {
+      if (!fullLabel) return 'Select item';
+      const withoutQty = fullLabel.replace(/\s*\(last qty.*\)$/i, '').trim();
+      const text = withoutQty || fullLabel.trim();
+      const MAX_CHARS = 32;
+      if (text.length <= MAX_CHARS) {
+        return text;
+      }
+      return text.slice(0, MAX_CHARS - 3) + '...';
+    };
+
     const selectItem = (pid, label, imageUrl) => {
       if (idInput) idInput.value = pid;
-      if (btn) btn.textContent = label || 'Selected item';
+      if (btn) btn.textContent = formatButtonLabel(label);
       if (img) {
         if (imageUrl && imageUrl !== '/img/products/no-image.png') {
           img.src = imageUrl;
