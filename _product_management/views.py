@@ -1702,6 +1702,29 @@ def missing_rsp(request):
 
     # Handle inline RSP updates from the table
     if request.method == 'POST':
+        # Header-level Apply All: set RSP = recommended for all missing/zero RSP
+        if 'apply_all' in request.POST:
+            updated = 0
+            qs = All_Products.objects.filter(
+                Q(rsp__isnull=True) | Q(rsp__lte=0),
+                price__isnull=False,
+            )
+            for product in qs:
+                try:
+                    recommended = (product.price * Decimal('1.30')).quantize(Decimal('0.01'))
+                except Exception:
+                    continue
+                if product.rsp != recommended:
+                    product.rsp = recommended
+                    product.save(update_fields=['rsp'])
+                    updated += 1
+            if updated:
+                messages.success(request, f'Applied recommended RSP to {updated} product(s).')
+            else:
+                messages.info(request, 'No products needed RSP updates.')
+            return redirect('_product_management:missing_rsp')
+
+        # Per-row updates (Save / Apply)
         product_id = request.POST.get('product_id')
         raw_rsp = (request.POST.get('new_rsp') or '').strip()
         apply_recommended = 'apply_recommended' in request.POST

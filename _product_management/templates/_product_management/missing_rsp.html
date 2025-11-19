@@ -21,7 +21,15 @@
             <th scope="col">GA Product ID</th>
             <th scope="col">Retail EAN</th>
             <th scope="col">Cost (Price)</th>
-            <th scope="col">Recommended RSP</th>
+            <th scope="col">
+              Recommended RSP
+              <form method="post" action="{% url '_product_management:missing_rsp' %}" class="d-inline ms-2">
+                {% csrf_token %}
+                <button type="submit" name="apply_all" value="1" class="btn btn-sm btn-outline-secondary">
+                  Apply All
+                </button>
+              </form>
+            </th>
             <th scope="col">RSP</th>
             <th scope="col">Category</th>
             <th scope="col">Subcategory</th>
