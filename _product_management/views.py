@@ -1690,6 +1690,91 @@ def home_categories(request):
     return render(request, '_product_management/home_categories.html', context)
 
 
+@staff_or_superuser_required
+def missing_rsp(request):
+    """
+    List products whose RSP is missing or zero and allow inline fixes.
+
+    Mirrors the All_ProductsMissingRSP admin filter so staff can
+    quickly see which items need RSP values set.
+    """
+    from decimal import Decimal, InvalidOperation
+
+    # Handle inline RSP updates from the table
+    if request.method == 'POST':
+        product_id = request.POST.get('product_id')
+        raw_rsp = (request.POST.get('new_rsp') or '').strip()
+        apply_recommended = 'apply_recommended' in request.POST
+
+        try:
+            pid = int(product_id)
+        except (TypeError, ValueError):
+            pid = None
+
+        if not pid:
+            messages.error(request, 'Invalid product selection.')
+        else:
+            product = get_object_or_404(All_Products, pk=pid)
+
+            if apply_recommended:
+                # Set RSP to recommended: cost price * 1.3
+                if product.price is None:
+                    messages.error(request, 'This product does not have a cost price set.')
+                else:
+                    try:
+                        recommended = (product.price * Decimal('1.30')).quantize(Decimal('0.01'))
+                    except Exception:
+                        messages.error(request, 'Could not calculate a recommended RSP for this product.')
+                    else:
+                        product.rsp = recommended
+                        product.save(update_fields=['rsp'])
+                        messages.success(
+                            request,
+                            f'Set RSP for "{product.name}" to recommended �{recommended:.2f}.'
+                        )
+            else:
+                if raw_rsp == '':
+                    # Blank input clears RSP back to NULL
+                    product.rsp = None
+                    product.save(update_fields=['rsp'])
+                    messages.success(request, f'Cleared RSP for "{product.name}".')
+                else:
+                    cleaned = raw_rsp.replace('�', '').replace(',', '').strip()
+                    try:
+                        new_value = Decimal(cleaned)
+                        if new_value < 0:
+                            raise InvalidOperation()
+                    except Exception:
+                        messages.error(request, 'Enter a valid non-negative number for RSP.')
+                    else:
+                        if product.rsp != new_value:
+                            product.rsp = new_value
+                            product.save(update_fields=['rsp'])
+                            messages.success(request, f'Updated RSP for "{product.name}" to �{new_value:.2f}.')
+                        else:
+                            messages.info(request, 'No change to RSP detected.')
+
+        # Redirect to avoid double-post if user refreshes
+        return redirect('_product_management:missing_rsp')
+
+    # Recommended RSP is cost price * 1.3
+    display_expr = ExpressionWrapper(
+        F('price') * Value(Decimal('1.30')),
+        output_field=DecimalField(max_digits=10, decimal_places=2),
+    )
+    products = (
+        All_Products.objects
+        .filter(Q(rsp__isnull=True) | Q(rsp__lte=0))
+        .annotate(recommended_rsp=display_expr)
+        .order_by('name')
+    )
+    context = {
+        'products': products,
+        'count': products.count(),
+    }
+    return render(request, '_product_management/missing_rsp.html', context)
+
+
 def missing_retail_ean(request):
     """List products that do not have a Retail EAN set.
 

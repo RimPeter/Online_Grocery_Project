@@ -30,6 +30,7 @@ urlpatterns = [
     path("orders/<int:order_id>/delivery/", views.set_delivery_slot, name="set_delivery_slot"),
     path("commands/", views.commands, name="commands"),
     path("home-categories/", views.home_categories, name="home_categories"),
+    path("missing-rsp/", views.missing_rsp, name="missing_rsp"),
     path("missing-retail-ean/", views.missing_retail_ean, name="missing_retail_ean"),
     path("over-50-products/", views.over_50_products, name="over_50_products"),
 ]
