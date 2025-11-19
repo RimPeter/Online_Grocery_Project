@@ -186,7 +186,8 @@ def product_categories(request):
     try:
         from _catalog.views import _build_main_category_groups  # type: ignore
 
-        raw_groups = _build_main_category_groups()
+        # For management, include hidden categories so they can be toggled.
+        raw_groups = _build_main_category_groups(include_hidden=True)
     except Exception:
         raw_groups = []
 

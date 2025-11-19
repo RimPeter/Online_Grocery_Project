@@ -406,7 +406,7 @@ def _load_category_json():
     return {}
 
 
-def _build_main_category_groups():
+def _build_main_category_groups(include_hidden: bool = False):
     """
     Build a grouped category structure keyed by main category.
 
@@ -471,7 +471,8 @@ def _build_main_category_groups():
                                 continue
                             key = (main_cat, sub_cat_name, sub_sub_name)
                             # Default to visible when no explicit setting exists.
-                            if leaf_visibility.get(key, True):
+                            is_visible = leaf_visibility.get(key, True)
+                            if include_hidden or is_visible:
                                 if sub_sub_name not in children:
                                     children.append(sub_sub_name)
             if not subcats:
