@@ -40,6 +40,30 @@
           <tr>
             <td>
               <a href="{% url 'product_detail' p.id %}">{{ p.name }}</a>
+              <form method="post" action="{% url '_product_management:missing_rsp' %}" class="mt-1">
+                {% csrf_token %}
+                <input type="hidden" name="product_id" value="{{ p.id }}">
+                {% if p.is_visible_to_customers %}
+                <button
+                  type="submit"
+                  name="listing_action"
+                  value="hide"
+                  class="btn btn-sm btn-outline-danger"
+                >
+                  Remove from Listing
+                </button>
+                {% else %}
+                <button
+                  type="submit"
+                  name="listing_action"
+                  value="restore"
+                  class="btn btn-sm btn-outline-success me-2"
+                >
+                  Restore
+                </button>
+                <span class="text-muted small">removed from product listing</span>
+                {% endif %}
+              </form>
             </td>
             <td>{{ p.variant|default:"-" }}</td>
             <td>{{ p.sku|default:"-" }}</td>

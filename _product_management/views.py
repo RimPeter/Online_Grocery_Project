@@ -1724,10 +1724,11 @@ def missing_rsp(request):
                 messages.info(request, 'No products needed RSP updates.')
             return redirect('_product_management:missing_rsp')
 
-        # Per-row updates (Save / Apply)
+        # Per-row updates (Save / Apply / Toggle listing visibility)
         product_id = request.POST.get('product_id')
         raw_rsp = (request.POST.get('new_rsp') or '').strip()
         apply_recommended = 'apply_recommended' in request.POST
+        listing_action = request.POST.get('listing_action') or ''
 
         try:
             pid = int(product_id)
@@ -1736,46 +1737,66 @@ def missing_rsp(request):
 
         if not pid:
             messages.error(request, 'Invalid product selection.')
-        else:
-            product = get_object_or_404(All_Products, pk=pid)
+            return redirect('_product_management:missing_rsp')
 
-            if apply_recommended:
-                # Set RSP to recommended: cost price * 1.3
-                if product.price is None:
-                    messages.error(request, 'This product does not have a cost price set.')
+        product = get_object_or_404(All_Products, pk=pid)
+
+        if listing_action in ('hide', 'restore'):
+            currently_visible = getattr(product, 'is_visible_to_customers', True)
+            target_visible = (listing_action == 'restore')
+
+            if currently_visible == target_visible:
+                # Nothing to change
+                if target_visible:
+                    messages.info(request, f'"{product.name}" is already visible to customers.')
                 else:
-                    try:
-                        recommended = (product.price * Decimal('1.30')).quantize(Decimal('0.01'))
-                    except Exception:
-                        messages.error(request, 'Could not calculate a recommended RSP for this product.')
-                    else:
-                        product.rsp = recommended
-                        product.save(update_fields=['rsp'])
-                        messages.success(
-                            request,
-                            f'Set RSP for "{product.name}" to recommended �{recommended:.2f}.'
-                        )
+                    messages.info(request, f'"{product.name}" is already hidden from customers.')
             else:
-                if raw_rsp == '':
-                    # Blank input clears RSP back to NULL
-                    product.rsp = None
-                    product.save(update_fields=['rsp'])
-                    messages.success(request, f'Cleared RSP for "{product.name}".')
+                product.is_visible_to_customers = target_visible
+                product.save(update_fields=['is_visible_to_customers'])
+                if target_visible:
+                    messages.success(request, f'"{product.name}" has been restored to the customer listing.')
                 else:
-                    cleaned = raw_rsp.replace('�', '').replace(',', '').strip()
-                    try:
-                        new_value = Decimal(cleaned)
-                        if new_value < 0:
-                            raise InvalidOperation()
-                    except Exception:
-                        messages.error(request, 'Enter a valid non-negative number for RSP.')
+                    messages.success(request, f'"{product.name}" has been removed from the customer listing.')
+            return redirect('_product_management:missing_rsp')
+
+        if apply_recommended:
+            # Set RSP to recommended: cost price * 1.3
+            if product.price is None:
+                messages.error(request, 'This product does not have a cost price set.')
+            else:
+                try:
+                    recommended = (product.price * Decimal('1.30')).quantize(Decimal('0.01'))
+                except Exception:
+                    messages.error(request, 'Could not calculate a recommended RSP for this product.')
+                else:
+                    product.rsp = recommended
+                    product.save(update_fields=['rsp'])
+                    messages.success(
+                        request,
+                        f'Set RSP for "{product.name}" to recommended �{recommended:.2f}.'
+                    )
+        else:
+            if raw_rsp == '':
+                # Blank input clears RSP back to NULL
+                product.rsp = None
+                product.save(update_fields=['rsp'])
+                messages.success(request, f'Cleared RSP for "{product.name}".')
+            else:
+                cleaned = raw_rsp.replace('�', '').replace(',', '').strip()
+                try:
+                    new_value = Decimal(cleaned)
+                    if new_value < 0:
+                        raise InvalidOperation()
+                except Exception:
+                    messages.error(request, 'Enter a valid non-negative number for RSP.')
+                else:
+                    if product.rsp != new_value:
+                        product.rsp = new_value
+                        product.save(update_fields=['rsp'])
+                        messages.success(request, f'Updated RSP for "{product.name}" to �{new_value:.2f}.')
                     else:
-                        if product.rsp != new_value:
-                            product.rsp = new_value
-                            product.save(update_fields=['rsp'])
-                            messages.success(request, f'Updated RSP for "{product.name}" to �{new_value:.2f}.')
-                        else:
-                            messages.info(request, 'No change to RSP detected.')
+                        messages.info(request, 'No change to RSP detected.')
 
         # Redirect to avoid double-post if user refreshes
         return redirect('_product_management:missing_rsp')
