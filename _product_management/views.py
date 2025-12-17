@@ -136,8 +136,9 @@ def _render_png_playwright(html: str, request) -> bytes:
     from playwright.sync_api import sync_playwright  # type: ignore
 
     html = _prepare_playwright_html(html, request)
-    width_mm = 99
-    height_mm = 210
+    # DL leaflet document including bleed (trim 99x210mm with 3mm bleed)
+    width_mm = 105
+    height_mm = 216
     dpi = 144
     width_px = int(round((width_mm / 25.4) * dpi))
     height_px = int(round((height_mm / 25.4) * dpi))
