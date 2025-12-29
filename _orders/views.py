@@ -186,8 +186,8 @@ def delivery_slots_view(request):
 
             if not dd:
                 messages.error(request, "Invalid delivery date format.")
-            elif dd < today:
-                messages.error(request, "Delivery date cannot be in the past.")
+            elif dd <= today:
+                messages.error(request, "Delivery date cannot be today or in the past.")
             elif dd > max_date:
                 messages.error(request, "Delivery date cannot be more than 2 weeks from today.")
             else:
