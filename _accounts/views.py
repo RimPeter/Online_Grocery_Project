@@ -98,6 +98,38 @@ def login_view(request):
                 request.session.set_expiry(60 * 60 * 24 * 14)  # 14 days
             else:
                 request.session.set_expiry(0)  # browser session
+
+            # If the user has a pending order but the session cart is empty (common after login),
+            # restore the session cart so the cart page/dropdown reflects their pending items.
+            try:
+                cart = request.session.get('cart', {}) or {}
+                if not isinstance(cart, dict):
+                    cart = {}
+                if not cart and not request.session.get('cart_skip_restore_from_pending', False):
+                    from _orders.models import Order  # local import to avoid circular deps
+
+                    pending = (
+                        Order.objects
+                        .filter(user=user, status='pending')
+                        .order_by('-created_at')
+                        .first()
+                    )
+                    if pending is not None:
+                        items = list(pending.items.all())
+                        if items:
+                            restored = {}
+                            for it in items:
+                                try:
+                                    qty = int(it.quantity)
+                                except (TypeError, ValueError):
+                                    qty = 0
+                                if qty > 0:
+                                    restored[str(it.product_id)] = qty
+                            if restored:
+                                request.session['cart'] = restored
+            except Exception:
+                pass
+
             logger.info('login success', extra={
                 'user_id': user.id,
                 'ip': request.META.get('REMOTE_ADDR'),

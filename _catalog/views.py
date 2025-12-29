@@ -774,7 +774,14 @@ def cart_view(request):
     Also, synchronizes the pending order items with the session cart.
     """
     # Get the cart from session (or use an empty dict if not found)
-    cart = request.session.get('cart', {})
+    cart = request.session.get('cart', {}) or {}
+    if not isinstance(cart, dict):
+        cart = {}
+
+    # If the user just emptied the cart via update_cart, don't auto-restore it.
+    skip_restore_from_pending = bool(
+        request.session.pop('cart_skip_restore_from_pending', False)
+    )
 
     # Fetch all pending orders for the user, ordered by newest first.
     pending_orders = Order.objects.filter(user=request.user, status='pending').order_by('-created_at')
@@ -789,11 +796,39 @@ def cart_view(request):
         order = Order.objects.create(user=request.user, status='pending')
         created_new = True
 
-    # Build cart items and calculate the total price from session data.
+    restored_from_order = False
+
+    # If the session cart is empty but the user already has a pending order,
+    # restore the session cart from the pending order so items show up after login.
+    if (not cart) and (not created_new) and (not skip_restore_from_pending):
+        existing_items = list(order.items.select_related('product').all())
+        if existing_items:
+            cart = {str(it.product_id): int(it.quantity) for it in existing_items}
+            request.session['cart'] = cart
+            restored_from_order = True
+
+    # Build cart items and calculate the total price.
     cart_items = []
     total_price = Decimal('0.00')
     products_by_id = {}
-    if cart:
+    if restored_from_order:
+        for item in order.items.select_related('product').all():
+            try:
+                qty = int(item.quantity)
+            except (TypeError, ValueError):
+                qty = 0
+            if qty <= 0:
+                continue
+            unit_price = Decimal(str(item.price))
+            item_total = unit_price * qty
+            total_price += item_total
+            cart_items.append({
+                'product': item.product,
+                'quantity': qty,
+                'unit_price': unit_price,
+                'item_total': item_total,
+            })
+    elif cart:
         product_ids = list(cart.keys())
         products = All_Products.objects.filter(pk__in=product_ids)
         products_by_id = {str(p.pk): p for p in products}
@@ -821,12 +856,16 @@ def cart_view(request):
                 })
 
     # Synchronize the pending order with the session cart.
-    # Remove any existing order items...
-    order.items.all().delete()
-    # ...and recreate them from the current cart.
-    for pid, quantity in cart.items():
-        product = products_by_id.get(str(pid))
-        if product:
+    # Only do this when the session cart is the source of truth (i.e. we didn't just restore it),
+    # or when the user explicitly emptied the cart.
+    if (not restored_from_order) and (cart or created_new or skip_restore_from_pending):
+        # Remove any existing order items...
+        order.items.all().delete()
+        # ...and recreate them from the current cart.
+        for pid, quantity in cart.items():
+            product = products_by_id.get(str(pid))
+            if not product:
+                continue
             base_unit = product.rsp if (product.rsp is not None and product.rsp > 0) else product.price
             price_dec = Decimal(str(base_unit))
             try:
@@ -926,6 +965,9 @@ def update_cart(request):
 
         # Save the updated cart back to the session
         request.session['cart'] = cart
+        if not cart:
+            # Prevent cart_view from restoring a pending order right after the user empties the cart.
+            request.session['cart_skip_restore_from_pending'] = True
 
     return redirect('cart_view')
 
