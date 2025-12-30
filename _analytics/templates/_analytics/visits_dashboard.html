@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+
+{% block title %}Visits Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+  <div>
+    <h2 class="mb-0">Visits Dashboard</h2>
+    <div class="text-muted small">Session-based visits (staff only)</div>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <label for="daysSelect" class="form-label mb-0">Range</label>
+    <select id="daysSelect" class="form-select form-select-sm" style="width: 8rem;">
+      <option value="7">Last 7 days</option>
+      <option value="30">Last 30 days</option>
+      <option value="90">Last 90 days</option>
+      <option value="365">Last 365 days</option>
+    </select>
+    <button id="refreshBtn" type="button" class="btn btn-sm btn-primary">Refresh</button>
+  </div>
+</div>
+
+<div class="row g-3 mt-1">
+  <div class="col-12 col-md-3">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="text-muted small">Total visits</div>
+        <div id="totalVisits" class="fs-3 fw-semibold">—</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-md-3">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="text-muted small">Today</div>
+        <div id="todayVisits" class="fs-3 fw-semibold">—</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-md-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between">
+          <div class="text-muted small">Visits per day</div>
+          <div id="statusText" class="text-muted small"></div>
+        </div>
+        <div class="mt-2" style="height: 260px;">
+          <canvas id="visitsChart" style="width: 100%; height: 100%;"></canvas>
+        </div>
+        <div id="errorBox" class="alert alert-danger mt-3 d-none mb-0"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-3">
+  <div class="card-body">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <div class="text-muted small">Daily breakdown</div>
+      <button id="downloadCsvBtn" type="button" class="btn btn-sm btn-outline-secondary">Download CSV</button>
+    </div>
+    <div class="table-responsive mt-2">
+      <table class="table table-sm table-striped align-middle mb-0">
+        <thead>
+          <tr>
+            <th scope="col">Day</th>
+            <th scope="col" class="text-end">Visits</th>
+          </tr>
+        </thead>
+        <tbody id="perDayRows">
+          <tr><td colspan="2" class="text-muted">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script id="analyticsConfig" type="application/json">
+  {"defaultDays": {{ default_days|default:30 }}, "summaryUrl": "{{ visits_summary_url }}"}
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    const configEl = document.getElementById("analyticsConfig");
+    const config = JSON.parse(configEl.textContent);
+
+    const daysSelect = document.getElementById("daysSelect");
+    const refreshBtn = document.getElementById("refreshBtn");
+    const totalVisitsEl = document.getElementById("totalVisits");
+    const todayVisitsEl = document.getElementById("todayVisits");
+    const statusTextEl = document.getElementById("statusText");
+    const perDayRowsEl = document.getElementById("perDayRows");
+    const errorBoxEl = document.getElementById("errorBox");
+    const downloadCsvBtn = document.getElementById("downloadCsvBtn");
+    const canvas = document.getElementById("visitsChart");
+
+    let lastData = null;
+
+    function setStatus(text) {
+      statusTextEl.textContent = text || "";
+    }
+
+    function showError(message) {
+      errorBoxEl.textContent = message;
+      errorBoxEl.classList.remove("d-none");
+    }
+
+    function clearError() {
+      errorBoxEl.textContent = "";
+      errorBoxEl.classList.add("d-none");
+    }
+
+    function toCsv(rows) {
+      const header = ["day", "visits"];
+      const lines = [header.join(",")];
+      for (const r of rows) {
+        lines.push([r.day, r.visits].join(","));
+      }
+      return lines.join("\n");
+    }
+
+    function downloadCsv(filename, csvText) {
+      const blob = new Blob([csvText], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function setTable(perDay) {
+      if (!perDay || perDay.length === 0) {
+        perDayRowsEl.innerHTML = '<tr><td colspan="2" class="text-muted">No data</td></tr>';
+        return;
+      }
+      perDayRowsEl.innerHTML = perDay
+        .map((r) => {
+          const day = String(r.day || "");
+          const visits = Number(r.visits || 0);
+          return `<tr><td>${day}</td><td class="text-end">${visits}</td></tr>`;
+        })
+        .join("");
+    }
+
+    function resizeCanvasToDisplaySize(canvas, ctx) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      const width = Math.max(10, Math.floor(rect.width * dpr));
+      const height = Math.max(10, Math.floor(rect.height * dpr));
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.scale(dpr, dpr);
+      }
+      return { width: rect.width, height: rect.height };
+    }
+
+    function drawLineChart(canvas, labels, values) {
+      const ctx = canvas.getContext("2d");
+      const size = resizeCanvasToDisplaySize(canvas, ctx);
+      const w = size.width;
+      const h = size.height;
+
+      ctx.clearRect(0, 0, w, h);
+
+      if (!values || values.length === 0) {
+        ctx.fillStyle = "#6c757d";
+        ctx.font = "14px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+        ctx.fillText("No data", 10, 24);
+        return;
+      }
+
+      const padding = { left: 48, right: 16, top: 12, bottom: 28 };
+      const chartW = Math.max(10, w - padding.left - padding.right);
+      const chartH = Math.max(10, h - padding.top - padding.bottom);
+
+      const maxVal = Math.max(1, ...values.map((v) => Number(v) || 0));
+      const ticks = 4;
+      const tickStep = Math.ceil(maxVal / ticks);
+      const yMax = tickStep * ticks;
+
+      function xFor(i) {
+        if (values.length === 1) return padding.left + chartW / 2;
+        return padding.left + (i / (values.length - 1)) * chartW;
+      }
+      function yFor(v) {
+        const vv = Number(v) || 0;
+        return padding.top + (1 - vv / yMax) * chartH;
+      }
+
+      ctx.strokeStyle = "rgba(0,0,0,0.08)";
+      ctx.lineWidth = 1;
+      ctx.fillStyle = "#6c757d";
+      ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+
+      for (let t = 0; t <= ticks; t++) {
+        const yValue = t * tickStep;
+        const y = yFor(yValue);
+        ctx.beginPath();
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(padding.left + chartW, y);
+        ctx.stroke();
+        ctx.fillText(String(yValue), 8, y + 4);
+      }
+
+      ctx.beginPath();
+      values.forEach((v, i) => {
+        const x = xFor(i);
+        const y = yFor(v);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = "rgba(13,110,253,0.95)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.lineTo(xFor(values.length - 1), padding.top + chartH);
+      ctx.lineTo(xFor(0), padding.top + chartH);
+      ctx.closePath();
+      ctx.fillStyle = "rgba(13,110,253,0.12)";
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(13,110,253,0.95)";
+      values.forEach((v, i) => {
+        const x = xFor(i);
+        const y = yFor(v);
+        ctx.beginPath();
+        ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      const labelEvery = Math.ceil(values.length / 6);
+      ctx.fillStyle = "#6c757d";
+      ctx.textAlign = "center";
+      for (let i = 0; i < labels.length; i += labelEvery) {
+        const x = xFor(i);
+        const label = String(labels[i] || "");
+        ctx.fillText(label, x, padding.top + chartH + 18);
+      }
+      ctx.textAlign = "start";
+    }
+
+    async function load() {
+      clearError();
+      setStatus("Loading…");
+
+      const days = Number(daysSelect.value || config.defaultDays || 30);
+      const url = `${config.summaryUrl}?days=${encodeURIComponent(days)}`;
+
+      try {
+        const res = await fetch(url, { headers: { "Accept": "application/json" }, cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        lastData = data;
+
+        totalVisitsEl.textContent = String(data.total_visits ?? "—");
+        todayVisitsEl.textContent = String(data.today_visits ?? "—");
+
+        const perDay = Array.isArray(data.per_day) ? data.per_day : [];
+        const labels = perDay.map((r) => String(r.day || ""));
+        const values = perDay.map((r) => Number(r.visits || 0));
+
+        setTable(perDay);
+        drawLineChart(canvas, labels, values);
+        setStatus("");
+      } catch (e) {
+        setStatus("");
+        showError(`Failed to load analytics data: ${e && e.message ? e.message : e}`);
+        perDayRowsEl.innerHTML = '<tr><td colspan="2" class="text-muted">No data</td></tr>';
+        drawLineChart(canvas, [], []);
+      }
+    }
+
+    function init() {
+      const initialDays = Number(config.defaultDays || 30);
+      daysSelect.value = String(initialDays);
+      refreshBtn.addEventListener("click", load);
+      daysSelect.addEventListener("change", load);
+      downloadCsvBtn.addEventListener("click", function () {
+        if (!lastData || !Array.isArray(lastData.per_day)) return;
+        const days = Number(daysSelect.value || initialDays);
+        const csv = toCsv(lastData.per_day.map((r) => ({ day: String(r.day || ""), visits: Number(r.visits || 0) })));
+        downloadCsv(`visits_last_${days}_days.csv`, csv);
+      });
+
+      window.addEventListener("resize", function () {
+        if (!lastData || !Array.isArray(lastData.per_day)) return;
+        const labels = lastData.per_day.map((r) => String(r.day || ""));
+        const values = lastData.per_day.map((r) => Number(r.visits || 0));
+        drawLineChart(canvas, labels, values);
+      });
+
+      load();
+    }
+
+    init();
+  })();
+</script>
+{% endblock %}
+
