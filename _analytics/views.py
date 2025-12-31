@@ -40,6 +40,35 @@ def visits_summary(request):
 
 
 @staff_member_required
+def visits_page_daily(request):
+    path = (request.GET.get('path') or '').strip()
+    if not path.startswith('/'):
+        return JsonResponse({'error': 'Invalid path'}, status=400)
+
+    days = int(request.GET.get('days', '30'))
+    days = max(1, min(days, 3650))
+    since = timezone.now() - timedelta(days=days)
+
+    qs = Visit.objects.filter(started_at__gte=since, landing_path=path)
+    per_day = (
+        qs.annotate(day=TruncDate('started_at'))
+        .values('day')
+        .annotate(visits=Count('id'))
+        .order_by('day')
+    )
+
+    return JsonResponse(
+        {
+            'path': path,
+            'days': days,
+            'since': since.isoformat(),
+            'total_visits': qs.count(),
+            'per_day': list(per_day),
+        }
+    )
+
+
+@staff_member_required
 def visits_pages_summary(request):
     today = timezone.localdate()
     this_week_start = today - timedelta(days=today.weekday())
@@ -83,5 +112,6 @@ def visits_dashboard(request):
             'default_days': days,
             'visits_summary_url': reverse('visits_summary'),
             'visits_pages_summary_url': reverse('visits_pages_summary'),
+            'visits_page_daily_url': reverse('visits_page_daily'),
         },
     )

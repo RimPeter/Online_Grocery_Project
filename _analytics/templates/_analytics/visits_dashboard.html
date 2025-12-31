@@ -20,6 +20,18 @@
   </div>
 </div>
 
+<div class="card mt-3">
+  <div class="card-body">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <div class="text-muted small">Visits per day for /</div>
+      <div id="homeStatusText" class="text-muted small"></div>
+    </div>
+    <div class="mt-2" style="height: 220px;">
+      <canvas id="homeVisitsChart" style="width: 100%; height: 100%;"></canvas>
+    </div>
+  </div>
+</div>
+
 <div class="row g-3 mt-1">
   <div class="col-12 col-md-3">
     <div class="card h-100">
@@ -117,7 +129,7 @@
 </div>
 
 <script id="analyticsConfig" type="application/json">
-  {"defaultDays": {{ default_days|default:30 }}, "summaryUrl": "{{ visits_summary_url }}", "pagesUrl": "{{ visits_pages_summary_url }}"}
+  {"defaultDays": {{ default_days|default:30 }}, "summaryUrl": "{{ visits_summary_url }}", "pagesUrl": "{{ visits_pages_summary_url }}", "pageDailyUrl": "{{ visits_page_daily_url }}"}
 </script>
 {% endblock %}
 
@@ -129,6 +141,8 @@
 
     const daysSelect = document.getElementById("daysSelect");
     const refreshBtn = document.getElementById("refreshBtn");
+    const homeStatusTextEl = document.getElementById("homeStatusText");
+    const homeCanvas = document.getElementById("homeVisitsChart");
     const totalVisitsEl = document.getElementById("totalVisits");
     const todayVisitsEl = document.getElementById("todayVisits");
     const avgVisitsPerDayEl = document.getElementById("avgVisitsPerDay");
@@ -141,9 +155,15 @@
     const canvas = document.getElementById("visitsChart");
 
     let lastData = null;
+    let lastHomePerDay = null;
 
     function setStatus(text) {
       statusTextEl.textContent = text || "";
+    }
+
+    function setHomeStatus(text) {
+      if (!homeStatusTextEl) return;
+      homeStatusTextEl.textContent = text || "";
     }
 
     function setPagesStatus(text) {
@@ -333,11 +353,18 @@
     async function load() {
       clearError();
       setStatus("Loading…");
+      setHomeStatus("Loading…");
       setPagesStatus("Loading…");
 
       const days = Number(daysSelect.value || config.defaultDays || 30);
       const url = `${config.summaryUrl}?days=${encodeURIComponent(days)}`;
       const summaryPromise = fetch(url, { headers: { "Accept": "application/json" }, cache: "no-store" });
+      const homePromise = config.pageDailyUrl
+        ? fetch(
+            `${config.pageDailyUrl}?days=${encodeURIComponent(days)}&path=${encodeURIComponent("/")}`,
+            { headers: { "Accept": "application/json" }, cache: "no-store" }
+          )
+        : Promise.resolve(null);
       const pagesPromise = config.pagesUrl
         ? fetch(config.pagesUrl, { headers: { "Accept": "application/json" }, cache: "no-store" })
         : Promise.resolve(null);
@@ -370,6 +397,25 @@
         if (avgVisitsPerDayEl) avgVisitsPerDayEl.textContent = "—";
         perDayRowsEl.innerHTML = '<tr><td colspan="2" class="text-muted">No data</td></tr>';
         drawLineChart(canvas, [], []);
+      }
+
+      try {
+        const homeRes = await homePromise;
+        if (!homeRes) {
+          setHomeStatus("");
+        } else {
+          if (!homeRes.ok) throw new Error(`HTTP ${homeRes.status}`);
+          const homeData = await homeRes.json();
+          const perDay = Array.isArray(homeData.per_day) ? homeData.per_day : [];
+          lastHomePerDay = perDay;
+          const labels = perDay.map((r) => String(r.day || ""));
+          const values = perDay.map((r) => Number(r.visits || 0));
+          if (homeCanvas) drawLineChart(homeCanvas, labels, values);
+          setHomeStatus("");
+        }
+      } catch (e) {
+        setHomeStatus("Failed to load");
+        if (homeCanvas) drawLineChart(homeCanvas, [], []);
       }
 
       try {
@@ -406,6 +452,12 @@
         const labels = lastData.per_day.map((r) => String(r.day || ""));
         const values = lastData.per_day.map((r) => Number(r.visits || 0));
         drawLineChart(canvas, labels, values);
+
+        if (homeCanvas && Array.isArray(lastHomePerDay)) {
+          const homeLabels = lastHomePerDay.map((r) => String(r.day || ""));
+          const homeValues = lastHomePerDay.map((r) => Number(r.visits || 0));
+          drawLineChart(homeCanvas, homeLabels, homeValues);
+        }
       });
 
       load();
