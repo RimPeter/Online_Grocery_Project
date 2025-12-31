@@ -24,8 +24,21 @@
   <div class="col-12 col-md-3">
     <div class="card h-100">
       <div class="card-body">
-        <div class="text-muted small">Total visits</div>
-        <div id="totalVisits" class="fs-3 fw-semibold">—</div>
+        <div class="text-muted small mb-2">Total visits</div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <tbody>
+              <tr>
+                <th scope="row" class="fw-normal">Total</th>
+                <td id="totalVisits" class="text-end fs-4 fw-semibold">—</td>
+              </tr>
+              <tr>
+                <th scope="row" class="fw-normal">Avg / day</th>
+                <td id="avgVisitsPerDay" class="text-end">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -56,7 +69,7 @@
 <div class="card mt-3">
   <div class="card-body">
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-      <div class="text-muted small">Daily breakdown</div>
+      <div class="text-muted small">Visits per day</div>
       <button id="downloadCsvBtn" type="button" class="btn btn-sm btn-outline-secondary">Download CSV</button>
     </div>
     <div class="table-responsive mt-2">
@@ -75,8 +88,36 @@
   </div>
 </div>
 
+<div class="card mt-3">
+  <div class="card-body">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <div>
+        <div class="text-muted small">HTML pages (tracked by landing path)</div>
+        <div class="text-muted small">Total, last week, this week, today</div>
+      </div>
+      <div id="pagesStatusText" class="text-muted small"></div>
+    </div>
+    <div class="table-responsive mt-2">
+      <table class="table table-sm table-striped align-middle mb-0">
+        <thead>
+          <tr>
+            <th scope="col">HTML</th>
+            <th scope="col" class="text-end">Total visits</th>
+            <th scope="col" class="text-end">Last week</th>
+            <th scope="col" class="text-end">This week</th>
+            <th scope="col" class="text-end">Today</th>
+          </tr>
+        </thead>
+        <tbody id="pageStatsRows">
+          <tr><td colspan="5" class="text-muted">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <script id="analyticsConfig" type="application/json">
-  {"defaultDays": {{ default_days|default:30 }}, "summaryUrl": "{{ visits_summary_url }}"}
+  {"defaultDays": {{ default_days|default:30 }}, "summaryUrl": "{{ visits_summary_url }}", "pagesUrl": "{{ visits_pages_summary_url }}"}
 </script>
 {% endblock %}
 
@@ -90,8 +131,11 @@
     const refreshBtn = document.getElementById("refreshBtn");
     const totalVisitsEl = document.getElementById("totalVisits");
     const todayVisitsEl = document.getElementById("todayVisits");
+    const avgVisitsPerDayEl = document.getElementById("avgVisitsPerDay");
     const statusTextEl = document.getElementById("statusText");
     const perDayRowsEl = document.getElementById("perDayRows");
+    const pagesStatusTextEl = document.getElementById("pagesStatusText");
+    const pageStatsRowsEl = document.getElementById("pageStatsRows");
     const errorBoxEl = document.getElementById("errorBox");
     const downloadCsvBtn = document.getElementById("downloadCsvBtn");
     const canvas = document.getElementById("visitsChart");
@@ -100,6 +144,11 @@
 
     function setStatus(text) {
       statusTextEl.textContent = text || "";
+    }
+
+    function setPagesStatus(text) {
+      if (!pagesStatusTextEl) return;
+      pagesStatusTextEl.textContent = text || "";
     }
 
     function showError(message) {
@@ -143,6 +192,41 @@
           const day = String(r.day || "");
           const visits = Number(r.visits || 0);
           return `<tr><td>${day}</td><td class="text-end">${visits}</td></tr>`;
+        })
+        .join("");
+    }
+
+    function escapeHtml(text) {
+      return String(text || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function setPagesTable(pages) {
+      if (!pageStatsRowsEl) return;
+      if (!pages || pages.length === 0) {
+        pageStatsRowsEl.innerHTML = '<tr><td colspan="5" class="text-muted">No data</td></tr>';
+        return;
+      }
+      pageStatsRowsEl.innerHTML = pages
+        .map((p) => {
+          const path = String(p.landing_path || "");
+          const total = Number(p.total_visits || 0);
+          const lastWeek = Number(p.last_week_visits || 0);
+          const thisWeek = Number(p.this_week_visits || 0);
+          const today = Number(p.today_visits || 0);
+          const safeText = escapeHtml(path);
+          const href = escapeHtml(encodeURI(path));
+          return `<tr>
+            <td class="text-truncate" style="max-width: 420px;"><a href="${href}">${safeText}</a></td>
+            <td class="text-end">${total}</td>
+            <td class="text-end">${lastWeek}</td>
+            <td class="text-end">${thisWeek}</td>
+            <td class="text-end">${today}</td>
+          </tr>`;
         })
         .join("");
     }
@@ -249,18 +333,29 @@
     async function load() {
       clearError();
       setStatus("Loading…");
+      setPagesStatus("Loading…");
 
       const days = Number(daysSelect.value || config.defaultDays || 30);
       const url = `${config.summaryUrl}?days=${encodeURIComponent(days)}`;
+      const summaryPromise = fetch(url, { headers: { "Accept": "application/json" }, cache: "no-store" });
+      const pagesPromise = config.pagesUrl
+        ? fetch(config.pagesUrl, { headers: { "Accept": "application/json" }, cache: "no-store" })
+        : Promise.resolve(null);
 
       try {
-        const res = await fetch(url, { headers: { "Accept": "application/json" }, cache: "no-store" });
+        const res = await summaryPromise;
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         lastData = data;
 
         totalVisitsEl.textContent = String(data.total_visits ?? "—");
         todayVisitsEl.textContent = String(data.today_visits ?? "—");
+        if (avgVisitsPerDayEl) {
+          const total = Number(data.total_visits || 0);
+          const dayCount = Number(data.days || 0);
+          const avg = dayCount > 0 ? total / dayCount : 0;
+          avgVisitsPerDayEl.textContent = dayCount > 0 ? String(Math.round(avg * 10) / 10) : "—";
+        }
 
         const perDay = Array.isArray(data.per_day) ? data.per_day : [];
         const labels = perDay.map((r) => String(r.day || ""));
@@ -272,8 +367,25 @@
       } catch (e) {
         setStatus("");
         showError(`Failed to load analytics data: ${e && e.message ? e.message : e}`);
+        if (avgVisitsPerDayEl) avgVisitsPerDayEl.textContent = "—";
         perDayRowsEl.innerHTML = '<tr><td colspan="2" class="text-muted">No data</td></tr>';
         drawLineChart(canvas, [], []);
+      }
+
+      try {
+        const pagesRes = await pagesPromise;
+        if (!pagesRes) {
+          setPagesStatus("");
+          return;
+        }
+        if (!pagesRes.ok) throw new Error(`HTTP ${pagesRes.status}`);
+        const pagesData = await pagesRes.json();
+        const pages = Array.isArray(pagesData.pages) ? pagesData.pages : [];
+        setPagesTable(pages);
+        setPagesStatus("");
+      } catch (e) {
+        setPagesStatus("Failed to load");
+        if (pageStatsRowsEl) pageStatsRowsEl.innerHTML = '<tr><td colspan="5" class="text-muted">No data</td></tr>';
       }
     }
 
@@ -303,4 +415,3 @@
   })();
 </script>
 {% endblock %}
-
