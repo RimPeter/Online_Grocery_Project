@@ -92,27 +92,6 @@
     "Nestle": "https://www.bestwaywholesale.co.uk/confectionery/291",
     "Sugar": "https://www.bestwaywholesale.co.uk/confectionery/351"
   },
-  "Beers, Wines & Spirits": {
-    "Beer": "https://www.bestwaywholesale.co.uk/beers-wines-spirits/791",
-    "Beer/Lager/Ale Low/No Alcohol": "https://www.bestwaywholesale.co.uk/beers-wines-spirits/825",
-    "Cider": "https://www.bestwaywholesale.co.uk/beers-wines-spirits/801",
-    "Lager": "https://www.bestwaywholesale.co.uk/beers-wines-spirits/781",
-    "Perrys": "https://www.bestwaywholesale.co.uk/beers-wines-spirits/821",
-    "Red Wine": "https://www.bestwaywholesale.co.uk/beers-wines-spirits/751",
-    "Rose Wine": "https://www.bestwaywholesale.co.uk/beers-wines-spirits/755",
-    "RTD Alcohols": "https://www.bestwaywholesale.co.uk/beers-wines-spirits/811",
-    "Spirits & Fortified Wine": "https://www.bestwaywholesale.co.uk/beers-wines-spirits/741",
-    "White Wine": "https://www.bestwaywholesale.co.uk/beers-wines-spirits/761"
-  },
-  "Cigarettes & Tobacco": {
-    "Cigarettes": "https://www.bestwaywholesale.co.uk/cigarettes-tobacco/cigarettes",
-    "Cigars": "https://www.bestwaywholesale.co.uk/cigarettes-tobacco/cigars",
-    "Heat Not Burn": "https://www.bestwaywholesale.co.uk/cigarettes-tobacco/heat-not-burn",
-    "Others": "https://www.bestwaywholesale.co.uk/cigarettes-tobacco/others",
-    "Roll Your Own": "https://www.bestwaywholesale.co.uk/cigarettes-tobacco/roll-your-own",
-    "Smoker Accessories": "https://www.bestwaywholesale.co.uk/cigarettes-tobacco/smoker-accessories",
-    "Vaping/E-Cigarettes": "https://www.bestwaywholesale.co.uk/cigarettes-tobacco/vaping-e-cigarettes"
-  },
   "Non Food, Paper & Disposables": {
     "Disposables": "https://www.bestwaywholesale.co.uk/non-food/971",
     "Non Foods": "https://www.bestwaywholesale.co.uk/non-food/951",
