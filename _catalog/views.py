@@ -18,6 +18,7 @@ from pathlib import Path
 from django.urls import reverse
 from decimal import Decimal, InvalidOperation
 from django.utils.http import url_has_allowed_host_and_scheme
+from urllib.parse import urlencode
 
 try:
     from django.contrib.postgres.search import TrigramSimilarity
@@ -590,6 +591,12 @@ def product_list(request):
     query = (request.GET.get('q') or '').strip()
     l1 = (request.GET.get('l1') or '').strip()
     l2 = (request.GET.get('l2') or '').strip()
+    page = (request.GET.get('page') or '').strip()
+
+    # Default category selection when landing on /products with no filters.
+    if not (query or l1 or l2 or page):
+        params = urlencode({'l1': 'Bread and Morning Goods', 'l2': 'Bread'})
+        return redirect(f"{reverse('product_list')}?{params}")
 
     # Superusers see all products; customers see only visible ones
     if request.user.is_superuser:
