@@ -18,7 +18,7 @@ class Payment(models.Model):
     )
     order = models.ForeignKey(Order, on_delete=models.CASCADE, null=True, blank=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    currency = models.CharField(max_length=3, default='usd')
+    currency = models.CharField(max_length=3, default='gbp')
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,

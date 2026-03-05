@@ -1,5 +1,6 @@
 # _payments/views.py
 import stripe
+import logging
 from django.shortcuts import render, redirect
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -11,10 +12,10 @@ from _catalog.models import All_Products
 from _orders.models import Order, OrderItem
 from .models import Payment
 
+logger = logging.getLogger(__name__)
+
 @login_required
 def checkout_view(request, order_id):
-    stripe.api_key = settings.STRIPE_SECRET_KEY
-
     # Use the order_id provided by the URL to retrieve the order.
     try:
         order = Order.objects.get(id=order_id, user=request.user, status='pending')
@@ -63,18 +64,21 @@ def checkout_view(request, order_id):
         order.save()
         print(f"Recalculated order total: {order.total}")
 
+    stripe_currency = (getattr(settings, "STRIPE_CURRENCY", "gbp") or "gbp").strip().lower()
+
     # Create or update Payment record
     payment, created = Payment.objects.get_or_create(
         user=request.user,
         order=order,
         defaults={
             'amount': order.total,
-            'currency': 'usd',
+            'currency': stripe_currency,
             'status': 'created',
         }
     )
     if not created:
         payment.amount = order.total
+        payment.currency = stripe_currency
         payment.save()
 
     # Calculate amount in cents (using proper rounding if needed)
@@ -87,14 +91,35 @@ def checkout_view(request, order_id):
         messages.error(request, "Order total is too low to process payment. Please add more items.")
         return redirect('cart_view')
 
-    intent = stripe.PaymentIntent.create(
-        amount=amount_in_cents,
-        currency='usd',
-        metadata={
-            'payment_id': payment.id,
-            'username': request.user.username,
-        },
-    )
+    stripe_secret_key = (settings.STRIPE_SECRET_KEY or "").strip()
+    stripe_public_key = (settings.STRIPE_PUBLIC_KEY or "").strip()
+    if not stripe_secret_key or not stripe_public_key:
+        messages.error(
+            request,
+            "Stripe is not configured. Set STRIPE_PUBLIC_KEY and STRIPE_SECRET_KEY in your environment."
+        )
+        return redirect('order_summery', order_id=order.id)
+
+    stripe.api_key = stripe_secret_key
+
+    try:
+        intent = stripe.PaymentIntent.create(
+            amount=amount_in_cents,
+            currency=stripe_currency,
+            metadata={
+                'payment_id': payment.id,
+                'username': request.user.username,
+            },
+        )
+    except stripe.error.StripeError as exc:
+        logger.exception(
+            "Stripe PaymentIntent.create failed for order_id=%s payment_id=%s",
+            order.id,
+            payment.id,
+        )
+        messages.error(request, f"Stripe error: {getattr(exc, 'user_message', str(exc))}")
+        return redirect('order_summery', order_id=order.id)
+
     payment.stripe_payment_intent_id = intent['id']
     payment.save()
 
@@ -102,7 +127,7 @@ def checkout_view(request, order_id):
 
     context = {
         'clientSecret': intent['client_secret'],
-        'STRIPE_PUBLIC_KEY': settings.STRIPE_PUBLIC_KEY,
+        'STRIPE_PUBLIC_KEY': stripe_public_key,
         'payment': payment,
         'success_url': success_url,
     }

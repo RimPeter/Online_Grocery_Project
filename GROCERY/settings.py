@@ -176,7 +176,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
     # Load .env
 try:
     from dotenv import load_dotenv  # pip install python-dotenv
-    load_dotenv(BASE_DIR / ".env")
+    # Ensure .env values win over local env.py defaults (e.g., Stripe keys).
+    load_dotenv(BASE_DIR / ".env", override=True)
 except Exception:
     pass  # optional: ignore if not installed
 
@@ -213,6 +214,7 @@ if not DEBUG:
 STRIPE_PUBLIC_KEY = os.getenv("STRIPE_PUBLIC_KEY")
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+STRIPE_CURRENCY = os.getenv("STRIPE_CURRENCY", "gbp").lower()
 
 # Leaflet PDF rendering configuration
 # Values: 'auto' (default), 'weasyprint', 'xhtml2pdf'
