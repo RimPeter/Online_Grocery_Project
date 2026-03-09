@@ -65,7 +65,10 @@
 .btn.time-window {
   border-color: #ffffff;
   color: #ffffff;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
+.btn.time-window:hover,
+.btn.time-window:focus-visible,
 .btn-check:checked + .btn.time-window {
   background-color: #ffffff;
   color: #0d6efd;
@@ -89,6 +92,12 @@
 .slot-card { transition: all .15s ease-in-out; }
 .slot-card:hover { transform: translateY(-2px); }
 
+/* Delivery section headings */
+.delivery-slot-label {
+  color: #fff;
+  font-weight: 600;
+}
+
 /* Delivery date tiles */
 .delivery-date-grid {
   display: grid;
@@ -105,10 +114,8 @@
   text-align: left;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
-.delivery-date-tile:hover {
-  border-color: #198754;
-  background: rgba(25, 135, 84, 0.15);
-}
+.delivery-date-tile:hover,
+.delivery-date-tile:focus-visible,
 .delivery-date-tile.active {
   border-color: #198754;
   background: rgba(25, 135, 84, 0.28);

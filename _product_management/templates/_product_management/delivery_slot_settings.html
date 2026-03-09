@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Delivery Slot Settings{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-12 col-xl-9">
+    <h1 class="mb-4">Delivery Slot Settings</h1>
+    <p class="text-muted mb-4">
+      Configure the delivery date range and delivery time window range used at checkout.
+    </p>
+
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}" role="alert">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+
+    <form method="post" class="vstack gap-4">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save_delivery_slot_settings">
+
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Delivery Date Range</h5>
+          <p class="text-muted mb-3">Set how many days from today are available for delivery booking.</p>
+
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label for="min_days_ahead" class="form-label">Earliest day offset</label>
+              <input
+                id="min_days_ahead"
+                name="min_days_ahead"
+                type="number"
+                min="0"
+                max="30"
+                class="form-control"
+                value="{{ min_days_ahead|default:1 }}"
+                required>
+              <div class="form-text">Use <code>1</code> to block same-day delivery.</div>
+            </div>
+
+            <div class="col-md-4">
+              <label for="max_days_ahead" class="form-label">Latest day offset</label>
+              <input
+                id="max_days_ahead"
+                name="max_days_ahead"
+                type="number"
+                min="1"
+                max="60"
+                class="form-control"
+                value="{{ max_days_ahead|default:14 }}"
+                required>
+              <div class="form-text">Common value: <code>14</code> days.</div>
+            </div>
+
+            <div class="col-md-4 d-flex align-items-end">
+              <div class="form-check mb-2">
+                <input
+                  id="allow_same_day"
+                  name="allow_same_day"
+                  class="form-check-input"
+                  type="checkbox"
+                  value="1"
+                  {% if allow_same_day %}checked{% endif %}>
+                <label class="form-check-label" for="allow_same_day">
+                  Allow same-day delivery
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div id="dateRangePreview" class="alert alert-light mt-3 mb-0 small">
+            Date range preview will appear here.
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Delivery Time Window Range</h5>
+          <p class="text-muted mb-3">
+            Control start-time range, step interval, and window duration used to generate selectable time slots.
+          </p>
+
+          <div class="row g-3">
+            <div class="col-md-3">
+              <label for="slot_start_time" class="form-label">First slot start</label>
+              <input
+                id="slot_start_time"
+                name="slot_start_time"
+                type="time"
+                class="form-control"
+                value="{{ slot_start_time|default:'09:00' }}"
+                required>
+            </div>
+
+            <div class="col-md-3">
+              <label for="slot_end_time" class="form-label">Last slot start</label>
+              <input
+                id="slot_end_time"
+                name="slot_end_time"
+                type="time"
+                class="form-control"
+                value="{{ slot_end_time|default:'19:00' }}"
+                required>
+            </div>
+
+            <div class="col-md-3">
+              <label for="slot_step_minutes" class="form-label">Step minutes</label>
+              <input
+                id="slot_step_minutes"
+                name="slot_step_minutes"
+                type="number"
+                min="15"
+                step="15"
+                class="form-control"
+                value="{{ slot_step_minutes|default:60 }}"
+                required>
+            </div>
+
+            <div class="col-md-3">
+              <label for="slot_duration_hours" class="form-label">Window duration (hours)</label>
+              <input
+                id="slot_duration_hours"
+                name="slot_duration_hours"
+                type="number"
+                min="1"
+                max="8"
+                class="form-control"
+                value="{{ slot_duration_hours|default:3 }}"
+                required>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <label for="generated_slots_preview" class="form-label">Generated slots preview</label>
+            <textarea id="generated_slots_preview" class="form-control font-monospace" rows="7" readonly></textarea>
+            <div class="form-text">Preview only. Generated slots should match checkout options after backend save logic is applied.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Save Delivery Slot Settings</button>
+        <a href="{% url '_product_management:commands' %}" class="btn btn-outline-secondary">Back to Commands</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    const minDaysEl = document.getElementById('min_days_ahead');
+    const maxDaysEl = document.getElementById('max_days_ahead');
+    const allowSameDayEl = document.getElementById('allow_same_day');
+    const dateRangePreviewEl = document.getElementById('dateRangePreview');
+
+    const startTimeEl = document.getElementById('slot_start_time');
+    const endTimeEl = document.getElementById('slot_end_time');
+    const stepMinutesEl = document.getElementById('slot_step_minutes');
+    const durationHoursEl = document.getElementById('slot_duration_hours');
+    const slotsPreviewEl = document.getElementById('generated_slots_preview');
+
+    if (!minDaysEl || !maxDaysEl || !allowSameDayEl || !dateRangePreviewEl) return;
+    if (!startTimeEl || !endTimeEl || !stepMinutesEl || !durationHoursEl || !slotsPreviewEl) return;
+
+    function parseTime(value) {
+      const parts = String(value || '').split(':');
+      if (parts.length !== 2) return NaN;
+      return (Number(parts[0]) * 60) + Number(parts[1]);
+    }
+
+    function addDays(dateObj, n) {
+      const d = new Date(dateObj);
+      d.setDate(d.getDate() + n);
+      return d;
+    }
+
+    function formatDate(d) {
+      return new Intl.DateTimeFormat('en-GB', {
+        weekday: 'short',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      }).format(d);
+    }
+
+    function format12(minutesFromMidnight) {
+      let h = Math.floor(minutesFromMidnight / 60);
+      const m = minutesFromMidnight % 60;
+      const suffix = h >= 12 ? 'pm' : 'am';
+      h = h % 12;
+      if (h === 0) h = 12;
+      if (m === 0) return String(h) + suffix;
+      return String(h) + ':' + String(m).padStart(2, '0') + suffix;
+    }
+
+    function renderDateRangePreview() {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const minDaysRaw = Number(minDaysEl.value || 0);
+      const maxDaysRaw = Number(maxDaysEl.value || 0);
+      const minDays = Math.max(0, minDaysRaw);
+      const sameDayAllowed = allowSameDayEl.checked;
+      const effectiveMin = sameDayAllowed ? minDays : Math.max(1, minDays);
+      const maxDays = Math.max(effectiveMin, maxDaysRaw);
+
+      const firstDate = addDays(today, effectiveMin);
+      const lastDate = addDays(today, maxDays);
+      dateRangePreviewEl.textContent = 'Customers can select delivery dates from ' +
+        formatDate(firstDate) + ' to ' + formatDate(lastDate) + '.';
+    }
+
+    function renderSlotsPreview() {
+      const startMins = parseTime(startTimeEl.value);
+      const endMins = parseTime(endTimeEl.value);
+      const step = Number(stepMinutesEl.value || 0);
+      const durationHours = Number(durationHoursEl.value || 0);
+      const durationMins = Math.round(durationHours * 60);
+
+      if (!Number.isFinite(startMins) || !Number.isFinite(endMins) || step <= 0 || durationMins <= 0) {
+        slotsPreviewEl.value = 'Invalid time settings.';
+        return;
+      }
+
+      if (endMins < startMins) {
+        slotsPreviewEl.value = 'Last slot start must be later than or equal to first slot start.';
+        return;
+      }
+
+      const lines = [];
+      let cursor = startMins;
+      let count = 0;
+      while (cursor <= endMins && count < 200) {
+        const end = cursor + durationMins;
+        lines.push(format12(cursor) + ' - ' + format12(end));
+        cursor += step;
+        count += 1;
+      }
+
+      slotsPreviewEl.value = lines.length ? lines.join('\n') : 'No slots generated.';
+    }
+
+    [minDaysEl, maxDaysEl, allowSameDayEl].forEach((el) => {
+      el.addEventListener('input', renderDateRangePreview);
+      el.addEventListener('change', renderDateRangePreview);
+    });
+    [startTimeEl, endTimeEl, stepMinutesEl, durationHoursEl].forEach((el) => {
+      el.addEventListener('input', renderSlotsPreview);
+      el.addEventListener('change', renderSlotsPreview);
+    });
+
+    renderDateRangePreview();
+    renderSlotsPreview();
+  })();
+</script>
+{% endblock %}

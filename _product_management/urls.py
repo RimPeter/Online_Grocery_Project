@@ -28,6 +28,7 @@ urlpatterns = [
     path("items-to-order/", views.items_to_order, name="items_to_order"),
     path("items-to-order.pdf", views.items_to_order_pdf, name="items_to_order_pdf"),
     path("orders/<int:order_id>/delivery/", views.set_delivery_slot, name="set_delivery_slot"),
+    path("delivery-slot-settings/", views.delivery_slot_settings, name="delivery_slot_settings"),
     path("commands/", views.commands, name="commands"),
     path("home-categories/", views.home_categories, name="home_categories"),
     path("missing-rsp/", views.missing_rsp, name="missing_rsp"),

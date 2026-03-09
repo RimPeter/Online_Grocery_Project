@@ -16,7 +16,7 @@ from datetime import date, timedelta
 from django.views.decorators.http import require_http_methods, require_POST
 import threading
 from _catalog.models import All_Products, HomeCategoryTile, HomeValuePillar, CategoryNodeSetting
-from .models import LeafletCopy, SubcategoryPipelineRun
+from .models import LeafletCopy, SubcategoryPipelineRun, DeliverySlotSettings
 from .constants import LEAFLET_TEXT_DEFAULTS
 from _orders.models import Order, OrderItem
 from django.contrib import messages
@@ -1187,8 +1187,21 @@ def items_to_order_pdf(request):
 @staff_or_superuser_required
 def set_delivery_slot(request, order_id: int):
     order = get_object_or_404(Order.objects.select_related('user'), id=order_id)
+    slot_settings = DeliverySlotSettings.get_solo()
+
     today = date.today()
-    max_date = today + timedelta(days=14)
+    min_date = today + timedelta(days=slot_settings.effective_min_days_ahead())
+    max_date = today + timedelta(days=slot_settings.effective_max_days_ahead())
+    slot_options = slot_settings.build_time_slot_options()
+    valid_slot_values = {slot["value"] for slot in slot_options}
+
+    if not slot_options:
+        messages.error(
+            request,
+            "Delivery time window settings are invalid. Please update Delivery Slot Settings first."
+        )
+
+    min_date_str = min_date.strftime('%Y-%m-%d')
     max_date_str = max_date.strftime('%Y-%m-%d')
 
     if request.method == 'POST':
@@ -1205,10 +1218,12 @@ def set_delivery_slot(request, order_id: int):
                 dd = None
             if not dd:
                 messages.error(request, 'Invalid delivery date.')
-            elif dd < today:
-                messages.error(request, 'Delivery date cannot be in the past.')
+            elif dd < min_date:
+                messages.error(request, f'Delivery date cannot be earlier than {min_date_str}.')
             elif dd > max_date:
-                messages.error(request, 'Delivery date cannot be more than 2 weeks from today.')
+                messages.error(request, f'Delivery date cannot be later than {max_date_str}.')
+            elif delivery_time not in valid_slot_values:
+                messages.error(request, 'Invalid delivery time window selected.')
             else:
                 order.delivery_date = dd
                 order.delivery_time = delivery_time
@@ -1219,7 +1234,105 @@ def set_delivery_slot(request, order_id: int):
     return render(
         request,
         '_product_management/set_delivery_slot.html',
-        {'order': order, 'max_date': max_date_str}
+        {
+            'order': order,
+            'min_date': min_date_str,
+            'max_date': max_date_str,
+            'slot_options': slot_options,
+            'allow_same_day': slot_settings.allow_same_day,
+        }
+    )
+
+
+@staff_or_superuser_required
+@require_http_methods(["GET", "POST"])
+def delivery_slot_settings(request):
+    slot_settings = DeliverySlotSettings.get_solo()
+
+    defaults = {
+        'min_days_ahead': slot_settings.min_days_ahead,
+        'max_days_ahead': slot_settings.max_days_ahead,
+        'allow_same_day': slot_settings.allow_same_day,
+        'slot_start_time': slot_settings.slot_start_time.strftime('%H:%M'),
+        'slot_end_time': slot_settings.slot_end_time.strftime('%H:%M'),
+        'slot_step_minutes': slot_settings.slot_step_minutes,
+        'slot_duration_hours': slot_settings.slot_duration_hours,
+    }
+
+    def _parse_int(value, default, min_value=None, max_value=None):
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError):
+            return default
+        if min_value is not None and parsed < min_value:
+            return min_value
+        if max_value is not None and parsed > max_value:
+            return max_value
+        return parsed
+
+    def _parse_time(value, default):
+        raw = (value or '').strip()
+        try:
+            hh, mm = raw.split(':', 1)
+            hhi = int(hh)
+            mmi = int(mm)
+            if 0 <= hhi <= 23 and 0 <= mmi <= 59:
+                return f'{hhi:02d}:{mmi:02d}'
+        except Exception:
+            pass
+        return default
+
+    current = dict(defaults)
+
+    if request.method == 'POST':
+        parsed = {
+            'min_days_ahead': _parse_int(request.POST.get('min_days_ahead'), current['min_days_ahead'], 0, 30),
+            'max_days_ahead': _parse_int(request.POST.get('max_days_ahead'), current['max_days_ahead'], 1, 60),
+            'allow_same_day': bool(request.POST.get('allow_same_day')),
+            'slot_start_time': _parse_time(request.POST.get('slot_start_time'), current['slot_start_time']),
+            'slot_end_time': _parse_time(request.POST.get('slot_end_time'), current['slot_end_time']),
+            'slot_step_minutes': _parse_int(request.POST.get('slot_step_minutes'), current['slot_step_minutes'], 15, 180),
+            'slot_duration_hours': _parse_int(request.POST.get('slot_duration_hours'), current['slot_duration_hours'], 1, 8),
+        }
+
+        if parsed['max_days_ahead'] < parsed['min_days_ahead']:
+            parsed['max_days_ahead'] = parsed['min_days_ahead']
+
+        if parsed['slot_end_time'] < parsed['slot_start_time']:
+            messages.error(request, 'Last slot start must be later than or equal to first slot start.')
+            current.update(parsed)
+            return render(
+                request,
+                '_product_management/delivery_slot_settings.html',
+                current,
+            )
+
+        slot_settings.min_days_ahead = parsed['min_days_ahead']
+        slot_settings.max_days_ahead = parsed['max_days_ahead']
+        slot_settings.allow_same_day = parsed['allow_same_day']
+        slot_settings.slot_start_time = parsed['slot_start_time']
+        slot_settings.slot_end_time = parsed['slot_end_time']
+        slot_settings.slot_step_minutes = parsed['slot_step_minutes']
+        slot_settings.slot_duration_hours = parsed['slot_duration_hours']
+        slot_settings.save(
+            update_fields=[
+                'min_days_ahead',
+                'max_days_ahead',
+                'allow_same_day',
+                'slot_start_time',
+                'slot_end_time',
+                'slot_step_minutes',
+                'slot_duration_hours',
+                'updated_at',
+            ]
+        )
+        messages.success(request, 'Delivery slot settings updated.')
+        return redirect('_product_management:delivery_slot_settings')
+
+    return render(
+        request,
+        '_product_management/delivery_slot_settings.html',
+        current,
     )
 
 

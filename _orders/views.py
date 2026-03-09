@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from .models import Order, OrderItem
 from _accounts.models import Address, Company   
 from _catalog.models import All_Products
+from _product_management.models import DeliverySlotSettings
 from decimal import Decimal
 from datetime import date, timedelta
 from django.contrib import messages
@@ -167,11 +168,15 @@ def delivery_slots_view(request):
                 price=price_dec
             )
 
-    # Now proceed with delivery slot selection
-    # Compute max date constraint (today + 14 days)
+    # Now proceed with delivery slot selection using configurable settings
+    slot_settings = DeliverySlotSettings.get_solo()
     today = date.today()
-    max_date = today + timedelta(days=14)
+    min_date = today + timedelta(days=slot_settings.effective_min_days_ahead())
+    max_date = today + timedelta(days=slot_settings.effective_max_days_ahead())
+    min_date_str = min_date.strftime('%Y-%m-%d')
     max_date_str = max_date.strftime('%Y-%m-%d')
+    slot_options = slot_settings.build_time_slot_options()
+    valid_slot_values = {slot["value"] for slot in slot_options}
 
     if request.method == 'POST':
         delivery_date_str = request.POST.get('delivery_date')
@@ -186,10 +191,12 @@ def delivery_slots_view(request):
 
             if not dd:
                 messages.error(request, "Invalid delivery date format.")
-            elif dd <= today:
-                messages.error(request, "Delivery date cannot be today or in the past.")
+            elif dd < min_date:
+                messages.error(request, f"Delivery date cannot be earlier than {min_date_str}.")
             elif dd > max_date:
-                messages.error(request, "Delivery date cannot be more than 2 weeks from today.")
+                messages.error(request, f"Delivery date cannot be later than {max_date_str}.")
+            elif delivery_time not in valid_slot_values:
+                messages.error(request, "Invalid delivery time window selected.")
             else:
                 # Save using validated values
                 order.delivery_date = dd
@@ -201,9 +208,31 @@ def delivery_slots_view(request):
 
         if not delivery_date_str or not delivery_time:
             messages.error(request, "Please provide both a valid delivery date and time.")
-        return render(request, '_orders/delivery_slots.html', {'order': order, 'max_date': max_date_str})
+        return render(
+            request,
+            '_orders/delivery_slots.html',
+            {
+                'order': order,
+                'min_date': min_date_str,
+                'max_date': max_date_str,
+                'slot_options': slot_options,
+                'allow_same_day': slot_settings.allow_same_day,
+                'max_days_ahead': slot_settings.effective_max_days_ahead(),
+            }
+        )
 
-    return render(request, '_orders/delivery_slots.html', {'order': order, 'max_date': max_date_str})
+    return render(
+        request,
+        '_orders/delivery_slots.html',
+        {
+            'order': order,
+            'min_date': min_date_str,
+            'max_date': max_date_str,
+            'slot_options': slot_options,
+            'allow_same_day': slot_settings.allow_same_day,
+            'max_days_ahead': slot_settings.effective_max_days_ahead(),
+        }
+    )
 
 @login_required
 def delete_order_view(request, order_id):
