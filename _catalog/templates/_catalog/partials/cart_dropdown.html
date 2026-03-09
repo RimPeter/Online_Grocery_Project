@@ -2,7 +2,7 @@
 {% if items %}
   <div style='min-width: 240px; max-width: 360px;'>
     <div class='cart-body p-2 d-flex flex-wrap gap-2'>
-      {% for it in items|slice:":12" %}
+      {% for it in items %}
         <a href="{% url 'product_detail' it.product.pk %}" class='d-inline-block'>
           {% if it.product.image_url %}
             <img src='{{ it.product.image_url }}' alt='' class='rounded' style='width: 56px; height: 56px; object-fit: cover;'>

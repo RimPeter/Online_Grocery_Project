@@ -80,6 +80,33 @@
   min-height: 56px;
 }
 
+.navbar.navbar2 .navbar-toggler {
+  border-color: #ffffff !important;
+}
+
+.mobile-back-btn {
+  min-height: 34px;
+  padding: 0.2rem 0.65rem;
+  border: 2px solid #ffffff !important;
+  border-radius: 7px;
+  background-color: #528941;
+  color: #ffffff !important;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.mobile-back-btn:hover,
+.mobile-back-btn:focus-visible,
+.mobile-back-btn:visited,
+.mobile-back-btn:active {
+  border-color: #ffffff !important;
+  color: #ffffff !important;
+  text-decoration: none;
+  opacity: 0.92;
+}
+
 /* Delivery Slots Layout */
 .slot-grid {
   display: grid;

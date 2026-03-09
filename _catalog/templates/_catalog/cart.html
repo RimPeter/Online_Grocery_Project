@@ -11,7 +11,7 @@
     <form method="POST" action="{% url 'update_cart' %}" class="d-inline">
       {% csrf_token %}
       <input type="hidden" name="action" value="clear">
-      <button type="submit" class="btn btn-outline-danger">Remove All Items</button>
+      <button type="submit" class="btn btn-outline-danger bg-white">Remove All Items</button>
     </form>
   </div>
   {% endif %}
@@ -136,4 +136,3 @@
   {% endif %}
 </div>
 {% endblock %}
-
