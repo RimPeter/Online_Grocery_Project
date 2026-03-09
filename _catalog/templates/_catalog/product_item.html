@@ -96,9 +96,9 @@
         <p class="card-text text-muted">Price unavailable</p>
       {% endif %}
 
-      {% if product.promotion_end_date %}
+      {% comment %} {% if product.promotion_end_date %}
         <p class="card-text text-danger"><strong>Promotion ends on:</strong> {{ product.promotion_end_date }}</p>
-      {% endif %}
+      {% endif %} {% endcomment %}
 
       <div class="mt-auto">
         <a href="{% url 'product_detail' product.pk %}" class="btn btn-primary mb-2" aria-label="View details for {{ product.name }}">View Details</a>
