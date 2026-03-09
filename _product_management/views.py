@@ -13,6 +13,7 @@ from django.contrib.auth.decorators import user_passes_test
 from django.db.models import Count, Sum, F, DecimalField, Value, ExpressionWrapper, Q, Max, Case, When
 from django.db.models.functions import Coalesce, Cast
 from datetime import date, timedelta
+from decimal import Decimal
 from django.views.decorators.http import require_http_methods, require_POST
 import threading
 from _catalog.models import All_Products, HomeCategoryTile, HomeValuePillar, CategoryNodeSetting
@@ -961,7 +962,7 @@ def mark_order_processed(request, order_id: int):
 
 @staff_or_superuser_required
 def items_to_order(request):
-    active_statuses = ('pending', 'paid', 'processed')
+    active_statuses = ('paid',)
     items_qs = (
         OrderItem.objects
         .filter(order__status__in=active_statuses)
@@ -999,7 +1000,6 @@ def items_to_order(request):
                     continue
         except Exception:
             pass
-        from decimal import Decimal
         # Running totals built from the same logic used for per-row display
         sum_cost_net = Decimal('0')
         sum_cost_gross = Decimal('0')
@@ -1146,8 +1146,8 @@ def items_to_order(request):
 
 @staff_or_superuser_required
 def items_to_order_pdf(request):
-    """Generate a PDF of the aggregated items to order (active orders only)."""
-    active_statuses = ('pending', 'paid', 'processed')
+    """Generate a PDF of the aggregated items to order (paid orders only)."""
+    active_statuses = ('paid',)
     items = (
         OrderItem.objects
         .filter(order__status__in=active_statuses)

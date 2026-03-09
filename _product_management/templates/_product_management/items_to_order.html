@@ -28,8 +28,8 @@
             <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="RSP excluding VAT (net).">RSP Net</th>
             <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Line net profit = (RSP Net − Cost) × Total Qty.">Net Profit</th>
             <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Product VAT rate (e.g., standard, zero).">VAT Rate</th>
-            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Total quantity ordered across active orders.">Total Qty</th>
-            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Number of distinct active orders containing this item.">Orders Count</th>
+            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Total quantity ordered across paid orders.">Total Qty</th>
+            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Number of distinct paid orders containing this item.">Orders Count</th>
           </tr>
         </thead>
         <tbody>
@@ -63,7 +63,7 @@
             </tr>
           {% empty %}
             <tr>
-              <td colspan="11" class="text-center text-muted py-4">No items found across active orders.</td>
+              <td colspan="11" class="text-center text-muted py-4">No items found across paid orders.</td>
             </tr>
           {% endfor %}
 
