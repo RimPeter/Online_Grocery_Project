@@ -122,6 +122,11 @@
   padding-top: 0.5rem;
 }
 
+#filter-l1-menu .dropdown-header {
+  background-color: #528941;
+  color: #ffffff;
+}
+
 /* Delivery Slots Layout */
 .slot-grid {
   display: grid;
