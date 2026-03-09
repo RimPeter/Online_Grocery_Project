@@ -265,6 +265,36 @@
         toastList.forEach((toast) => toast.show());
       })();
     </script>
+    <script>
+      (function () {
+        var navCollapse = document.getElementById("navbarNav");
+        var navToggler = document.querySelector('.navbar-toggler[data-bs-target="#navbarNav"]');
+        if (!navCollapse || !navToggler || typeof bootstrap === "undefined") return;
+
+        var mobileQuery = window.matchMedia("(max-width: 991.98px)");
+        var allowHideFromToggler = false;
+
+        navToggler.addEventListener("click", function () {
+          allowHideFromToggler = true;
+          window.setTimeout(function () {
+            allowHideFromToggler = false;
+          }, 300);
+        });
+
+        navCollapse.addEventListener("hide.bs.collapse", function (event) {
+          if (!mobileQuery.matches) return;
+          if (allowHideFromToggler) return;
+          event.preventDefault();
+        });
+
+        navCollapse.addEventListener("hidden.bs.collapse", function () {
+          allowHideFromToggler = false;
+        });
+        navCollapse.addEventListener("shown.bs.collapse", function () {
+          allowHideFromToggler = false;
+        });
+      })();
+    </script>
     <!-- Additional JavaScript Files -->
     {% block extra_js %}{% endblock %}
   </body>

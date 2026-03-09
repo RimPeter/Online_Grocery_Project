@@ -200,7 +200,7 @@
           
           <div class="col-md-3">
             <label for="filter-l1" class="form-label">Category</label>
-            <select class="form-select" id="filter-l1" name="l1">
+            <select class="form-select d-none" id="filter-l1" name="l1" aria-hidden="true" tabindex="-1">
               <option value="">All categories</option>
               {% if main_category_groups %}
                 {% for group in main_category_groups %}
@@ -216,15 +216,46 @@
                 {% endfor %}
               {% endif %}
             </select>
+            <div class="dropdown category-image-dropdown">
+              <button
+                class="btn btn-light border dropdown-toggle w-100 text-start category-image-trigger d-flex align-items-center justify-content-between"
+                type="button"
+                id="filter-l1-button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <span class="d-flex align-items-center gap-2 text-truncate category-image-selected-wrap">
+                  <img id="filter-l1-selected-image" src="{% static 'images/fresh_products.jpg' %}" alt="" class="category-option-image" />
+                  <span id="filter-l1-selected-label" class="text-truncate">All categories</span>
+                </span>
+              </button>
+              <ul class="dropdown-menu w-100 category-image-menu" id="filter-l1-menu" aria-labelledby="filter-l1-button"></ul>
+            </div>
           </div>
           <div class="col-md-3">
             <label for="filter-l2" class="form-label">Subcategory</label>
-            <select class="form-select" id="filter-l2" name="l2" {% if not request.GET.l1 %}disabled{% endif %}>
+            <select class="form-select d-none" id="filter-l2" name="l2" {% if not request.GET.l1 %}disabled{% endif %} aria-hidden="true" tabindex="-1">
               <option value="">All subcategories</option>
               {% for level2 in initial_level2_options %}
                 <option value="{{ level2 }}" {% if request.GET.l2 == level2 %}selected{% endif %}>{{ level2 }}</option>
               {% endfor %}
             </select>
+            <div class="dropdown category-image-dropdown">
+              <button
+                class="btn btn-light border dropdown-toggle w-100 text-start category-image-trigger d-flex align-items-center justify-content-between"
+                type="button"
+                id="filter-l2-button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+                {% if not request.GET.l1 %}disabled{% endif %}
+              >
+                <span class="d-flex align-items-center gap-2 text-truncate category-image-selected-wrap">
+                  <img id="filter-l2-selected-image" src="{% static 'images/fresh_products.jpg' %}" alt="" class="category-option-image" />
+                  <span id="filter-l2-selected-label" class="text-truncate">All subcategories</span>
+                </span>
+              </button>
+              <ul class="dropdown-menu w-100 category-image-menu" id="filter-l2-menu" aria-labelledby="filter-l2-button"></ul>
+            </div>
           </div>
         </div>
         <div class="mt-2">
@@ -243,6 +274,8 @@
 {{ level1_names|json_script:"level1-names" }}
 {{ level2_names|json_script:"level2-names" }}
 {{ level2_map|json_script:"level2-map" }}
+{{ level1_image_map|json_script:"level1-image-map" }}
+{{ level2_image_map|json_script:"level2-image-map" }}
 
       <!-- Product Container -->
       <div class="row gy-4" id="product-container">
@@ -291,8 +324,18 @@
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     const mapEl = document.getElementById('level2-map');
+    const l1ImageMapEl = document.getElementById('level1-image-map');
+    const l2ImageMapEl = document.getElementById('level2-image-map');
     const l1Select = document.getElementById('filter-l1');
     const l2Select = document.getElementById('filter-l2');
+    const l1Menu = document.getElementById('filter-l1-menu');
+    const l2Menu = document.getElementById('filter-l2-menu');
+    const l1SelectedLabel = document.getElementById('filter-l1-selected-label');
+    const l1SelectedImage = document.getElementById('filter-l1-selected-image');
+    const l2SelectedLabel = document.getElementById('filter-l2-selected-label');
+    const l2SelectedImage = document.getElementById('filter-l2-selected-image');
+    const l2Button = document.getElementById('filter-l2-button');
+    const fallbackCategoryImage = "{% static 'images/fresh_products.jpg' %}";
     const form = document.getElementById('search-form');
     const hideBulkToggle = document.getElementById('hide-bulk-toggle');
     const productContainer = document.getElementById('product-container');
@@ -301,6 +344,22 @@
 
     if (mapEl && l1Select && l2Select) {
       const level2Map = JSON.parse(mapEl.textContent);
+      let level1ImageMap = {};
+      let level2ImageMap = {};
+      if (l1ImageMapEl) {
+        try {
+          level1ImageMap = JSON.parse(l1ImageMapEl.textContent || '{}');
+        } catch (err) {
+          level1ImageMap = {};
+        }
+      }
+      if (l2ImageMapEl) {
+        try {
+          level2ImageMap = JSON.parse(l2ImageMapEl.textContent || '{}');
+        } catch (err) {
+          level2ImageMap = {};
+        }
+      }
       window.level2Map = level2Map;
 
       const submitFilters = () => {
@@ -310,6 +369,136 @@
         } else {
           form.submit();
         }
+      };
+
+      const getCategoryImage = (categoryName) => {
+        if (!categoryName) return fallbackCategoryImage;
+        return level1ImageMap[categoryName] || fallbackCategoryImage;
+      };
+
+      const getSubcategoryImage = (subcategoryName) => {
+        if (!subcategoryName) return fallbackCategoryImage;
+        return level2ImageMap[subcategoryName] || fallbackCategoryImage;
+      };
+
+      const syncCategoryTrigger = () => {
+        if (!l1SelectedLabel || !l1SelectedImage) return;
+        const currentValue = l1Select.value || '';
+        const selectedOption = l1Select.options[l1Select.selectedIndex];
+        l1SelectedLabel.textContent = selectedOption ? selectedOption.textContent.trim() : 'All categories';
+        l1SelectedImage.src = getCategoryImage(currentValue);
+        l1SelectedImage.alt = currentValue ? `${currentValue} category` : 'All categories';
+        if (l1Menu) {
+          l1Menu.querySelectorAll('a[data-l1-value]').forEach(link => {
+            link.classList.toggle('active', link.dataset.l1Value === currentValue);
+          });
+        }
+      };
+
+      const syncSubcategoryTrigger = () => {
+        if (!l2SelectedLabel || !l2SelectedImage) return;
+        const currentValue = l2Select.value || '';
+        const selectedOption = l2Select.options[l2Select.selectedIndex];
+        l2SelectedLabel.textContent = selectedOption ? selectedOption.textContent.trim() : 'All subcategories';
+        l2SelectedImage.src = getSubcategoryImage(currentValue);
+        l2SelectedImage.alt = currentValue ? `${currentValue} subcategory` : 'All subcategories';
+        if (l2Button) {
+          l2Button.disabled = !!l2Select.disabled;
+        }
+        if (l2Menu) {
+          l2Menu.querySelectorAll('a[data-l2-value]').forEach(link => {
+            link.classList.toggle('active', link.dataset.l2Value === currentValue);
+          });
+        }
+      };
+
+      const buildCategoryMenu = () => {
+        if (!l1Menu) return;
+        l1Menu.innerHTML = '';
+
+        const appendOption = (option) => {
+          const li = document.createElement('li');
+          const link = document.createElement('a');
+          link.href = '#';
+          link.className = 'dropdown-item d-flex align-items-center gap-2 category-image-item';
+          link.dataset.l1Value = option.value || '';
+
+          const img = document.createElement('img');
+          img.src = getCategoryImage(option.value || '');
+          img.alt = '';
+          img.className = 'category-option-image';
+
+          const label = document.createElement('span');
+          label.className = 'text-truncate';
+          label.textContent = option.textContent.trim();
+
+          link.appendChild(img);
+          link.appendChild(label);
+          link.addEventListener('click', function (event) {
+            event.preventDefault();
+            const selectedValue = option.value || '';
+            if (l1Select.value !== selectedValue) {
+              l1Select.value = selectedValue;
+              l1Select.dispatchEvent(new Event('change', { bubbles: true }));
+            } else {
+              syncCategoryTrigger();
+            }
+          });
+          li.appendChild(link);
+          l1Menu.appendChild(li);
+        };
+
+        Array.from(l1Select.children).forEach(node => {
+          if (node.tagName === 'OPTGROUP') {
+            const headerLi = document.createElement('li');
+            const header = document.createElement('h6');
+            header.className = 'dropdown-header';
+            header.textContent = node.label;
+            headerLi.appendChild(header);
+            l1Menu.appendChild(headerLi);
+            Array.from(node.children).forEach(appendOption);
+            return;
+          }
+          if (node.tagName === 'OPTION') {
+            appendOption(node);
+          }
+        });
+      };
+
+      const buildSubcategoryMenu = () => {
+        if (!l2Menu) return;
+        l2Menu.innerHTML = '';
+        Array.from(l2Select.options).forEach(option => {
+          const li = document.createElement('li');
+          const link = document.createElement('a');
+          link.href = '#';
+          link.className = 'dropdown-item d-flex align-items-center gap-2 category-image-item';
+          link.dataset.l2Value = option.value || '';
+
+          const img = document.createElement('img');
+          img.src = getSubcategoryImage(option.value || '');
+          img.alt = '';
+          img.className = 'category-option-image';
+
+          const label = document.createElement('span');
+          label.className = 'text-truncate';
+          label.textContent = option.textContent.trim();
+
+          link.appendChild(img);
+          link.appendChild(label);
+          link.addEventListener('click', function (event) {
+            event.preventDefault();
+            const selectedValue = option.value || '';
+            if (l2Select.value !== selectedValue) {
+              l2Select.value = selectedValue;
+              l2Select.dispatchEvent(new Event('change', { bubbles: true }));
+            } else {
+              syncSubcategoryTrigger();
+            }
+          });
+          li.appendChild(link);
+          l2Menu.appendChild(li);
+        });
       };
 
       const updateSubcategories = (targetValue = '') => {
@@ -334,15 +523,23 @@
             l2Select.value = '';
           }
         }
+        buildSubcategoryMenu();
+        syncSubcategoryTrigger();
       };
       window.updateSubcategoryOptions = updateSubcategories;
 
+      buildCategoryMenu();
+      syncCategoryTrigger();
       updateSubcategories();
       l1Select.addEventListener('change', () => {
+        syncCategoryTrigger();
         updateSubcategories();
         submitFilters();
       });
-      l2Select.addEventListener('change', submitFilters);
+      l2Select.addEventListener('change', () => {
+        syncSubcategoryTrigger();
+        submitFilters();
+      });
     }
 
     if (hideBulkToggle && productContainer) {
