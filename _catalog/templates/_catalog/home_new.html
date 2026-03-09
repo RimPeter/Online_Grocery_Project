@@ -4,7 +4,17 @@
 {% block title %}Fresh Groceries Delivered{% endblock %}
 
 {% block content %}
-
+<!-- Callout -->
+{% if not user.is_authenticated %}
+<section class='pb-2'>
+  <div class='container'>
+    <div class='alert alert-success d-flex justify-content-between align-items-center' role='status'>
+      <div>New here? Create an account for a faster checkout next time.</div>
+      <a href="{% url 'signup' %}" class='btn btn-success btn-sm'>Sign up</a>
+    </div>
+  </div>
+</section>
+{% endif %}
 <!-- Hero -->
 <section class='py-5 rounded-3 mb-4 main-banner'>
   <div class='container'>
