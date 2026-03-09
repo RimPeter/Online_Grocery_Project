@@ -401,6 +401,8 @@
             const header = document.createElement('h6');
             header.className = 'dropdown-header';
             header.textContent = node.label;
+            header.style.backgroundColor = '#528941';
+            header.style.color = '#ffffff';
             headerLi.appendChild(header);
             l1Menu.appendChild(headerLi);
             Array.from(node.children).forEach(appendOption);
