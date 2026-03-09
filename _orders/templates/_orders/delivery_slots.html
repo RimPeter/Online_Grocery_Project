@@ -3,50 +3,6 @@
 
 {% block title %}Select Delivery Slot{% endblock %}
 
-{% block extra_css %}
-<style>
-  .delivery-date-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-    gap: 0.75rem;
-  }
-  .delivery-date-tile {
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.04);
-    color: #fff;
-    border-radius: 0.65rem;
-    padding: 0.6rem;
-    min-height: 88px;
-    text-align: left;
-    transition: border-color 0.15s ease, background 0.15s ease;
-  }
-  .delivery-date-tile:hover {
-    border-color: #198754;
-    background: rgba(25, 135, 84, 0.15);
-  }
-  .delivery-date-tile.active {
-    border-color: #198754;
-    background: rgba(25, 135, 84, 0.28);
-  }
-  .delivery-date-tile .date-dow {
-    display: block;
-    font-size: 0.78rem;
-    opacity: 0.9;
-  }
-  .delivery-date-tile .date-day {
-    display: block;
-    font-size: 1.15rem;
-    font-weight: 700;
-    line-height: 1.1;
-  }
-  .delivery-date-tile .date-month {
-    display: block;
-    font-size: 0.78rem;
-    opacity: 0.9;
-  }
-</style>
-{% endblock %}
-
 {% block content %}
 {% now 'Y-m-d' as today %}
 <div class="container mt-4">

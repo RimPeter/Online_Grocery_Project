@@ -1,4 +1,5 @@
-/* DL size is 99mm x 210mm; simplified CSS compatible with xhtml2pdf */
+/* DL leaflet document is 105mm x 216mm (including 3mm bleed on all sides).
+   Final trimmed size is 99mm x 210mm with a 5mm safe margin inside trim. */
 html, body {
   height: 100%;
   margin: 0;
@@ -20,8 +21,8 @@ html, body {
 
 /* Ensure DL page size for print/PDF renderers */
 @page {
-  size: 99mm 210mm;
-  margin: 6mm;
+  size: 105mm 216mm;
+  margin: 0;
 }
 
 .leaflet-toolbar {
@@ -36,8 +37,8 @@ html, body {
 }
 
 .leaflet {
-  width: 99mm;
-  height: 210mm;
+  width: 105mm;
+  height: 216mm;
   margin: 16px auto;
   background: #fff;
   border: 1px solid #e5e7eb;
@@ -72,7 +73,8 @@ html, body {
 
 .stack-inner { height: fit-content;}
 .lf-body {
-  padding: 14px 16px;
+  /* 8mm = 3mm bleed + 5mm safe zone from trim */
+  padding: 8mm;
   height: 100%;
   min-height: 100%;
   box-sizing: border-box;
@@ -282,6 +284,10 @@ img.qr { max-width: 100%; height: auto; border: 1px solid #e5e7eb; background: #
 
 @media print {
   html, body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .leaflet { margin: 0; border: 0; }
+  .leaflet {
+    margin: 0;
+    border: 0;
+    box-shadow: none;
+  }
   .leaflet-toolbar { display: none !important; }
 }
