@@ -107,28 +107,16 @@
   opacity: 0.92;
 }
 
-.category-image-menu {
+.filter-custom-menu {
   max-height: 320px;
   overflow-y: auto;
 }
 
-.category-image-selected-wrap {
-  min-width: 0;
-}
-
-.category-option-image {
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
-.category-image-item {
+.filter-custom-item {
   white-space: normal;
 }
 
-.category-image-menu li + li .dropdown-header {
+.filter-custom-menu li + li .dropdown-header {
   border-top: 1px solid #000000;
   margin-top: 0.25rem;
   padding-top: 0.5rem;

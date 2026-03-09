@@ -216,20 +216,17 @@
                 {% endfor %}
               {% endif %}
             </select>
-            <div class="dropdown category-image-dropdown">
+            <div class="dropdown filter-custom-dropdown">
               <button
-                class="btn btn-light border dropdown-toggle w-100 text-start category-image-trigger d-flex align-items-center justify-content-between"
+                class="btn btn-light border dropdown-toggle w-100 text-start text-truncate"
                 type="button"
                 id="filter-l1-button"
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
               >
-                <span class="d-flex align-items-center gap-2 text-truncate category-image-selected-wrap">
-                  <img id="filter-l1-selected-image" src="{% static 'images/fresh_products.jpg' %}" alt="" class="category-option-image" />
-                  <span id="filter-l1-selected-label" class="text-truncate">All categories</span>
-                </span>
+                <span id="filter-l1-selected-label" class="text-truncate d-inline-block w-100">All categories</span>
               </button>
-              <ul class="dropdown-menu w-100 category-image-menu" id="filter-l1-menu" aria-labelledby="filter-l1-button"></ul>
+              <ul class="dropdown-menu w-100 filter-custom-menu" id="filter-l1-menu" aria-labelledby="filter-l1-button"></ul>
             </div>
           </div>
           <div class="col-md-3">
@@ -240,21 +237,18 @@
                 <option value="{{ level2 }}" {% if request.GET.l2 == level2 %}selected{% endif %}>{{ level2 }}</option>
               {% endfor %}
             </select>
-            <div class="dropdown category-image-dropdown">
+            <div class="dropdown filter-custom-dropdown">
               <button
-                class="btn btn-light border dropdown-toggle w-100 text-start category-image-trigger d-flex align-items-center justify-content-between"
+                class="btn btn-light border dropdown-toggle w-100 text-start text-truncate"
                 type="button"
                 id="filter-l2-button"
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
                 {% if not request.GET.l1 %}disabled{% endif %}
               >
-                <span class="d-flex align-items-center gap-2 text-truncate category-image-selected-wrap">
-                  <img id="filter-l2-selected-image" src="{% static 'images/fresh_products.jpg' %}" alt="" class="category-option-image" />
-                  <span id="filter-l2-selected-label" class="text-truncate">All subcategories</span>
-                </span>
+                <span id="filter-l2-selected-label" class="text-truncate d-inline-block w-100">All subcategories</span>
               </button>
-              <ul class="dropdown-menu w-100 category-image-menu" id="filter-l2-menu" aria-labelledby="filter-l2-button"></ul>
+              <ul class="dropdown-menu w-100 filter-custom-menu" id="filter-l2-menu" aria-labelledby="filter-l2-button"></ul>
             </div>
           </div>
         </div>
@@ -274,8 +268,6 @@
 {{ level1_names|json_script:"level1-names" }}
 {{ level2_names|json_script:"level2-names" }}
 {{ level2_map|json_script:"level2-map" }}
-{{ level1_image_map|json_script:"level1-image-map" }}
-{{ level2_image_map|json_script:"level2-image-map" }}
 
       <!-- Product Container -->
       <div class="row gy-4" id="product-container">
@@ -324,18 +316,8 @@
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     const mapEl = document.getElementById('level2-map');
-    const l1ImageMapEl = document.getElementById('level1-image-map');
-    const l2ImageMapEl = document.getElementById('level2-image-map');
     const l1Select = document.getElementById('filter-l1');
     const l2Select = document.getElementById('filter-l2');
-    const l1Menu = document.getElementById('filter-l1-menu');
-    const l2Menu = document.getElementById('filter-l2-menu');
-    const l1SelectedLabel = document.getElementById('filter-l1-selected-label');
-    const l1SelectedImage = document.getElementById('filter-l1-selected-image');
-    const l2SelectedLabel = document.getElementById('filter-l2-selected-label');
-    const l2SelectedImage = document.getElementById('filter-l2-selected-image');
-    const l2Button = document.getElementById('filter-l2-button');
-    const fallbackCategoryImage = "{% static 'images/fresh_products.jpg' %}";
     const form = document.getElementById('search-form');
     const hideBulkToggle = document.getElementById('hide-bulk-toggle');
     const productContainer = document.getElementById('product-container');
@@ -344,22 +326,11 @@
 
     if (mapEl && l1Select && l2Select) {
       const level2Map = JSON.parse(mapEl.textContent);
-      let level1ImageMap = {};
-      let level2ImageMap = {};
-      if (l1ImageMapEl) {
-        try {
-          level1ImageMap = JSON.parse(l1ImageMapEl.textContent || '{}');
-        } catch (err) {
-          level1ImageMap = {};
-        }
-      }
-      if (l2ImageMapEl) {
-        try {
-          level2ImageMap = JSON.parse(l2ImageMapEl.textContent || '{}');
-        } catch (err) {
-          level2ImageMap = {};
-        }
-      }
+      const l1Menu = document.getElementById('filter-l1-menu');
+      const l2Menu = document.getElementById('filter-l2-menu');
+      const l1SelectedLabel = document.getElementById('filter-l1-selected-label');
+      const l2SelectedLabel = document.getElementById('filter-l2-selected-label');
+      const l2Button = document.getElementById('filter-l2-button');
       window.level2Map = level2Map;
 
       const submitFilters = () => {
@@ -371,23 +342,11 @@
         }
       };
 
-      const getCategoryImage = (categoryName) => {
-        if (!categoryName) return fallbackCategoryImage;
-        return level1ImageMap[categoryName] || fallbackCategoryImage;
-      };
-
-      const getSubcategoryImage = (subcategoryName) => {
-        if (!subcategoryName) return fallbackCategoryImage;
-        return level2ImageMap[subcategoryName] || fallbackCategoryImage;
-      };
-
       const syncCategoryTrigger = () => {
-        if (!l1SelectedLabel || !l1SelectedImage) return;
+        if (!l1SelectedLabel) return;
         const currentValue = l1Select.value || '';
         const selectedOption = l1Select.options[l1Select.selectedIndex];
         l1SelectedLabel.textContent = selectedOption ? selectedOption.textContent.trim() : 'All categories';
-        l1SelectedImage.src = getCategoryImage(currentValue);
-        l1SelectedImage.alt = currentValue ? `${currentValue} category` : 'All categories';
         if (l1Menu) {
           l1Menu.querySelectorAll('a[data-l1-value]').forEach(link => {
             link.classList.toggle('active', link.dataset.l1Value === currentValue);
@@ -396,12 +355,10 @@
       };
 
       const syncSubcategoryTrigger = () => {
-        if (!l2SelectedLabel || !l2SelectedImage) return;
+        if (!l2SelectedLabel) return;
         const currentValue = l2Select.value || '';
         const selectedOption = l2Select.options[l2Select.selectedIndex];
         l2SelectedLabel.textContent = selectedOption ? selectedOption.textContent.trim() : 'All subcategories';
-        l2SelectedImage.src = getSubcategoryImage(currentValue);
-        l2SelectedImage.alt = currentValue ? `${currentValue} subcategory` : 'All subcategories';
         if (l2Button) {
           l2Button.disabled = !!l2Select.disabled;
         }
@@ -420,20 +377,10 @@
           const li = document.createElement('li');
           const link = document.createElement('a');
           link.href = '#';
-          link.className = 'dropdown-item d-flex align-items-center gap-2 category-image-item';
+          link.className = 'dropdown-item text-start filter-custom-item';
           link.dataset.l1Value = option.value || '';
+          link.textContent = option.textContent.trim();
 
-          const img = document.createElement('img');
-          img.src = getCategoryImage(option.value || '');
-          img.alt = '';
-          img.className = 'category-option-image';
-
-          const label = document.createElement('span');
-          label.className = 'text-truncate';
-          label.textContent = option.textContent.trim();
-
-          link.appendChild(img);
-          link.appendChild(label);
           link.addEventListener('click', function (event) {
             event.preventDefault();
             const selectedValue = option.value || '';
@@ -472,20 +419,10 @@
           const li = document.createElement('li');
           const link = document.createElement('a');
           link.href = '#';
-          link.className = 'dropdown-item d-flex align-items-center gap-2 category-image-item';
+          link.className = 'dropdown-item text-start filter-custom-item';
           link.dataset.l2Value = option.value || '';
+          link.textContent = option.textContent.trim();
 
-          const img = document.createElement('img');
-          img.src = getSubcategoryImage(option.value || '');
-          img.alt = '';
-          img.className = 'category-option-image';
-
-          const label = document.createElement('span');
-          label.className = 'text-truncate';
-          label.textContent = option.textContent.trim();
-
-          link.appendChild(img);
-          link.appendChild(label);
           link.addEventListener('click', function (event) {
             event.preventDefault();
             const selectedValue = option.value || '';

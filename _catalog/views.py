@@ -542,81 +542,6 @@ def _category_metadata():
 
     return category_tree, level1_names, sorted(level2_names, key=str.casefold), level2_map
 
-
-def _build_level1_image_map(level1_names, include_hidden: bool = False):
-    """
-    Build a map of {level1/sub_category: image_url} for category filter previews.
-
-    Picks the first non-empty product image per subcategory.
-    """
-    wanted = {(name or "").strip() for name in (level1_names or []) if (name or "").strip()}
-    if not wanted:
-        return {}
-
-    try:
-        qs = All_Products.objects.all() if include_hidden else All_Products.objects.filter(is_visible_to_customers=True)
-        qs = (
-            qs.filter(sub_category__in=list(wanted))
-            .exclude(image_url__isnull=True)
-            .exclude(image_url="")
-            .exclude(image_url="/img/products/no-image.png")
-            .only("sub_category", "image_url")
-            .order_by("sub_category", "id")
-        )
-    except Exception:
-        return {}
-
-    out = {}
-    try:
-        for product in qs.iterator(chunk_size=500):
-            level1 = (getattr(product, "sub_category", "") or "").strip()
-            if not level1 or level1 in out:
-                continue
-            out[level1] = (getattr(product, "image_url", "") or "").strip()
-            if len(out) >= len(wanted):
-                break
-    except Exception:
-        return out
-    return out
-
-
-def _build_level2_image_map(level2_names, include_hidden: bool = False):
-    """
-    Build a map of {level2/sub_subcategory: image_url} for subcategory filter previews.
-
-    Picks the first non-empty product image per subcategory.
-    """
-    wanted = {(name or "").strip() for name in (level2_names or []) if (name or "").strip()}
-    if not wanted:
-        return {}
-
-    try:
-        qs = All_Products.objects.all() if include_hidden else All_Products.objects.filter(is_visible_to_customers=True)
-        qs = (
-            qs.filter(sub_subcategory__in=list(wanted))
-            .exclude(image_url__isnull=True)
-            .exclude(image_url="")
-            .exclude(image_url="/img/products/no-image.png")
-            .only("sub_subcategory", "image_url")
-            .order_by("sub_subcategory", "id")
-        )
-    except Exception:
-        return {}
-
-    out = {}
-    try:
-        for product in qs.iterator(chunk_size=500):
-            level2 = (getattr(product, "sub_subcategory", "") or "").strip()
-            if not level2 or level2 in out:
-                continue
-            out[level2] = (getattr(product, "image_url", "") or "").strip()
-            if len(out) >= len(wanted):
-                break
-    except Exception:
-        return out
-    return out
-
-
 def _apply_category_filters(queryset, l1, l2):
     """
     Shared helper to filter a queryset by level-1/level-2 names with trimmed/casefold logic.
@@ -833,21 +758,6 @@ def product_list(request):
         except Exception:
             recent_purchased_items = []
 
-    level1_names_for_images = set(level1_names)
-    for group in (main_category_groups or []):
-        for item in group.get("items", []):
-            name = (item.get("level1") or "").strip()
-            if name:
-                level1_names_for_images.add(name)
-    level1_image_map = _build_level1_image_map(
-        sorted(level1_names_for_images, key=str.casefold),
-        include_hidden=request.user.is_superuser,
-    )
-    level2_image_map = _build_level2_image_map(
-        level2_names,
-        include_hidden=request.user.is_superuser,
-    )
-
     context = {
         'products': page_obj,
         'page_obj': page_obj,
@@ -857,8 +767,6 @@ def product_list(request):
         'level1_names': level1_names,
         'level2_names': level2_names,
         'level2_map': level2_map,
-        'level1_image_map': level1_image_map,
-        'level2_image_map': level2_image_map,
         'initial_level2_options': level2_map.get(l1, []) if l1 else [],
     }
 
