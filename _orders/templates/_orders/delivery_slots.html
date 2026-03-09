@@ -3,7 +3,49 @@
 
 {% block title %}Select Delivery Slot{% endblock %}
 
-{% block extra_css %}{% endblock %}
+{% block extra_css %}
+<style>
+  .delivery-date-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 0.75rem;
+  }
+  .delivery-date-tile {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.04);
+    color: #fff;
+    border-radius: 0.65rem;
+    padding: 0.6rem;
+    min-height: 88px;
+    text-align: left;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .delivery-date-tile:hover {
+    border-color: #198754;
+    background: rgba(25, 135, 84, 0.15);
+  }
+  .delivery-date-tile.active {
+    border-color: #198754;
+    background: rgba(25, 135, 84, 0.28);
+  }
+  .delivery-date-tile .date-dow {
+    display: block;
+    font-size: 0.78rem;
+    opacity: 0.9;
+  }
+  .delivery-date-tile .date-day {
+    display: block;
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+  .delivery-date-tile .date-month {
+    display: block;
+    font-size: 0.78rem;
+    opacity: 0.9;
+  }
+</style>
+{% endblock %}
 
 {% block content %}
 {% now 'Y-m-d' as today %}
@@ -35,25 +77,22 @@
 
     <div class="mb-4">
       <label for="delivery_date" class="form-label fw-semibold">Delivery Date</label>
-      {% if form and form.delivery_date %}
-        {{ form.delivery_date }}
-        {% if form.delivery_date.errors %}
-          <div class="text-danger small" id="delivery_date_help">{{ form.delivery_date.errors }}</div>
-        {% endif %}
-      {% else %}
-        <input 
-          type="date"
-          id="delivery_date"
-          name="delivery_date"
-          class="form-control"
-          value="{{ request.POST.delivery_date|default:'' }}"
-          min="{{ today }}"
-          {% if max_date %}max="{{ max_date }}"{% endif %}
-          aria-describedby="delivery_date_help"
-          required
-        >
-        <div id="delivery_date_help" class="form-text">Choose a date from today within the next 14 days.</div>
-      {% endif %}
+      <input
+        type="hidden"
+        id="delivery_date"
+        name="delivery_date"
+        value="{% if request.POST.delivery_date %}{{ request.POST.delivery_date }}{% elif order.delivery_date %}{{ order.delivery_date|date:'Y-m-d' }}{% endif %}"
+      >
+      <div
+        id="delivery_date_tiles"
+        class="delivery-date-grid"
+        role="radiogroup"
+        aria-label="Delivery date options"
+        data-start-date="{{ today }}"
+        {% if max_date %}data-max-date="{{ max_date }}"{% endif %}
+        data-selected-date="{% if request.POST.delivery_date %}{{ request.POST.delivery_date }}{% elif order.delivery_date %}{{ order.delivery_date|date:'Y-m-d' }}{% endif %}"
+      ></div>
+      <div id="delivery_date_help" class="form-text">Same-day delivery is unavailable. Choose a date from tomorrow within the next 14 days.</div>
     </div>
 
     <div class="mb-4">
@@ -128,5 +167,84 @@
   </div>
 </div>
 
-{# No extra JS needed; using fixed time slots #}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    const tilesWrap = document.getElementById('delivery_date_tiles');
+    const hiddenInput = document.getElementById('delivery_date');
+    if (!tilesWrap || !hiddenInput) return;
+
+    function parseISODate(value) {
+      if (!value) return null;
+      const parts = value.split('-');
+      if (parts.length !== 3) return null;
+      const y = Number(parts[0]);
+      const m = Number(parts[1]) - 1;
+      const d = Number(parts[2]);
+      const dt = new Date(y, m, d);
+      if (Number.isNaN(dt.getTime())) return null;
+      return dt;
+    }
+
+    function toISODate(dt) {
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth() + 1).padStart(2, '0');
+      const d = String(dt.getDate()).padStart(2, '0');
+      return y + '-' + m + '-' + d;
+    }
+
+    const startDate = parseISODate(tilesWrap.dataset.startDate);
+    const maxDate = parseISODate(tilesWrap.dataset.maxDate);
+    if (!startDate || !maxDate) return;
+
+    const firstAvailable = new Date(startDate);
+    firstAvailable.setDate(firstAvailable.getDate() + 1);
+
+    const selectedDate = tilesWrap.dataset.selectedDate;
+    const fmtDow = new Intl.DateTimeFormat('en-GB', { weekday: 'short' });
+    const fmtMonth = new Intl.DateTimeFormat('en-GB', { month: 'short' });
+
+    function selectTile(value) {
+      hiddenInput.value = value;
+      tilesWrap.querySelectorAll('.delivery-date-tile').forEach((el) => {
+        const isActive = el.dataset.value === value;
+        el.classList.toggle('active', isActive);
+        el.setAttribute('aria-checked', isActive ? 'true' : 'false');
+      });
+    }
+
+    const cursor = new Date(firstAvailable);
+    while (cursor <= maxDate) {
+      const iso = toISODate(cursor);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'delivery-date-tile';
+      btn.dataset.value = iso;
+      btn.setAttribute('role', 'radio');
+      btn.setAttribute('aria-checked', 'false');
+      btn.innerHTML =
+        '<span class="date-dow">' + fmtDow.format(cursor) + '</span>' +
+        '<span class="date-day">' + String(cursor.getDate()) + '</span>' +
+        '<span class="date-month">' + fmtMonth.format(cursor) + '</span>';
+
+      btn.addEventListener('click', function () {
+        selectTile(iso);
+      });
+
+      tilesWrap.appendChild(btn);
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    if (selectedDate) {
+      const selected = parseISODate(selectedDate);
+      if (selected && selected > startDate && selected <= maxDate) {
+        selectTile(toISODate(selected));
+      } else {
+        hiddenInput.value = '';
+      }
+    }
+  })();
+</script>
 {% endblock %}
