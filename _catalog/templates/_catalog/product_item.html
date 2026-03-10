@@ -66,11 +66,11 @@
       <h6 class="card-title text-break"><a href="{% url 'product_detail' product.pk %}" class="text-decoration-none text-reset">{{ product.name }}</a></h6>
       <p class="card-text text-muted text-truncate">{{ product.variant|default:"No description available" }}</p>
       {% if product.main_category or product.sub_category or product.sub_subcategory %}
-        <p class="card-text text-muted small">
+        {% comment %} <p class="card-text text-muted small">
           {% if product.main_category %}{{ product.main_category }}{% endif %}
           {% if product.sub_category %}{% if product.main_category %} › {% endif %}{{ product.sub_category }}{% endif %}
           {% if product.sub_subcategory %}{% if product.main_category or product.sub_category %} › {% endif %}{{ product.sub_subcategory }}{% endif %}
-        </p>
+        </p> {% endcomment %}
       {% endif %}
 
       {% if user.is_superuser %}
