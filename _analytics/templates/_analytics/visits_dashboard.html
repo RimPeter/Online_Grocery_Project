@@ -3,134 +3,137 @@
 {% block title %}Visits Dashboard{% endblock %}
 
 {% block content %}
-<div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-  <div>
-    <h2 class="mb-0">Visits Dashboard</h2>
-    <div class="text-muted small">Session-based visits (staff only)</div>
-  </div>
-  <div class="d-flex align-items-center gap-2">
-    <label for="daysSelect" class="form-label mb-0">Range</label>
-    <select id="daysSelect" class="form-select form-select-sm" style="width: 8rem;">
-      <option value="7">Last 7 days</option>
-      <option value="30">Last 30 days</option>
-      <option value="90">Last 90 days</option>
-      <option value="365">Last 365 days</option>
-    </select>
-    <button id="refreshBtn" type="button" class="btn btn-sm btn-primary">Refresh</button>
-  </div>
-</div>
-
-<div class="card mt-3">
-  <div class="card-body">
-    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-      <div class="text-muted small">Visits per day for /</div>
-      <div id="homeStatusText" class="text-muted small"></div>
+<section class="pm-hub-page">
+  <div class="pm-hero">
+    <div>
+      <p class="pm-eyebrow">Product Management</p>
+      <h1 class="pm-title">Visits Dashboard</h1>
+      <p class="pm-subtitle">Session-based traffic overview for staff monitoring, trend analysis, and page-level performance checks.</p>
     </div>
-    <div class="mt-2" style="height: 220px;">
-      <canvas id="homeVisitsChart" style="width: 100%; height: 100%;"></canvas>
+    <div class="pm-hero-actions">
+      <label for="daysSelect" class="form-label mb-0 text-white-50">Range</label>
+      <select id="daysSelect" class="form-select form-select-sm" style="width: 8rem;">
+        <option value="7">Last 7 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="90">Last 90 days</option>
+        <option value="365">Last 365 days</option>
+      </select>
+      <button id="refreshBtn" type="button" class="btn btn-light btn-sm">Refresh</button>
     </div>
   </div>
-</div>
 
-<div class="row g-3 mt-1">
-  <div class="col-12 col-md-3">
-    <div class="card h-100">
-      <div class="card-body">
-        <div class="text-muted small mb-2">Total visits</div>
-        <div class="table-responsive">
-          <table class="table table-sm align-middle mb-0">
-            <tbody>
-              <tr>
-                <th scope="row" class="fw-normal">Total</th>
-                <td id="totalVisits" class="text-end fs-4 fw-semibold">—</td>
-              </tr>
-              <tr>
-                <th scope="row" class="fw-normal">Avg / day</th>
-                <td id="avgVisitsPerDay" class="text-end">—</td>
-              </tr>
-            </tbody>
-          </table>
+  <div class="card">
+    <div class="card-body">
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="text-muted small">Visits per day for /</div>
+        <div id="homeStatusText" class="text-muted small"></div>
+      </div>
+      <div class="mt-2 pm-chart-shell">
+        <canvas id="homeVisitsChart" style="width: 100%; height: 100%;"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mt-1">
+    <div class="col-12 col-md-3">
+      <div class="card h-100 pm-kpi-card">
+        <div class="card-body">
+          <div class="text-muted small mb-2">Total visits</div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <tbody>
+                <tr>
+                  <th scope="row" class="fw-normal">Total</th>
+                  <td id="totalVisits" class="text-end fs-4 fw-semibold">-</td>
+                </tr>
+                <tr>
+                  <th scope="row" class="fw-normal">Avg / day</th>
+                  <td id="avgVisitsPerDay" class="text-end">-</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="card h-100 pm-kpi-card">
+        <div class="card-body">
+          <div class="text-muted small">Today</div>
+          <div id="todayVisits" class="fs-3 fw-semibold">-</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="text-muted small">Visits per day</div>
+            <div id="statusText" class="text-muted small"></div>
+          </div>
+          <div class="mt-2 pm-chart-shell-lg">
+            <canvas id="visitsChart" style="width: 100%; height: 100%;"></canvas>
+          </div>
+          <div id="errorBox" class="alert alert-danger mt-3 d-none mb-0"></div>
         </div>
       </div>
     </div>
   </div>
-  <div class="col-12 col-md-3">
-    <div class="card h-100">
-      <div class="card-body">
-        <div class="text-muted small">Today</div>
-        <div id="todayVisits" class="fs-3 fw-semibold">—</div>
+
+  <div class="card mt-3">
+    <div class="card-body">
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="text-muted small">Visits per day</div>
+        <button id="downloadCsvBtn" type="button" class="btn btn-sm btn-outline-secondary">Download CSV</button>
+      </div>
+      <div class="table-responsive mt-2">
+        <table class="table table-sm table-striped align-middle mb-0">
+          <thead>
+            <tr>
+              <th scope="col">Day</th>
+              <th scope="col" class="text-end">Visits</th>
+            </tr>
+          </thead>
+          <tbody id="perDayRows">
+            <tr><td colspan="2" class="text-muted">Loading...</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
-  <div class="col-12 col-md-6">
-    <div class="card h-100">
-      <div class="card-body">
-        <div class="d-flex align-items-center justify-content-between">
-          <div class="text-muted small">Visits per day</div>
-          <div id="statusText" class="text-muted small"></div>
+
+  <div class="card mt-3">
+    <div class="card-body">
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div>
+          <div class="text-muted small">HTML pages (tracked by landing path)</div>
+          <div class="text-muted small">Total, last week, this week, today</div>
         </div>
-        <div class="mt-2" style="height: 260px;">
-          <canvas id="visitsChart" style="width: 100%; height: 100%;"></canvas>
-        </div>
-        <div id="errorBox" class="alert alert-danger mt-3 d-none mb-0"></div>
+        <div id="pagesStatusText" class="text-muted small"></div>
+      </div>
+      <div class="table-responsive mt-2">
+        <table class="table table-sm table-striped align-middle mb-0">
+          <thead>
+            <tr>
+              <th scope="col">HTML</th>
+              <th scope="col" class="text-end">Total visits</th>
+              <th scope="col" class="text-end">Last week</th>
+              <th scope="col" class="text-end">This week</th>
+              <th scope="col" class="text-end">Today</th>
+            </tr>
+          </thead>
+          <tbody id="pageStatsRows">
+            <tr><td colspan="5" class="text-muted">Loading...</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
-</div>
 
-<div class="card mt-3">
-  <div class="card-body">
-    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-      <div class="text-muted small">Visits per day</div>
-      <button id="downloadCsvBtn" type="button" class="btn btn-sm btn-outline-secondary">Download CSV</button>
-    </div>
-    <div class="table-responsive mt-2">
-      <table class="table table-sm table-striped align-middle mb-0">
-        <thead>
-          <tr>
-            <th scope="col">Day</th>
-            <th scope="col" class="text-end">Visits</th>
-          </tr>
-        </thead>
-        <tbody id="perDayRows">
-          <tr><td colspan="2" class="text-muted">Loading…</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-<div class="card mt-3">
-  <div class="card-body">
-    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-      <div>
-        <div class="text-muted small">HTML pages (tracked by landing path)</div>
-        <div class="text-muted small">Total, last week, this week, today</div>
-      </div>
-      <div id="pagesStatusText" class="text-muted small"></div>
-    </div>
-    <div class="table-responsive mt-2">
-      <table class="table table-sm table-striped align-middle mb-0">
-        <thead>
-          <tr>
-            <th scope="col">HTML</th>
-            <th scope="col" class="text-end">Total visits</th>
-            <th scope="col" class="text-end">Last week</th>
-            <th scope="col" class="text-end">This week</th>
-            <th scope="col" class="text-end">Today</th>
-          </tr>
-        </thead>
-        <tbody id="pageStatsRows">
-          <tr><td colspan="5" class="text-muted">Loading…</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-<script id="analyticsConfig" type="application/json">
-  {"defaultDays": {{ default_days|default:30 }}, "summaryUrl": "{{ visits_summary_url }}", "pagesUrl": "{{ visits_pages_summary_url }}", "pageDailyUrl": "{{ visits_page_daily_url }}"}
-</script>
+  <script id="analyticsConfig" type="application/json">
+    {"defaultDays": {{ default_days|default:30 }}, "summaryUrl": "{{ visits_summary_url }}", "pagesUrl": "{{ visits_pages_summary_url }}", "pageDailyUrl": "{{ visits_page_daily_url }}"}
+  </script>
+</section>
 {% endblock %}
 
 {% block extra_js %}
@@ -352,9 +355,9 @@
 
     async function load() {
       clearError();
-      setStatus("Loading…");
-      setHomeStatus("Loading…");
-      setPagesStatus("Loading…");
+      setStatus("Loading...");
+      setHomeStatus("Loading...");
+      setPagesStatus("Loading...");
 
       const days = Number(daysSelect.value || config.defaultDays || 30);
       const url = `${config.summaryUrl}?days=${encodeURIComponent(days)}`;
@@ -375,13 +378,13 @@
         const data = await res.json();
         lastData = data;
 
-        totalVisitsEl.textContent = String(data.total_visits ?? "—");
-        todayVisitsEl.textContent = String(data.today_visits ?? "—");
+        totalVisitsEl.textContent = String(data.total_visits ?? "-");
+        todayVisitsEl.textContent = String(data.today_visits ?? "-");
         if (avgVisitsPerDayEl) {
           const total = Number(data.total_visits || 0);
           const dayCount = Number(data.days || 0);
           const avg = dayCount > 0 ? total / dayCount : 0;
-          avgVisitsPerDayEl.textContent = dayCount > 0 ? String(Math.round(avg * 10) / 10) : "—";
+          avgVisitsPerDayEl.textContent = dayCount > 0 ? String(Math.round(avg * 10) / 10) : "-";
         }
 
         const perDay = Array.isArray(data.per_day) ? data.per_day : [];
@@ -394,7 +397,7 @@
       } catch (e) {
         setStatus("");
         showError(`Failed to load analytics data: ${e && e.message ? e.message : e}`);
-        if (avgVisitsPerDayEl) avgVisitsPerDayEl.textContent = "—";
+        if (avgVisitsPerDayEl) avgVisitsPerDayEl.textContent = "-";
         perDayRowsEl.innerHTML = '<tr><td colspan="2" class="text-muted">No data</td></tr>';
         drawLineChart(canvas, [], []);
       }

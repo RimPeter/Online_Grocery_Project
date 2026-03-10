@@ -4,28 +4,30 @@
 {% block title %}Product Categories{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
-    <div class="flex-grow-1">
-      <h1 class="h3 mb-1">Product categories</h1>
-      <p class="text-muted mb-0">
-        Review the full category tree used on the storefront and control which categories are visible to customers.
-      </p>
+<section class="pm-hub-page">
+  <div class="pm-hero">
+    <div>
+      <p class="pm-eyebrow">Product Management</p>
+      <h1 class="pm-title">Product Categories</h1>
+      <p class="pm-subtitle">Manage storefront taxonomy visibility, sort behavior, and heading overrides across category levels.</p>
     </div>
-    <a href="{% url 'product_list' %}" class="btn btn-outline-secondary btn-sm ms-auto" target="_blank" rel="noopener">
-      View storefront
-    </a>
+    <div class="pm-hero-actions">
+      <a href="{% url 'product_list' %}" class="btn btn-outline-light btn-sm" target="_blank" rel="noopener">View Storefront</a>
+      {% if main_category_groups %}
+      <span class="pm-chip">Main categories: {{ main_category_groups|length }}</span>
+      {% endif %}
+    </div>
   </div>
 
-  <div class="alert alert-info small">
-    Categories shown below are derived from the structured taxonomy (main category &rarr; subcategory &rarr; sub-subcategory)
-    used on the product listing page. Use the visibility tick-boxes to hide individual sub-subcategories from customers without
-    deleting any products. Sort order and heading overrides are optional.
+  <div class="alert alert-info small mb-3">
+    Categories shown below are derived from the structured taxonomy (main category -&gt; subcategory -&gt; sub-subcategory)
+    used on the product listing page. Use visibility tick-boxes to hide individual sub-subcategories without
+    deleting products. Sort order and heading overrides are optional.
   </div>
 
-  <div class="card mt-3">
+  <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-      <span class="fw-semibold">Category visibility &amp; ordering</span>
+      <span class="fw-semibold">Category Visibility and Ordering</span>
       {% if main_category_groups %}
       <span class="badge text-bg-secondary">{{ main_category_groups|length }} main categories</span>
       {% endif %}
@@ -102,7 +104,7 @@
                         name="heading_{{ main_slug }}__{{ sub_slug }}"
                         class="form-control form-control-sm"
                         value="{{ item.heading_override }}"
-                        placeholder="{{ group.main }} › {{ item.level1 }}"
+                        placeholder="{{ group.main }} > {{ item.level1 }}"
                       >
                     </td>
                     <input
@@ -124,7 +126,7 @@
             Heading overrides update labels in the storefront category navigation.
           </div>
           <button type="submit" class="btn btn-primary btn-sm">
-            Save category settings
+            Save Category Settings
           </button>
         </div>
       </form>
@@ -135,5 +137,5 @@
       {% endif %}
     </div>
   </div>
-</div>
+</section>
 {% endblock %}

@@ -4,18 +4,21 @@
 {% block title %}Home Categories{% endblock %}
 
 {% block content %}
-
-<div class="container py-4">
-  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
-    <div class="flex-grow-1">
-      <h1 class="h3 mb-1">Home page categories</h1>
-      <p class="text-muted mb-0">Pick which category tiles appear on the storefront home page and control their order.</p>
+<section class="pm-hub-page">
+  <div class="pm-hero">
+    <div>
+      <p class="pm-eyebrow">Product Management</p>
+      <h1 class="pm-title">Home Page Categories</h1>
+      <p class="pm-subtitle">Curate the featured storefront category tiles and value pillars shown on the home experience.</p>
     </div>
-    <a href="{% url 'home' %}" class="btn btn-outline-secondary btn-sm ms-auto" target="_blank" rel="noopener">View storefront</a>
+    <div class="pm-hero-actions">
+      <a href="{% url 'home' %}" class="btn btn-outline-light btn-sm" target="_blank" rel="noopener">View Storefront</a>
+      <span class="pm-chip">Configured: {{ tiles|length }}</span>
+    </div>
   </div>
 
-  <div class="card mt-4">
-    <div class="card-header fw-semibold">Value pillars</div>
+  <div class="card mt-3">
+    <div class="card-header fw-semibold">Value Pillars</div>
     <div class="card-body">
       {% if pillars %}
       <form method="post">
@@ -37,7 +40,7 @@
           </div>
           {% endfor %}
         </div>
-        <button type="submit" class="btn btn-primary w-100 mt-3">Save value pillars</button>
+        <button type="submit" class="btn btn-primary w-100 mt-3">Save Value Pillars</button>
       </form>
       {% else %}
       <p class="text-muted mb-0">Value pillars will become editable once defaults are created.</p>
@@ -45,11 +48,11 @@
     </div>
   </div>
 
-  <div class="row g-4">
+  <div class="row g-4 mt-1">
     <div class="col-12 col-lg-8">
       <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
-          <span class="fw-semibold">Selected categories</span>
+          <span class="fw-semibold">Selected Categories</span>
           <span class="badge text-bg-secondary">{{ tiles|length }} configured</span>
         </div>
         <div class="card-body p-0">
@@ -61,8 +64,8 @@
                 <thead>
                   <tr>
                     <th style="width: 110px;">Order</th>
-                    <th style="width: 220px;">Main category</th>
-                    <th>Heading override</th>
+                    <th style="width: 220px;">Main Category</th>
+                    <th>Heading Override</th>
                     <th style="width: 220px;">Image URL</th>
                     <th class="text-center" style="width: 80px;">Visible</th>
                     <th class="text-center" style="width: 80px;">Remove</th>
@@ -93,10 +96,10 @@
               </table>
             </div>
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 p-3 border-top">
-              <div class="text-muted small">Use the remove checkbox + button to drop tiles. Order is ascending.</div>
+              <div class="text-muted small">Use the remove checkbox plus action to drop tiles. Order is ascending.</div>
               <div class="d-flex gap-2">
-                <button type="submit" name="action" value="delete" class="btn btn-outline-danger btn-sm">Remove selected</button>
-                <button type="submit" name="action" value="update" class="btn btn-primary btn-sm">Save changes</button>
+                <button type="submit" name="action" value="delete" class="btn btn-outline-danger btn-sm">Remove Selected</button>
+                <button type="submit" name="action" value="update" class="btn btn-primary btn-sm">Save Changes</button>
               </div>
             </div>
           </form>
@@ -111,7 +114,7 @@
 
     <div class="col-12 col-lg-4">
       <div class="card h-100">
-        <div class="card-header fw-semibold">Add a category</div>
+        <div class="card-header fw-semibold">Add a Category</div>
         <div class="card-body">
           {% if available_options %}
           <form method="post" class="vstack gap-3">
@@ -123,7 +126,7 @@
             <div>
               <label for="new_pair" class="form-label">Pick main category</label>
               <select id="new_pair" name="new_pair" class="form-select" required>
-                <option value="">Select…</option>
+                <option value="">Select...</option>
                 {% for option in available_options %}
                 <option value="{{ option.value }}">{{ option.label }}</option>
                 {% endfor %}
@@ -142,7 +145,7 @@
               <input type="number" id="new_sort_order" name="new_sort_order" class="form-control" value="{{ suggested_sort }}" />
               <div class="form-text">Lower numbers appear first. Suggested next value shown.</div>
             </div>
-            <button type="submit" class="btn btn-success w-100">Add to home page</button>
+            <button type="submit" class="btn btn-success w-100">Add to Home Page</button>
           </form>
           {% else %}
           <p class="text-muted mb-0">All known categories are already configured.</p>
@@ -152,9 +155,7 @@
           Visibility toggles control whether a tile is shown without deleting it. Changes take effect immediately on the storefront home page.
         </div>
       </div>
-      
     </div>
   </div>
-</div>
+</section>
 {% endblock %}
-

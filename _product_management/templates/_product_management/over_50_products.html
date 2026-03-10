@@ -1,16 +1,22 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Products Over £50{% endblock %}
+{% block title %}Products Over GBP 50{% endblock %}
 
 {% block content %}
-<div class="row">
-  <div class="col-12">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h1 class="mb-0">Products Over £50 (not available for customers)</h1>
-      <div class="text-muted">Total: {{ total_results }}</div>
+<section class="pm-hub-page">
+  <div class="pm-hero">
+    <div>
+      <p class="pm-eyebrow">Product Management</p>
+      <h1 class="pm-title">Products Over &pound;50</h1>
+      <p class="pm-subtitle">Audit higher-ticket products and quickly adjust raw RSP values used in storefront display logic.</p>
     </div>
+    <div class="pm-hero-actions">
+      <span class="pm-chip">Total: {{ total_results }}</span>
+    </div>
+  </div>
 
+  <div class="pm-surface">
     <div class="table-responsive">
       <table class="table table-striped table-hover align-middle">
         <thead class="table-light">
@@ -34,7 +40,7 @@
             <td>{% if p.price %}&pound;{{ p.price|floatformat:2 }}{% else %}-{% endif %}</td>
             <td>{% if p.display_rsp %}&pound;{{ p.display_rsp|floatformat:2 }}{% else %}-{% endif %}</td>
             <td>
-              <form method="post" action="{% url '_product_management:over_50_products' %}" class="d-flex align-items-center gap-2">
+              <form method="post" action="{% url '_product_management:over_50_products' %}" class="d-flex align-items-center gap-2 flex-wrap">
                 {% csrf_token %}
                 <input type="hidden" name="product_id" value="{{ p.id }}">
                 <input type="hidden" name="page" value="{{ page_obj.number }}">
@@ -57,7 +63,7 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="6" class="text-center text-muted py-4">No products found over £50.</td>
+            <td colspan="6" class="text-center text-muted py-4">No products found over &pound;50.</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -83,8 +89,6 @@
       </ul>
     </nav>
     {% endif %}
-
   </div>
-</div>
+</section>
 {% endblock %}
-

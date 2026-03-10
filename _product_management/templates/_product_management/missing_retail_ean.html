@@ -4,13 +4,19 @@
 {% block title %}Missing Retail EAN{% endblock %}
 
 {% block content %}
-<div class="row">
-  <div class="col-12">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h1 class="mb-0">Products Missing Retail EAN</h1>
-      <div class="text-muted">Total: {{ count }}</div>
+<section class="pm-hub-page">
+  <div class="pm-hero">
+    <div>
+      <p class="pm-eyebrow">Product Management</p>
+      <h1 class="pm-title">Products Missing Retail EAN</h1>
+      <p class="pm-subtitle">Spot products that still need retailer barcode data before final catalog readiness.</p>
     </div>
+    <div class="pm-hero-actions">
+      <span class="pm-chip">Total: {{ count }}</span>
+    </div>
+  </div>
 
+  <div class="pm-surface">
     <div class="table-responsive">
       <table class="table table-striped table-hover align-middle">
         <thead class="table-light">
@@ -46,6 +52,5 @@
       </table>
     </div>
   </div>
-</div>
+</section>
 {% endblock %}
-

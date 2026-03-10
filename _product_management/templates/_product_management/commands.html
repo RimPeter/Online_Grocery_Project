@@ -4,218 +4,230 @@
 {% block title %}Commands{% endblock %}
 
 {% block content %}
-<div class="row">
-  <div class="col-12 col-lg-8">
-    <h1 class="mb-4">Product Management Commands</h1>
-
-        <div class="card">
-      <div class="card-body">
-        <h5 class="card-title">Run Subcategory Pipeline</h5>
-        <p class="text-muted">
-          Run the Bestway subcategory scraping pipeline
-          (scrape_subcategories, scrape_sub_subcategories,
-          scraper_for_sub_subcategory, load_sub_subcategory_products,
-          generate_category_json).
-        </p>
-        <form method="post" class="vstack gap-3">
-          {% csrf_token %}
-          <input type="hidden" name="action" value="run_subcategory_pipeline">
-
-          <div class="row g-3">
-            <div class="col-md-4">
-              <label for="subcat_from_step" class="form-label">From step</label>
-              <select id="subcat_from_step" name="from_step" class="form-select form-select-sm">
-                <option value="">First step</option>
-                <option value="scrape_subcategories">scrape_subcategories</option>
-                <option value="scrape_sub_subcategories">scrape_sub_subcategories</option>
-                <option value="scraper_for_sub_subcategory">scraper_for_sub_subcategory</option>
-                <option value="load_sub_subcategory_products">load_sub_subcategory_products</option>
-                <option value="generate_category_json">generate_category_json</option>
-              </select>
-            </div>
-            <div class="col-md-4">
-              <label for="subcat_to_step" class="form-label">To step</label>
-              <select id="subcat_to_step" name="to_step" class="form-select form-select-sm">
-                <option value="">Last step</option>
-                <option value="scrape_subcategories">scrape_subcategories</option>
-                <option value="scrape_sub_subcategories">scrape_sub_subcategories</option>
-                <option value="scraper_for_sub_subcategory">scraper_for_sub_subcategory</option>
-                <option value="load_sub_subcategory_products">load_sub_subcategory_products</option>
-                <option value="generate_category_json">generate_category_json</option>
-              </select>
-            </div>
-            <div class="col-md-4">
-              <label for="subcat_verbosity" class="form-label">Verbosity</label>
-              <select id="subcat_verbosity" name="verbosity" class="form-select form-select-sm">
-                <option value="0">0 - errors</option>
-                <option value="1" selected>1 - normal</option>
-                <option value="2">2 - verbose</option>
-                <option value="3">3 - very verbose</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-check mt-2">
-            <input class="form-check-input" type="checkbox" id="subcat_continue_on_error" name="continue_on_error" value="1">
-            <label class="form-check-label" for="subcat_continue_on_error">
-              Continue on error
-            </label>
-          </div>
-
-          {% if subcategory_last_run %}
-          <div class="mt-3">
-            <label for="subcat_errors" class="form-label">Last run errors</label>
-            <textarea id="subcat_errors" class="form-control font-monospace" rows="6" readonly>
-{% if subcategory_last_run.errors %}{{ subcategory_last_run.errors }}{% else %}No errors recorded for the last subcategory pipeline run.{% endif %}</textarea>
-            <div class="form-text">
-              Last run started at {{ subcategory_last_run.started_at }}
-              {% if subcategory_last_run.finished_at %}, finished at {{ subcategory_last_run.finished_at }}{% endif %}.
-              Status:
-              {% if subcategory_last_run.succeeded %}
-                success
-              {% else %}
-                failed
-              {% endif %}.
-            </div>
-          </div>
-          {% endif %}
-
-          <div class="mt-3">
-            <button type="submit" class="btn btn-primary">
-              Run Subcategory Pipeline
-            </button>
-          </div>
-        </form>
-      </div>
+<section class="pm-hub-page">
+  <div class="pm-hero">
+    <div>
+      <p class="pm-eyebrow">Product Management</p>
+      <h1 class="pm-title">Command Center</h1>
+      <p class="pm-subtitle">Run catalog pipelines, maintenance commands, and controlled destructive actions from one operational panel.</p>
     </div>
-
-    <div class="card mt-4">
-      <div class="card-body">
-        <h5 class="card-title">Reload Products JSON (Heroku)</h5>
-        <p class="text-muted">
-          Run the <code>load_sub_subcategory_products</code> management command to
-          load products from <code>sub_subcategory_products.json</code> into
-          <code>All_Products</code>. From your terminal, the equivalent Heroku
-          CLI command is:
-          <code>heroku run python manage.py load_sub_subcategory_products --app kingston-online-grocery</code>.
-        </p>
-        <form method="post" class="vstack gap-3">
-          {% csrf_token %}
-          <input type="hidden" name="action" value="load_sub_subcategory_products">
-
-          <div class="row g-3">
-            <div class="col-md-4">
-              <label for="load_products_verbosity" class="form-label">Verbosity</label>
-              <select id="load_products_verbosity" name="verbosity" class="form-select form-select-sm">
-                <option value="0">0 - errors</option>
-                <option value="1" selected>1 - normal</option>
-                <option value="2">2 - verbose</option>
-                <option value="3">3 - very verbose</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="mt-3">
-            <button type="submit" class="btn btn-secondary">
-              Run load_sub_subcategory_products
-            </button>
-          </div>
-        </form>
-      </div>
+    <div class="pm-hero-actions">
+      <a class="btn btn-outline-light btn-sm" href="{% url '_product_management:product_categories' %}">Category Settings</a>
+      <a class="btn btn-outline-light btn-sm" href="{% url '_product_management:home_categories' %}">Home Categories</a>
     </div>
+  </div>
 
-    <div class="card mt-4">
-      <div class="card-body">
-        <h5 class="card-title">Backfill Variants</h5>
-        <p class="text-muted">
-          Populate missing variant fields by parsing pack information from product names
-          (e.g. <code>500ml x 12</code>).
-        </p>
-        <form method="post" class="vstack gap-3">
-          {% csrf_token %}
-          <input type="hidden" name="action" value="backfill_variants">
+  <div class="row g-4">
+    <div class="col-12 col-lg-10">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Run Subcategory Pipeline</h5>
+          <p class="text-muted">
+            Run the Bestway subcategory scraping pipeline
+            (scrape_subcategories, scrape_sub_subcategories,
+            scraper_for_sub_subcategory, load_sub_subcategory_products,
+            generate_category_json).
+          </p>
+          <form method="post" class="vstack gap-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="run_subcategory_pipeline">
 
-          <div class="row g-3">
-            <div class="col-md-4">
-              <label for="backfill_limit" class="form-label">Limit (0 = all)</label>
-              <input
-                type="number"
-                min="0"
-                class="form-control form-control-sm"
-                id="backfill_limit"
-                name="limit"
-                placeholder="0">
-            </div>
-            <div class="col-md-4">
-              <label for="backfill_verbosity" class="form-label">Verbosity</label>
-              <select id="backfill_verbosity" name="verbosity" class="form-select form-select-sm">
-                <option value="0">0 - errors</option>
-                <option value="1" selected>1 - normal</option>
-                <option value="2">2 - verbose</option>
-                <option value="3">3 - very verbose</option>
-              </select>
-            </div>
-            <div class="col-md-4 d-flex align-items-end">
-              <div class="form-check">
-                <input
-                  class="form-check-input"
-                  type="checkbox"
-                  id="backfill_dry_run"
-                  name="dry_run"
-                  value="1">
-                <label class="form-check-label" for="backfill_dry_run">
-                  Dry run (no DB changes)
-                </label>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label for="subcat_from_step" class="form-label">From step</label>
+                <select id="subcat_from_step" name="from_step" class="form-select form-select-sm">
+                  <option value="">First step</option>
+                  <option value="scrape_subcategories">scrape_subcategories</option>
+                  <option value="scrape_sub_subcategories">scrape_sub_subcategories</option>
+                  <option value="scraper_for_sub_subcategory">scraper_for_sub_subcategory</option>
+                  <option value="load_sub_subcategory_products">load_sub_subcategory_products</option>
+                  <option value="generate_category_json">generate_category_json</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label for="subcat_to_step" class="form-label">To step</label>
+                <select id="subcat_to_step" name="to_step" class="form-select form-select-sm">
+                  <option value="">Last step</option>
+                  <option value="scrape_subcategories">scrape_subcategories</option>
+                  <option value="scrape_sub_subcategories">scrape_sub_subcategories</option>
+                  <option value="scraper_for_sub_subcategory">scraper_for_sub_subcategory</option>
+                  <option value="load_sub_subcategory_products">load_sub_subcategory_products</option>
+                  <option value="generate_category_json">generate_category_json</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label for="subcat_verbosity" class="form-label">Verbosity</label>
+                <select id="subcat_verbosity" name="verbosity" class="form-select form-select-sm">
+                  <option value="0">0 - errors</option>
+                  <option value="1" selected>1 - normal</option>
+                  <option value="2">2 - verbose</option>
+                  <option value="3">3 - very verbose</option>
+                </select>
               </div>
             </div>
-          </div>
 
-          <div class="mt-3">
-            <button type="submit" class="btn btn-secondary">
-              Run Backfill Variants
-            </button>
-          </div>
-        </form>
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" id="subcat_continue_on_error" name="continue_on_error" value="1">
+              <label class="form-check-label" for="subcat_continue_on_error">
+                Continue on error
+              </label>
+            </div>
+
+            {% if subcategory_last_run %}
+            <div class="mt-3">
+              <label for="subcat_errors" class="form-label">Last run errors</label>
+              <textarea id="subcat_errors" class="form-control font-monospace" rows="6" readonly>
+{% if subcategory_last_run.errors %}{{ subcategory_last_run.errors }}{% else %}No errors recorded for the last subcategory pipeline run.{% endif %}</textarea>
+              <div class="form-text">
+                Last run started at {{ subcategory_last_run.started_at }}
+                {% if subcategory_last_run.finished_at %}, finished at {{ subcategory_last_run.finished_at }}{% endif %}.
+                Status:
+                {% if subcategory_last_run.succeeded %}
+                  success
+                {% else %}
+                  failed
+                {% endif %}.
+              </div>
+            </div>
+            {% endif %}
+
+            <div class="mt-3">
+              <button type="submit" class="btn btn-primary">
+                Run Subcategory Pipeline
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
 
-    <div class="card mt-4 border-danger">
-      <div class="card-body">
-        <h5 class="card-title text-danger">Danger Zone: Clear All Products</h5>
-        <p class="text-muted">Deletes every row in All_Products. This cannot be undone.</p>
-        <form method="post" class="vstack gap-2">
-          {% csrf_token %}
-          <input type="hidden" name="action" value="clear_all_products">
-          <div class="alert alert-warning">
-            <div>
-              Current product count: <strong>{{ product_count }}</strong>
+      <div class="card mt-4">
+        <div class="card-body">
+          <h5 class="card-title">Reload Products JSON (Heroku)</h5>
+          <p class="text-muted">
+            Run the <code>load_sub_subcategory_products</code> management command to
+            load products from <code>sub_subcategory_products.json</code> into
+            <code>All_Products</code>. From your terminal, the equivalent Heroku
+            CLI command is:
+            <code>heroku run python manage.py load_sub_subcategory_products --app kingston-online-grocery</code>.
+          </p>
+          <form method="post" class="vstack gap-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="load_sub_subcategory_products">
+
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label for="load_products_verbosity" class="form-label">Verbosity</label>
+                <select id="load_products_verbosity" name="verbosity" class="form-select form-select-sm">
+                  <option value="0">0 - errors</option>
+                  <option value="1" selected>1 - normal</option>
+                  <option value="2">2 - verbose</option>
+                  <option value="3">3 - very verbose</option>
+                </select>
+              </div>
             </div>
-            <ul class="mb-0 mt-2">
-              <li>Step 1: Tick the acknowledgement checkbox.</li>
-              <li>Step 2: Type <code>DELETE ALL PRODUCTS</code> below.</li>
-              <li>Step 3: Enter the current product count exactly.</li>
-            </ul>
-          </div>
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" value="1" id="ack" name="ack">
-            <label class="form-check-label" for="ack">I understand this action will permanently delete all products.</label>
-          </div>
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label for="confirm_phrase" class="form-label">Confirmation phrase</label>
-              <input id="confirm_phrase" name="confirm_phrase" type="text" class="form-control" placeholder="DELETE ALL PRODUCTS">
+
+            <div class="mt-3">
+              <button type="submit" class="btn btn-secondary">
+                Run load_sub_subcategory_products
+              </button>
             </div>
-            <div class="col-md-6">
-              <label for="confirm_count" class="form-label">Confirm product count</label>
-              <input id="confirm_count" name="confirm_count" type="number" min="0" class="form-control" placeholder="{{ product_count }}">
+          </form>
+        </div>
+      </div>
+
+      <div class="card mt-4">
+        <div class="card-body">
+          <h5 class="card-title">Backfill Variants</h5>
+          <p class="text-muted">
+            Populate missing variant fields by parsing pack information from product names
+            (for example <code>500ml x 12</code>).
+          </p>
+          <form method="post" class="vstack gap-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="backfill_variants">
+
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label for="backfill_limit" class="form-label">Limit (0 = all)</label>
+                <input
+                  type="number"
+                  min="0"
+                  class="form-control form-control-sm"
+                  id="backfill_limit"
+                  name="limit"
+                  placeholder="0">
+              </div>
+              <div class="col-md-4">
+                <label for="backfill_verbosity" class="form-label">Verbosity</label>
+                <select id="backfill_verbosity" name="verbosity" class="form-select form-select-sm">
+                  <option value="0">0 - errors</option>
+                  <option value="1" selected>1 - normal</option>
+                  <option value="2">2 - verbose</option>
+                  <option value="3">3 - very verbose</option>
+                </select>
+              </div>
+              <div class="col-md-4 d-flex align-items-end">
+                <div class="form-check">
+                  <input
+                    class="form-check-input"
+                    type="checkbox"
+                    id="backfill_dry_run"
+                    name="dry_run"
+                    value="1">
+                  <label class="form-check-label" for="backfill_dry_run">
+                    Dry run (no DB changes)
+                  </label>
+                </div>
+              </div>
             </div>
-          </div>
-          <div class="mt-3">
-            <button type="submit" class="btn btn-outline-danger" title="Runs management command 'clear_all_products' (_catalog/management/commands/clear_all_products.py)">Clear All Products</button>
-          </div>
-        </form>
+
+            <div class="mt-3">
+              <button type="submit" class="btn btn-secondary">
+                Run Backfill Variants
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="card mt-4 pm-danger">
+        <div class="card-body">
+          <h5 class="card-title text-danger">Danger Zone: Clear All Products</h5>
+          <p class="text-muted">Deletes every row in All_Products. This cannot be undone.</p>
+          <form method="post" class="vstack gap-2">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="clear_all_products">
+            <div class="alert alert-warning">
+              <div>
+                Current product count: <strong>{{ product_count }}</strong>
+              </div>
+              <ul class="mb-0 mt-2">
+                <li>Step 1: Tick the acknowledgement checkbox.</li>
+                <li>Step 2: Type <code>DELETE ALL PRODUCTS</code> below.</li>
+                <li>Step 3: Enter the current product count exactly.</li>
+              </ul>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" value="1" id="ack" name="ack">
+              <label class="form-check-label" for="ack">I understand this action will permanently delete all products.</label>
+            </div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="confirm_phrase" class="form-label">Confirmation phrase</label>
+                <input id="confirm_phrase" name="confirm_phrase" type="text" class="form-control" placeholder="DELETE ALL PRODUCTS">
+              </div>
+              <div class="col-md-6">
+                <label for="confirm_count" class="form-label">Confirm product count</label>
+                <input id="confirm_count" name="confirm_count" type="number" min="0" class="form-control" placeholder="{{ product_count }}">
+              </div>
+            </div>
+            <div class="mt-3">
+              <button type="submit" class="btn btn-outline-danger" title="Runs management command 'clear_all_products' (_catalog/management/commands/clear_all_products.py)">Clear All Products</button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   </div>
-</div>
+</section>
 {% endblock %}

@@ -4,15 +4,18 @@
 {% block title %}Company Settings{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
+<section class="pm-hub-page">
+  <div class="pm-hero">
     <div>
-      <h1 class="h3 mb-0">Company Settings</h1>
-      <div class="text-muted small">Manage company identity, contact, tax and invoice details</div>
+      <p class="pm-eyebrow">Product Management</p>
+      <h1 class="pm-title">Company Settings</h1>
+      <p class="pm-subtitle">Manage identity, tax details, invoice defaults, and company profile data used across the platform.</p>
     </div>
-    {% if company %}
-      <span class="badge bg-secondary">ID #{{ company.id }}</span>
-    {% endif %}
+    <div class="pm-hero-actions">
+      {% if company %}
+      <span class="pm-chip">Company ID: {{ company.id }}</span>
+      {% endif %}
+    </div>
   </div>
 
   {% if messages %}
@@ -23,7 +26,7 @@
 
   <div class="row g-4">
     <div class="col-lg-8">
-      <form method="post" enctype="multipart/form-data" class="card shadow-sm">
+      <form method="post" enctype="multipart/form-data" class="card">
         <div class="card-body">
           {% csrf_token %}
 
@@ -137,9 +140,9 @@
     </div>
 
     <div class="col-lg-4">
-      <div class="card shadow-sm">
+      <div class="card">
         <div class="card-body">
-          <h2 class="h6">Current</h2>
+          <h2 class="h6">Current Record</h2>
           {% if company %}
             <div class="mb-2"><strong>{{ company.name }}</strong></div>
             <div class="text-muted small mb-2">Slug: {{ company.slug }}</div>
@@ -157,5 +160,5 @@
       </div>
     </div>
   </div>
-</div>
+</section>
 {% endblock %}

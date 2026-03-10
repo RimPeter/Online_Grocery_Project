@@ -291,3 +291,33 @@ img.qr { max-width: 100%; height: auto; border: 1px solid #e5e7eb; background: #
   }
   .leaflet-toolbar { display: none !important; }
 }
+
+/* Product Management refresh for Leaflet DL controls */
+.leaflet-toolbar {
+  border-radius: 18px;
+  border: 1px solid rgba(15, 118, 110, 0.2);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(236, 250, 245, 0.92));
+  box-shadow: 0 18px 36px rgba(15, 41, 78, 0.12);
+}
+
+.lf-url-form input[type="url"],
+.lf-editor-grid input,
+.lf-editor-grid textarea {
+  border-radius: 10px;
+  border: 1px solid rgba(14, 52, 99, 0.22);
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.lf-editor summary {
+  color: #0f4b67;
+}
+
+.lf-toolbar-actions .btn-primary {
+  background: linear-gradient(120deg, #0f766e, #155e75);
+  border: 0;
+}
+
+.lf-toolbar-actions .btn-secondary {
+  background: linear-gradient(180deg, #f7fafc, #ecf3fb);
+  border: 1px solid rgba(14, 52, 99, 0.2);
+}

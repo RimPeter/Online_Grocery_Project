@@ -4,33 +4,38 @@
 {% block title %}Items To Order{% endblock %}
 
 {% block content %}
-<div class="row">
-  <div class="col-12">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h1 class="mb-0">Items To Order</h1>
-      <div class="d-flex gap-2">
-<a class="btn btn-outline-light" href="{% url '_product_management:paid_orders' %}">Back To Paid Orders</a>
-        <a class="btn btn-outline-light" href="{% url '_product_management:processed_orders' %}">Back To Completed Orders</a>
-        <a class="btn btn-outline-light" href="{% url '_product_management:items_to_order_pdf' %}">Download PDF</a>
-      </div>
+<section class="pm-hub-page">
+  <div class="pm-hero">
+    <div>
+      <p class="pm-eyebrow">Product Management</p>
+      <h1 class="pm-title">Items To Order</h1>
+      <p class="pm-subtitle">Consolidated procurement view from paid orders with pricing, VAT and profitability context.</p>
     </div>
+    <div class="pm-hero-actions">
+      <a class="btn btn-outline-light btn-sm" href="{% url '_product_management:paid_orders' %}">Paid Orders</a>
+      <a class="btn btn-outline-light btn-sm" href="{% url '_product_management:processed_orders' %}">Processed Orders</a>
+      <a class="btn btn-light btn-sm" href="{% url '_product_management:items_to_order_pdf' %}">Download PDF</a>
+      <span class="pm-chip">Rows: {{ items|length }}</span>
+    </div>
+  </div>
 
+  <div class="pm-surface">
     <div class="table-responsive">
       <table class="table table-striped table-hover align-middle">
         <thead class="table-light">
           <tr>
             <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Product name.">Product</th>
-            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Product variant (e.g., size or flavour).">Variant</th>
-            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="SKU (stock keeping unit) identifier.">SKU</th>
-            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Bestway GA product identifier (e.g., 807771-1).">GA Product ID</th>
-            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Supplier cost per unit, net of VAT.">Cost (Price)</th>
+            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Product variant, for example size or flavor.">Variant</th>
+            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="SKU identifier.">SKU</th>
+            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Bestway GA product identifier.">GA Product ID</th>
+            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Supplier cost per unit net of VAT.">Cost (Price)</th>
             <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Supplier cost including VAT where applicable.">Gross Price</th>
-            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Recommended selling price (gross). Uses bulk pack price when applicable.">RSP</th>
-            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="RSP excluding VAT (net).">RSP Net</th>
-            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Line net profit = (RSP Net − Cost) × Total Qty.">Net Profit</th>
-            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Product VAT rate (e.g., standard, zero).">VAT Rate</th>
+            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Recommended selling price gross.">RSP</th>
+            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="RSP excluding VAT.">RSP Net</th>
+            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Line net profit = (RSP Net - Cost) x Total Qty.">Net Profit</th>
+            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Product VAT rate.">VAT Rate</th>
             <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Total quantity ordered across paid orders.">Total Qty</th>
-            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Number of distinct paid orders containing this item.">Orders Count</th>
+            <th scope="col" data-bs-toggle="tooltip" data-bs-placement="top" title="Number of paid orders that contain this item.">Orders Count</th>
           </tr>
         </thead>
         <tbody>
@@ -68,116 +73,103 @@
               <td colspan="12" class="text-center text-muted py-4">No items found across paid orders.</td>
             </tr>
           {% endfor %}
-
-                </tbody>
+        </tbody>
         {% if items %}
         <tfoot class="table-light fw-bold">
-  <tr>
-    <td>Total</td>
-    <td>-</td>
-    <td>-</td>
-    <td>-</td>
-    <td>
-      &pound;{{ items|sum_attr:"product__price"|floatformat:2 }}
-    </td>
-    <td>
-      &pound;{{ items|sum_attr:"gross_price"|floatformat:2 }}
-    </td>
-    <td>
-      &pound;{{ items|sum_coalesce:"display_rsp,product__rsp"|floatformat:2 }}
-    </td>
-    <td>
-      &pound;{{ items|sum_attr:"rsp_net"|floatformat:2 }}
-    </td>
-    <td>
-      &pound;{{ items|sum_attr:"net_profit_total"|floatformat:2 }}
-    </td>
-    <td>-</td>
-    <td>{{ items|sum_attr:"total_qty" }}</td>
-    <td>{{ items|sum_attr:"orders_count" }}</td>
-  </tr>
-</tfoot>
+          <tr>
+            <td>Total</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td>&pound;{{ items|sum_attr:"product__price"|floatformat:2 }}</td>
+            <td>&pound;{{ items|sum_attr:"gross_price"|floatformat:2 }}</td>
+            <td>&pound;{{ items|sum_coalesce:"display_rsp,product__rsp"|floatformat:2 }}</td>
+            <td>&pound;{{ items|sum_attr:"rsp_net"|floatformat:2 }}</td>
+            <td>&pound;{{ items|sum_attr:"net_profit_total"|floatformat:2 }}</td>
+            <td>-</td>
+            <td>{{ items|sum_attr:"total_qty" }}</td>
+            <td>{{ items|sum_attr:"orders_count" }}</td>
+          </tr>
+        </tfoot>
         {% endif %}
-
-        
       </table>
     </div>
+  </div>
 
-    <div class="mt-5">
-      <h2 class="h4 mb-3">Items Grouped Per Order</h2>
-      {% if items_grouped_by_order %}
-        <div class="accordion" id="items-per-order-accordion">
-          {% for grp in items_grouped_by_order %}
-            <div class="accordion-item">
-              <h2 class="accordion-header" id="order-heading-{{ grp.order.id }}">
-                <button
-                  class="accordion-button collapsed"
-                  type="button"
-                  data-bs-toggle="collapse"
-                  data-bs-target="#order-collapse-{{ grp.order.id }}"
-                  aria-expanded="false"
-                  aria-controls="order-collapse-{{ grp.order.id }}"
-                >
-                  Order #{{ grp.order.id }} | {{ grp.order.created_at|date:"Y-m-d H:i" }} | Qty: {{ grp.total_qty }} | Total: &pound;{{ grp.total_amount|floatformat:2 }}
-                </button>
-              </h2>
-              <div
-                id="order-collapse-{{ grp.order.id }}"
-                class="accordion-collapse collapse"
-                aria-labelledby="order-heading-{{ grp.order.id }}"
-                data-bs-parent="#items-per-order-accordion"
+  <div class="pm-surface mt-4">
+    <h2 class="h4 mb-3">Items Grouped Per Order</h2>
+    {% if items_grouped_by_order %}
+      <div class="accordion" id="items-per-order-accordion">
+        {% for grp in items_grouped_by_order %}
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="order-heading-{{ grp.order.id }}">
+              <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#order-collapse-{{ grp.order.id }}"
+                aria-expanded="false"
+                aria-controls="order-collapse-{{ grp.order.id }}"
               >
-                <div class="accordion-body">
-                  <div class="table-responsive">
-                    <table class="table table-sm table-striped align-middle mb-0">
-                      <thead class="table-light">
+                Order #{{ grp.order.id }} | {{ grp.order.created_at|date:"Y-m-d H:i" }} | Qty: {{ grp.total_qty }} | Total: &pound;{{ grp.total_amount|floatformat:2 }}
+              </button>
+            </h2>
+            <div
+              id="order-collapse-{{ grp.order.id }}"
+              class="accordion-collapse collapse"
+              aria-labelledby="order-heading-{{ grp.order.id }}"
+              data-bs-parent="#items-per-order-accordion"
+            >
+              <div class="accordion-body">
+                <div class="table-responsive">
+                  <table class="table table-sm table-striped align-middle mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th scope="col">Product</th>
+                        <th scope="col">Variant</th>
+                        <th scope="col">SKU</th>
+                        <th scope="col">GA Product ID</th>
+                        <th scope="col">Qty</th>
+                        <th scope="col">Unit Price</th>
+                        <th scope="col">Line Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for row in grp.rows %}
                         <tr>
-                          <th scope="col">Product</th>
-                          <th scope="col">Variant</th>
-                          <th scope="col">SKU</th>
-                          <th scope="col">GA Product ID</th>
-                          <th scope="col">Qty</th>
-                          <th scope="col">Unit Price</th>
-                          <th scope="col">Line Total</th>
+                          <td>{{ row.product_name }}</td>
+                          <td>{{ row.variant }}</td>
+                          <td>{{ row.sku }}</td>
+                          <td>{{ row.ga_product_id }}</td>
+                          <td>{{ row.qty }}</td>
+                          <td>&pound;{{ row.unit_price|floatformat:2 }}</td>
+                          <td>&pound;{{ row.line_total|floatformat:2 }}</td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {% for row in grp.rows %}
-                          <tr>
-                            <td>{{ row.product_name }}</td>
-                            <td>{{ row.variant }}</td>
-                            <td>{{ row.sku }}</td>
-                            <td>{{ row.ga_product_id }}</td>
-                            <td>{{ row.qty }}</td>
-                            <td>&pound;{{ row.unit_price|floatformat:2 }}</td>
-                            <td>&pound;{{ row.line_total|floatformat:2 }}</td>
-                          </tr>
-                        {% endfor %}
-                      </tbody>
-                      <tfoot class="table-light fw-bold">
-                        <tr>
-                          <td>Total</td>
-                          <td>-</td>
-                          <td>-</td>
-                          <td>-</td>
-                          <td>{{ grp.total_qty }}</td>
-                          <td>-</td>
-                          <td>&pound;{{ grp.total_amount|floatformat:2 }}</td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
+                      {% endfor %}
+                    </tbody>
+                    <tfoot class="table-light fw-bold">
+                      <tr>
+                        <td>Total</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>{{ grp.total_qty }}</td>
+                        <td>-</td>
+                        <td>&pound;{{ grp.total_amount|floatformat:2 }}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 </div>
               </div>
             </div>
-          {% endfor %}
-        </div>
-      {% else %}
-        <div class="text-muted">No paid orders found.</div>
-      {% endif %}
-    </div>
-</div>
- </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="text-muted">No paid orders found.</div>
+    {% endif %}
+  </div>
+</section>
 {% endblock %}
 
 {% block extra_js %}
@@ -185,10 +177,8 @@
   (function () {
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipTriggerList.forEach(function (el) {
-      new bootstrap.Tooltip(el, {container: 'body'});
+      new bootstrap.Tooltip(el, { container: 'body' });
     });
   })();
-  </script>
+</script>
 {% endblock %}
-
-
