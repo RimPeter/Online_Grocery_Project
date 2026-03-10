@@ -10,7 +10,7 @@ from django.conf import settings
 from django.contrib.staticfiles import finders
 from xhtml2pdf import pisa
 from django.contrib.auth.decorators import user_passes_test
-from django.db.models import Count, Sum, F, DecimalField, Value, ExpressionWrapper, Q, Max, Case, When
+from django.db.models import Count, Sum, F, DecimalField, Value, ExpressionWrapper, Q, Max, Case, When, Prefetch
 from django.db.models.functions import Coalesce, Cast
 from datetime import date, timedelta
 from decimal import Decimal
@@ -970,6 +970,7 @@ def items_to_order(request):
             'product_id',
             'product__name',
             'product__sku',
+            'product__ga_product_id',
             'product__variant',
             'product__price',
             'product__rsp',
@@ -1126,6 +1127,47 @@ def items_to_order(request):
     gross_profit = total_rsp - total_purchase
     net_profit = total_net_profit
     grand_qty = sum(int(it.get('total_qty') or 0) for it in items) if items else 0
+    # Additional section data: items grouped by each paid order
+    paid_orders = (
+        Order.objects
+        .filter(status__in=active_statuses)
+        .select_related('user')
+        .prefetch_related(
+            Prefetch(
+                'items',
+                queryset=OrderItem.objects.select_related('product').order_by('product__name'),
+            )
+        )
+        .order_by('-created_at', '-id')
+    )
+    items_grouped_by_order = []
+    for order in paid_orders:
+        rows = []
+        total_qty = 0
+        total_amount = Decimal('0')
+        for oi in order.items.all():
+            qty = int(oi.quantity or 0)
+            unit_price = oi.price if oi.price is not None else Decimal('0')
+            line_total = unit_price * qty
+            total_qty += qty
+            total_amount += line_total
+            p = oi.product
+            rows.append({
+                'product_name': p.name,
+                'variant': p.variant or '-',
+                'sku': p.sku or '-',
+                'ga_product_id': p.ga_product_id or '-',
+                'qty': qty,
+                'unit_price': unit_price,
+                'line_total': line_total,
+            })
+        if rows:
+            items_grouped_by_order.append({
+                'order': order,
+                'rows': rows,
+                'total_qty': total_qty,
+                'total_amount': total_amount,
+            })
 
     context = {
         'items': items,
@@ -1140,6 +1182,7 @@ def items_to_order(request):
         'total_rsp_net': total_rsp_net,
         'total_net_profit': total_net_profit,
         'grand_qty': grand_qty,
+        'items_grouped_by_order': items_grouped_by_order,
     }
     return render(request, '_product_management/items_to_order.html', context)
 

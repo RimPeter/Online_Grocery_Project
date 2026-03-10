@@ -19,6 +19,11 @@ from datetime import timedelta
 from .models import PendingSignup
 
 logger = logging.getLogger(__name__)
+MULTI_USE_TEST_EMAIL = "primaszecsi@gmail.com"
+
+
+def _is_multi_use_test_email(email: str) -> bool:
+    return (email or "").strip().lower() == MULTI_USE_TEST_EMAIL
 
 @login_required
 def manage_addresses(request):
@@ -169,7 +174,7 @@ def signup_view(request):
     if request.method == 'POST':
         context = {}
         username = (request.POST.get('username') or "").strip()
-        email = (request.POST.get('email') or "").strip()
+        email = (request.POST.get('email') or "").strip().lower()
         phone = (request.POST.get('phone') or "").strip()
         password1 = request.POST.get('password1')
         password2 = request.POST.get('password2')
@@ -179,13 +184,14 @@ def signup_view(request):
             return render(request, 'accounts/signup.html', context)
 
         User = get_user_model()
+        allow_duplicate_test_email = _is_multi_use_test_email(email)
 
         # Case-insensitive checks against existing Users
         if User.objects.filter(username__iexact=username).exists():
             context['username_error'] = 'Username already taken'
             return render(request, 'accounts/signup.html', context)
 
-        if User.objects.filter(email__iexact=email).exists():
+        if (not allow_duplicate_test_email) and User.objects.filter(email__iexact=email).exists():
             context['email_error'] = 'Email address already in use'
             return render(request, 'accounts/signup.html', context)
 
@@ -201,20 +207,40 @@ def signup_view(request):
         if PendingSignup.objects.filter(username__iexact=username).exists():
             context['username_error'] = 'A verification is already pending for this username. Check your email.'
             return render(request, 'accounts/signup.html', context)
-        if PendingSignup.objects.filter(email__iexact=email).exists():
+        if (not allow_duplicate_test_email) and PendingSignup.objects.filter(email__iexact=email).exists():
             context['email_error'] = 'A verification is already pending for this email. Check your inbox.'
             return render(request, 'accounts/signup.html', context)
 
         code = get_random_string(length=8).lower()  # e.g., c5532027 style
-        pending = PendingSignup.objects.create(
-            username=username,
-            email=email,
-            phone=phone,
-            password_hash=make_password(password1),
-            code=code,
-            expires_at=timezone.now() + timedelta(minutes=30),
-            requester_ip=request.META.get('REMOTE_ADDR')
-        )
+        pending_payload = {
+            'username': username,
+            'email': email,
+            'phone': phone,
+            'password_hash': make_password(password1),
+            'code': code,
+            'expires_at': timezone.now() + timedelta(minutes=30),
+            'requester_ip': request.META.get('REMOTE_ADDR'),
+        }
+        try:
+            pending = PendingSignup.objects.create(**pending_payload)
+        except IntegrityError as exc:
+            err_text = str(exc).lower()
+            if 'uniq_pending_username_lower' in err_text:
+                context['username_error'] = 'A verification is already pending for this username. Check your email.'
+                return render(request, 'accounts/signup.html', context)
+            if 'uniq_pending_email_lower' in err_text:
+                if allow_duplicate_test_email:
+                    # Legacy DBs may still enforce unique pending email; recycle any existing
+                    # rows for the test email and retry once instead of returning HTTP 500.
+                    PendingSignup.objects.filter(email__iexact=email).delete()
+                    pending = PendingSignup.objects.create(**pending_payload)
+                else:
+                    context['email_error'] = 'A verification is already pending for this email. Check your inbox.'
+                    return render(request, 'accounts/signup.html', context)
+            else:
+                logger.exception('signup pending creation failed')
+                context['error'] = 'Could not start verification right now. Please try again.'
+                return render(request, 'accounts/signup.html', context)
 
         email_ok = send_verification_email(
             # You can overload to accept raw details instead of a user
@@ -270,7 +296,7 @@ def verify_account(request):
                 if User.objects.filter(username__iexact=pending.username).exists():
                     pending.delete()
                     return render(request, 'accounts/verify_account.html', {'error': 'Username is no longer available.'})
-                if User.objects.filter(email__iexact=pending.email).exists():
+                if (not _is_multi_use_test_email(pending.email)) and User.objects.filter(email__iexact=pending.email).exists():
                     pending.delete()
                     return render(request, 'accounts/verify_account.html', {'error': 'Email is no longer available.'})
 

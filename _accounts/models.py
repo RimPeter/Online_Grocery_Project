@@ -7,6 +7,8 @@ from django.db.models import Q
 from django.db.models.functions import Lower # For case-insensitive constraints
 from django.utils import timezone
 
+MULTI_USE_TEST_EMAIL = "primaszecsi@gmail.com"
+
 
 class Company(models.Model):
     # Core identity
@@ -77,7 +79,7 @@ class Company(models.Model):
         return ", ".join([p for p in parts if p])
 
 class User(AbstractUser):
-    email = models.EmailField(unique=True)
+    email = models.EmailField()
     phone = models.CharField(max_length=15)
     is_active = models.BooleanField(default=True)
 
@@ -106,8 +108,8 @@ class User(AbstractUser):
             # Case-insensitive unique email (skip NULLs)
             models.UniqueConstraint(
                 Lower('email'),
-                condition=Q(email__isnull=False),
-                name='uniq_user_email_lower'
+                condition=Q(email__isnull=False) & ~Q(email__iexact=MULTI_USE_TEST_EMAIL),
+                name='uniq_user_email_lower_except_test'
             ),
         ]
 
@@ -163,7 +165,11 @@ class PendingSignup(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(Lower('username'), name='uniq_pending_username_lower'),
-            models.UniqueConstraint(Lower('email'), condition=Q(email__isnull=False), name='uniq_pending_email_lower'),
+            models.UniqueConstraint(
+                Lower('email'),
+                condition=Q(email__isnull=False) & ~Q(email__iexact=MULTI_USE_TEST_EMAIL),
+                name='uniq_pending_email_lower_except_test'
+            ),
         ]
 
     def is_expired(self):
