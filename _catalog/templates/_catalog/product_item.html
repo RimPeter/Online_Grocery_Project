@@ -1,22 +1,22 @@
 {% load static %}
-<div class="col-lg-3 col-md-4 col-sm-6 col-6 d-flex align-items-stretch" data-bulk-item="{{ product.is_bulk|yesno:'true,false' }}">
-  <div class="card mb-4 shadow-sm h-100 position-relative {% if user.is_superuser and not product.is_visible_to_customers %}border border-warning bg-light{% endif %}">
+<div class="col-xxl-3 col-lg-4 col-md-4 col-sm-6 col-6 d-flex align-items-stretch catalog-product-col" data-bulk-item="{{ product.is_bulk|yesno:'true,false' }}">
+  <article class="card product-cosmos-card h-100 position-relative {% if user.is_superuser and not product.is_visible_to_customers %}product-cosmos-card-hidden{% endif %}">
     {% if product.is_bulk %}
-      <span class="position-absolute top-0 start-0 m-2 badge rounded-pill text-bg-warning" style="z-index:2;" aria-label="Bulk item" title="Bulk item">Bulk Item</span>
+      <span class="product-bulk-badge" aria-label="Bulk item" title="Bulk item">Bulk item</span>
     {% endif %}
 
     {% if user.is_superuser %}
-      <div class="dropdown position-absolute top-0 end-0 m-2" style="z-index:3;">
-        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="adminMenu{{ product.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+      <div class="dropdown position-absolute top-0 end-0 m-2 product-admin-dropdown">
+        <button class="btn btn-sm product-admin-btn dropdown-toggle" type="button" id="adminMenu{{ product.id }}" data-bs-toggle="dropdown" aria-expanded="false">
           Admin
         </button>
-        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="adminMenu{{ product.id }}" style="min-width: 220px;">
+        <ul class="dropdown-menu dropdown-menu-end product-admin-menu" aria-labelledby="adminMenu{{ product.id }}">
           <li class="px-3 py-2">
             <form method="post" action="{% url 'product_admin_update' product.id %}">
               {% csrf_token %}
               <input type="hidden" name="action" value="toggle_visibility">
               <input type="hidden" name="return_to" value="{{ request.get_full_path }}">
-              <button type="submit" class="btn btn-link p-0">
+              <button type="submit" class="btn btn-link p-0 product-admin-link">
                 {% if product.is_visible_to_customers %}
                   Make invisible for customers
                 {% else %}
@@ -33,7 +33,7 @@
               <input type="hidden" name="return_to" value="{{ request.get_full_path }}">
               <label for="id_rsp_{{ product.id }}" class="form-label mb-1 small">Change RSP</label>
               <div class="input-group input-group-sm">
-                <span class="input-group-text">£</span>
+                <span class="input-group-text">&pound;</span>
                 <input
                   type="number"
                   step="0.01"
@@ -51,68 +51,59 @@
       </div>
     {% endif %}
 
-{% if product.image_url and product.image_url != '/img/products/no-image.png' %}
-  <a href="{% url 'product_detail' product.pk %}">
-    <img src="{{ product.image_url }}" class="card-img-top" alt="{{ product.name }}" loading="lazy">
-  </a>
-{% else %}
-  <img src="{% static 'images/default_product.jpg' %}" class="card-img-top" alt="No Image" loading="lazy">
-{% endif %}
+    <a href="{% url 'product_detail' product.pk %}" class="product-media-link">
+      {% if product.image_url and product.image_url != '/img/products/no-image.png' %}
+        <img src="{{ product.image_url }}" class="card-img-top product-cosmos-image" alt="{{ product.name }}" loading="lazy">
+      {% else %}
+        <img src="{% static 'images/default_product.jpg' %}" class="card-img-top product-cosmos-image" alt="No Image" loading="lazy">
+      {% endif %}
+    </a>
 
-    <div class="card-body d-flex flex-column">
+    <div class="card-body d-flex flex-column product-cosmos-body">
       {% if user.is_superuser and not product.is_visible_to_customers %}
-        <p class="card-text text-danger small mb-1">Invisible for customers</p>
+        <p class="product-hidden-flag mb-2">Invisible for customers</p>
       {% endif %}
-      <h6 class="card-title text-break"><a href="{% url 'product_detail' product.pk %}" class="text-decoration-none text-reset">{{ product.name }}</a></h6>
-      <p class="card-text text-muted text-truncate">{{ product.variant|default:"No description available" }}</p>
-      {% if product.main_category or product.sub_category or product.sub_subcategory %}
-        {% comment %} <p class="card-text text-muted small">
-          {% if product.main_category %}{{ product.main_category }}{% endif %}
-          {% if product.sub_category %}{% if product.main_category %} › {% endif %}{{ product.sub_category }}{% endif %}
-          {% if product.sub_subcategory %}{% if product.main_category or product.sub_category %} › {% endif %}{{ product.sub_subcategory }}{% endif %}
-        </p> {% endcomment %}
-      {% endif %}
+
+      <h6 class="card-title text-break product-cosmos-title">
+        <a href="{% url 'product_detail' product.pk %}" class="text-decoration-none">{{ product.name }}</a>
+      </h6>
+
+      <p class="card-text product-cosmos-variant">{{ product.variant|default:"No description available" }}</p>
 
       {% if user.is_superuser %}
-        <p class="card-text text-muted small">Cost £{{ product.price|floatformat:2 }}</p>
+        <p class="card-text product-cost-line">Cost &pound;{{ product.price|floatformat:2 }}</p>
       {% endif %}
 
-      {# Show price to superusers even if RSP is 0; users see price only if RSP > 0 #}
       {% if user.is_superuser %}
         {% if product.is_bulk %}
-          <p class="card-text price">£{{ product.rsp|floatformat:2 }}/item</p>
-          <p class="card-text"><small class="text-muted">Pack of {{ product.pack_amount }} — Total £{{ product.bulk_total_price|floatformat:2 }}</small></p>
+          <p class="card-text product-price-main">&pound;{{ product.rsp|floatformat:2 }}<span>/item</span></p>
+          <p class="card-text product-pack-note">Pack of {{ product.pack_amount }} | Total &pound;{{ product.bulk_total_price|floatformat:2 }}</p>
         {% else %}
-          <p class="card-text price">£{{ product.rsp|floatformat:2 }}</p>
+          <p class="card-text product-price-main">&pound;{{ product.rsp|floatformat:2 }}</p>
         {% endif %}
       {% elif product.rsp and product.rsp > 0 %}
         {% if product.is_bulk %}
-          <p class="card-text price">£{{ product.rsp|floatformat:2 }}/item</p>
-          <p class="card-text"><small class="text-muted">Pack of {{ product.pack_amount }} — Total £{{ product.bulk_total_price|floatformat:2 }}</small></p>
+          <p class="card-text product-price-main">&pound;{{ product.rsp|floatformat:2 }}<span>/item</span></p>
+          <p class="card-text product-pack-note">Pack of {{ product.pack_amount }} | Total &pound;{{ product.bulk_total_price|floatformat:2 }}</p>
         {% else %}
-          <p class="card-text price">£{{ product.rsp|floatformat:2 }}</p>
+          <p class="card-text product-price-main">&pound;{{ product.rsp|floatformat:2 }}</p>
         {% endif %}
       {% else %}
-        <p class="card-text text-muted">Price unavailable</p>
+        <p class="card-text product-price-unavailable">Price unavailable</p>
       {% endif %}
 
-      {% comment %} {% if product.promotion_end_date %}
-        <p class="card-text text-danger"><strong>Promotion ends on:</strong> {{ product.promotion_end_date }}</p>
-      {% endif %} {% endcomment %}
+      <div class="mt-auto product-cosmos-actions">
+        <a href="{% url 'product_detail' product.pk %}" class="btn product-detail-btn" aria-label="View details for {{ product.name }}">Details</a>
 
-      <div class="mt-auto">
-        <a href="{% url 'product_detail' product.pk %}" class="btn btn-primary mb-2" aria-label="View details for {{ product.name }}">View Details</a>
-
-        <!-- Add to Cart Form -->
-        <form method="POST" action="{% url 'add_to_cart' product.id %}" class="add-to-cart-form" data-action-url="{% url 'add_to_cart' product.id %}">
+        <form method="POST" action="{% url 'add_to_cart' product.id %}" class="add-to-cart-form product-add-form" data-action-url="{% url 'add_to_cart' product.id %}">
           {% csrf_token %}
           <input type="hidden" name="return_to" value="{{ request.get_full_path }}">
-          <div class="input-group mb-2">
-            <input type="number" name="quantity" class="form-control" value="1" min="1" aria-label="Quantity for {{ product.name }}">
-            <button type="submit" class="btn btn-primary" aria-label="Add {{ product.name }} to cart">Add</button>
+          <div class="input-group">
+            <input type="number" name="quantity" class="form-control product-qty-input" value="1" min="1" aria-label="Quantity for {{ product.name }}">
+            <button type="submit" class="btn product-add-btn" aria-label="Add {{ product.name }} to cart">Add</button>
           </div>
         </form>
       </div>
     </div>
-  </div>
+  </article>
 </div>

@@ -1,34 +1,69 @@
 {% extends 'base.html' %}
+{% load static %}
+
 {% block title %}Contact Us{% endblock %}
 
-{% block content %}
-<h3>Contact Us</h3>
-<p class='text-muted'>Have a question or feedback? Send us a message.</p>
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@600;700&display=swap" rel="stylesheet">
+{% endblock %}
 
-<form method='post' novalidate>
-  {% csrf_token %}
-  <div class='mb-3'>
-    <label for='id_subject' class='form-label'>Subject</label>
-    {{ form.subject }}
-    {% if form.subject.errors %}
-      <div class='text-danger small'>{{ form.subject.errors|striptags }}</div>
-    {% endif %}
+{% block content %}
+<div class="container my-4 contact-lab">
+  <section class="contact-hero">
+    <div>
+      <p class="contact-kicker mb-1">Support</p>
+      <h1 class="contact-title mb-1">Contact us</h1>
+      <p class="contact-sub mb-0">Have a question, issue, or feedback? Send a message and we&apos;ll get back to you.</p>
+    </div>
+    <span class="contact-chip">Response by email</span>
+  </section>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <section class="contact-shell-card">
+        <form method="post" novalidate class="contact-form-shell">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="id_subject" class="form-label">Subject</label>
+            {{ form.subject }}
+            {% if form.subject.errors %}
+              <div class="text-danger small">{{ form.subject.errors|striptags }}</div>
+            {% endif %}
+          </div>
+          <div class="mb-3">
+            <label for="id_message" class="form-label">Message</label>
+            {{ form.message }}
+            {% if form.message.errors %}
+              <div class="text-danger small">{{ form.message.errors|striptags }}</div>
+            {% endif %}
+          </div>
+          <div class="d-flex gap-2 flex-wrap">
+            <button type="submit" class="btn contact-send-btn">Send</button>
+            <a href="{% url 'home' %}" class="btn contact-cancel-btn">Cancel</a>
+            {% if user.is_superuser %}
+              <a href="{% url 'admin:index' %}" class="btn contact-admin-btn">Admin</a>
+            {% endif %}
+          </div>
+
+          {% if form.non_field_errors %}
+            <div class="text-danger mt-2">{{ form.non_field_errors }}</div>
+          {% endif %}
+        </form>
+      </section>
+    </div>
+
+    <div class="col-lg-4">
+      <section class="contact-note-card">
+        <h2 class="h6 mb-2">Before you send</h2>
+        <ul class="mb-0">
+          <li>Add as much detail as possible in your message.</li>
+          <li>If your issue is about an order, include your order number.</li>
+          <li>We reply to your account email address.</li>
+        </ul>
+      </section>
+    </div>
   </div>
-  <div class='mb-3'>
-    <label for='id_message' class='form-label'>Message</label>
-    {{ form.message }}
-    {% if form.message.errors %}
-      <div class='text-danger small'>{{ form.message.errors|striptags }}</div>
-    {% endif %}
-  </div>
-  <button type='submit' class='btn btn-primary'>Send</button>
-  <a href="{% url 'home' %}" class='btn btn-outline-secondary ms-2'>Cancel</a>
-  {% if user.is_superuser %}
-    <a href="{% url 'admin:index' %}" class='btn btn-link'>Admin</a>
-  {% endif %}
-  
-  {% if form.non_field_errors %}
-    <div class='text-danger mt-2'>{{ form.non_field_errors }}</div>
-  {% endif %}
-</form>
+</div>
 {% endblock %}

@@ -27,13 +27,17 @@
   </head>
   <body class="pagecolor">
     <!-- Navigation Bar -->
-    <nav class="navbar navbar2 navbar-expand-lg navbar-dark">
-      <a class="navbar-brand" href="{% url 'home' %}" aria-label="Online Grocery Home">
+    <nav class="navbar navbar2 grocery-nav navbar-expand-lg navbar-dark">
+      <a class="navbar-brand grocery-brand" href="{% url 'home' %}" aria-label="Online Grocery Home">
         <img src="{% static 'images/Kingston_Online_Grocery_logo.png' %}"
              alt="Online Grocery"
              class="navbar-logo"/>
+        <span class="brand-meta d-none d-md-flex">
+          <span class="brand-title">Online Grocery</span>
+          <span class="brand-sub">Fresh picks, fair prices</span>
+        </span>
       </a>
-      <div class="d-flex align-items-center gap-2 ms-auto">
+      <div class="d-flex align-items-center gap-2 ms-auto nav-mobile-controls">
         <a
           href="{% url 'home' %}"
           class="mobile-back-btn d-inline-flex d-lg-none align-items-center justify-content-center"
@@ -43,7 +47,7 @@
           Back
         </a>
         <button
-          class="navbar-toggler"
+          class="navbar-toggler nav-toggle"
           type="button"
           data-bs-toggle="collapse"
           data-bs-target="#navbarNav"
@@ -54,9 +58,9 @@
           <span class="navbar-toggler-icon"></span>
         </button>
       </div>
-      <div class="collapse navbar-collapse" id="navbarNav">
+      <div class="collapse navbar-collapse nav-collapse-shell" id="navbarNav">
         {% with request.resolver_match.url_name as url_name %}
-        <ul class="navbar-nav ms-auto">
+        <ul class="navbar-nav ms-auto nav-links">
           <!-- Bootstrap 5 uses ms-auto -->
           <li class="nav-item">
             <a class="nav-link navbar-button {% if url_name == 'home' %}active{% endif %}" {% if url_name == 'home' %}aria-current="page"{% endif %} href="{% url 'home' %}">Home</a>
@@ -76,7 +80,7 @@
             >
               Product Management
             </a>
-            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarPMDropdown">
+            <ul class="dropdown-menu dropdown-menu-end nav-dropdown" aria-labelledby="navbarPMDropdown">
               <li>
                 <a class="dropdown-item" href="{% url '_product_management:dl' %}">Leaflet DL</a>
               </li>
@@ -136,11 +140,11 @@
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="22" height="22" fill="currentColor"><!--!Font Awesome Pro v7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2025 Fonticons, Inc.--><path d="M24 48C10.7 48 0 58.7 0 72C0 85.3 10.7 96 24 96L69.3 96C73.2 96 76.5 98.8 77.2 102.6L129.3 388.9C135.5 423.1 165.3 448 200.1 448L456 448C469.3 448 480 437.3 480 424C480 410.7 469.3 400 456 400L200.1 400C188.5 400 178.6 391.7 176.5 380.3L171.4 352L475 352C505.8 352 532.2 330.1 537.9 299.8L568.9 133.9C572.6 114.2 557.5 96 537.4 96L124.7 96L124.3 94C119.5 67.4 96.3 48 69.2 48L24 48zM208 576C234.5 576 256 554.5 256 528C256 501.5 234.5 480 208 480C181.5 480 160 501.5 160 528C160 554.5 181.5 576 208 576zM432 576C458.5 576 480 554.5 480 528C480 501.5 458.5 480 432 480C405.5 480 384 501.5 384 528C384 554.5 405.5 576 432 576z"/></svg>
               {% with cart=request.session.cart %}
                 {% cart_total_value as navbar_cart_total %}
-                {% if cart %}<span class="badge bg-secondary ms-1">{{ cart|length }}</span>{% endif %}
-                <span class="ms-1 fw-semibold">£{{ navbar_cart_total|floatformat:2 }}</span>
+                {% if cart %}<span class="badge nav-cart-badge ms-1">{{ cart|length }}</span>{% endif %}
+                <span class="ms-1 fw-semibold nav-cart-total">£{{ navbar_cart_total|floatformat:2 }}</span>
               {% endwith %}
             </a>
-            <div class="dropdown-menu dropdown-menu-end p-0 cart-menu" aria-labelledby="navbarCartDropdown">
+            <div class="dropdown-menu dropdown-menu-end p-0 cart-menu nav-dropdown" aria-labelledby="navbarCartDropdown">
               {% load cart_tags %}
               {% cart_dropdown %}
             </div>
@@ -158,7 +162,7 @@
             >
               {{ user.username|default:'Account' }}
             </a>
-            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarAccountDropdown">
+            <ul class="dropdown-menu dropdown-menu-end nav-dropdown" aria-labelledby="navbarAccountDropdown">
               <li>
                 <a class="dropdown-item" href="{% url 'manage_addresses' %}"
                   >Addresses</a
@@ -198,10 +202,10 @@
           </li>
           {% else %}
           <li class="nav-item">
-            <a class="nav-link {% if url_name == 'login' %}active{% endif %}" {% if url_name == 'login' %}aria-current="page"{% endif %} href="{% url 'login' %}">Login</a>
+            <a class="nav-link navbar-button {% if url_name == 'login' %}active{% endif %}" {% if url_name == 'login' %}aria-current="page"{% endif %} href="{% url 'login' %}">Login</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link {% if url_name == 'signup' %}active{% endif %}" {% if url_name == 'signup' %}aria-current="page"{% endif %} href="{% url 'signup' %}">Sign Up</a>
+            <a class="nav-link navbar-button {% if url_name == 'signup' %}active{% endif %}" {% if url_name == 'signup' %}aria-current="page"{% endif %} href="{% url 'signup' %}">Sign Up</a>
           </li>
           {% endif %}
         </ul>
@@ -272,26 +276,42 @@
         if (!navCollapse || !navToggler || typeof bootstrap === "undefined") return;
 
         var mobileQuery = window.matchMedia("(max-width: 991.98px)");
-        var allowHideFromToggler = false;
+        var TOGGLER_GRACE_MS = 900;
+        var lastTogglerIntentAt = 0;
 
-        navToggler.addEventListener("click", function () {
-          allowHideFromToggler = true;
-          window.setTimeout(function () {
-            allowHideFromToggler = false;
-          }, 300);
+        function markTogglerIntent() {
+          lastTogglerIntentAt = Date.now();
+        }
+
+        document.addEventListener("pointerdown", function (event) {
+          if (navToggler.contains(event.target)) {
+            markTogglerIntent();
+          }
+        }, true);
+
+        document.addEventListener("click", function (event) {
+          if (navToggler.contains(event.target)) {
+            markTogglerIntent();
+          }
+        }, true);
+
+        navToggler.addEventListener("keydown", function (event) {
+          if (event.key === "Enter" || event.key === " ") {
+            markTogglerIntent();
+          }
         });
 
         navCollapse.addEventListener("hide.bs.collapse", function (event) {
           if (!mobileQuery.matches) return;
-          if (allowHideFromToggler) return;
+          if ((Date.now() - lastTogglerIntentAt) <= TOGGLER_GRACE_MS) return;
           event.preventDefault();
         });
 
         navCollapse.addEventListener("hidden.bs.collapse", function () {
-          allowHideFromToggler = false;
+          lastTogglerIntentAt = 0;
         });
         navCollapse.addEventListener("shown.bs.collapse", function () {
-          allowHideFromToggler = false;
+          lastTogglerIntentAt = 0;
         });
       })();
     </script>

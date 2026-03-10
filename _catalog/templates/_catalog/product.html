@@ -5,35 +5,55 @@
   Product List - Online Grocery
 {% endblock %}
 
-{% block content %}
-<div class="container">
-  <h1>Product List</h1>
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@600;700&display=swap" rel="stylesheet">
+{% endblock %}
 
-  <div class="row">
+{% block content %}
+<div class="container catalog-lab">
+  <section class="catalog-hero">
+    <div class="catalog-hero-content">
+      <p class="catalog-kicker mb-1">Product Explorer</p>
+      <h1 class="catalog-title">Build this week&apos;s basket with speed.</h1>
+      <p class="catalog-hero-sub mb-0">Find essentials, jump aisles fast, and reorder in seconds.</p>
+    </div>
+    <div class="catalog-hero-stat">
+      {% if page_obj %}
+        <strong>{{ page_obj.paginator.count }}</strong>
+      {% else %}
+        <strong>{{ products|length }}</strong>
+      {% endif %}
+      <span>items indexed</span>
+    </div>
+  </section>
+
+  <div class="row g-4">
     <!-- Left Column: Collapsible Category Menu -->
     <div class="col-md-3 mb-4 d-none d-md-block">
-      <div class="card">
-        <div class="card-header">
+      <div class="card catalog-side-card">
+        <div class="card-header catalog-side-header">
           <strong>Categories</strong>
         </div>
 
         {% if main_category_groups %}
-          <div class="accordion" id="mainCategoryAccordion">
+          <div class="accordion catalog-accordion" id="mainCategoryAccordion">
             {% for group in main_category_groups %}
-              <div class="accordion-item">
+              <div class="accordion-item catalog-accordion-item">
                 <h2 class="accordion-header" id="heading-main-{{ forloop.counter }}">
-                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-main-{{ forloop.counter }}" aria-expanded="false" aria-controls="collapse-main-{{ forloop.counter }}">
+                  <button class="accordion-button collapsed catalog-accordion-btn" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-main-{{ forloop.counter }}" aria-expanded="false" aria-controls="collapse-main-{{ forloop.counter }}">
                     {{ group.main }}
                   </button>
                 </h2>
                 <div id="collapse-main-{{ forloop.counter }}" class="accordion-collapse collapse" aria-labelledby="heading-main-{{ forloop.counter }}" data-bs-parent="#mainCategoryAccordion">
                   <div class="accordion-body p-0">
-                    <ul class="list-group list-group-flush">
+                    <ul class="list-group list-group-flush catalog-side-list">
                       {% for item in group.items %}
-                        <li class="list-group-item">
+                        <li class="list-group-item catalog-side-item">
                           {% if item.children %}
                             <a
-                              class="d-flex justify-content-between align-items-center text-decoration-none"
+                              class="d-flex justify-content-between align-items-center text-decoration-none category-parent-link"
                               data-bs-toggle="collapse"
                               href="#cat-{{ forloop.parentloop.counter }}-{{ forloop.counter }}"
                               role="button"
@@ -41,13 +61,13 @@
                               aria-controls="cat-{{ forloop.parentloop.counter }}-{{ forloop.counter }}"
                             >
                               <strong>{{ item.level1 }}</strong>
-                              <span class="ms-2"><i class="bi bi-caret-down-fill"></i></span>
+                              <span class="ms-2 category-chevron">&#9662;</span>
                             </a>
 
-                            <ul class="collapse ms-4 mt-2" id="cat-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" style="list-style-type: disc;">
+                            <ul class="collapse catalog-sublist" id="cat-{{ forloop.parentloop.counter }}-{{ forloop.counter }}">
                               {% for level2 in item.children %}
-                                <li style="list-style-position: outside;">
-                                  <a class="text-decoration-none {% if request.GET.l1 == item.level1 and request.GET.l2 == level2 %}fw-bold{% endif %}"
+                                <li>
+                                  <a class="category-leaf-link {% if request.GET.l1 == item.level1 and request.GET.l2 == level2 %}fw-bold active{% endif %}"
                                      href="?l1={{ item.level1|urlencode }}&l2={{ level2|urlencode }}"
                                      {% if request.GET.l1 == item.level1 and request.GET.l2 == level2 %}aria-current="page"{% endif %}>
                                     {{ level2 }}
@@ -56,7 +76,7 @@
                               {% endfor %}
                             </ul>
                           {% else %}
-                            <a class="text-decoration-none d-block {% if request.GET.l1 == item.level1 and not request.GET.l2 %}fw-bold{% endif %}"
+                            <a class="category-parent-link d-block {% if request.GET.l1 == item.level1 and not request.GET.l2 %}fw-bold active{% endif %}"
                                href="?l1={{ item.level1|urlencode }}"
                                {% if request.GET.l1 == item.level1 and not request.GET.l2 %}aria-current="page"{% endif %}>
                               <strong>{{ item.level1 }}</strong>
@@ -71,12 +91,12 @@
             {% endfor %}
           </div>
         {% else %}
-          <ul class="list-group list-group-flush">
+          <ul class="list-group list-group-flush catalog-side-list">
             {% for level1, node in category_tree.items %}
-              <li class="list-group-item">
+              <li class="list-group-item catalog-side-item">
                 {% if node.items %}
                   <a
-                    class="d-flex justify-content-between align-items-center text-decoration-none"
+                    class="d-flex justify-content-between align-items-center text-decoration-none category-parent-link"
                     data-bs-toggle="collapse"
                     href="#cat-{{ forloop.counter }}"
                     role="button"
@@ -84,13 +104,13 @@
                     aria-controls="cat-{{ forloop.counter }}"
                   >
                     <strong>{{ level1 }}</strong>
-                    <span class="ms-2"><i class="bi bi-caret-down-fill"></i></span>
+                    <span class="ms-2 category-chevron">&#9662;</span>
                   </a>
 
-                  <ul class="collapse ms-4 mt-2" id="cat-{{ forloop.counter }}" style="list-style-type: disc;">
+                  <ul class="collapse catalog-sublist" id="cat-{{ forloop.counter }}">
                     {% for level2, _ in node.items %}
-                      <li style="list-style-position: outside;">
-                        <a class="text-decoration-none {% if request.GET.l1 == level1 and request.GET.l2 == level2 %}fw-bold{% endif %}"
+                      <li>
+                        <a class="category-leaf-link {% if request.GET.l1 == level1 and request.GET.l2 == level2 %}fw-bold active{% endif %}"
                            href="?l1={{ level1|urlencode }}&l2={{ level2|urlencode }}"
                            {% if request.GET.l1 == level1 and request.GET.l2 == level2 %}aria-current="page"{% endif %}>
                           {{ level2 }}
@@ -99,7 +119,7 @@
                     {% endfor %}
                   </ul>
                 {% else %}
-                  <a class="text-decoration-none d-block {% if request.GET.l1 == level1 and not request.GET.l2 %}fw-bold{% endif %}"
+                  <a class="category-parent-link d-block {% if request.GET.l1 == level1 and not request.GET.l2 %}fw-bold active{% endif %}"
                      href="?l1={{ level1|urlencode }}"
                      {% if request.GET.l1 == level1 and not request.GET.l2 %}aria-current="page"{% endif %}>
                     <strong>{{ level1 }}</strong>
@@ -107,7 +127,7 @@
                 {% endif %}
               </li>
             {% empty %}
-              <li class="list-group-item text-muted">No categories found.</li>
+              <li class="list-group-item text-muted catalog-side-item">No categories found.</li>
             {% endfor %}
           </ul>
         {% endif %}
@@ -116,42 +136,41 @@
     </div>
 
     <!-- Right Column: Search Form & Product Listing -->
-    <div class="col-md-9">
+    <div class="col-md-9 catalog-main-col">
 
       {# Quick reorder from last 3 orders #}
       {% if user.is_authenticated and recent_purchased_items %}
-      <div class="card mb-3">
-        <div class="card-body">
+      <div class="card mb-3 reorder-card">
+        <div class="card-body reorder-card-body">
           <form id="recent-reorder-form" method="POST">
             {% csrf_token %}
             <input type="hidden" name="return_to" value="{{ request.get_full_path }}" />
             <input type="hidden" id="recent-reorder-id" />
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-              <label class="form-label mb-0">Reorder from last 3 orders</label>
-              <button type="button" id="recent-add-all" class="btn btn-sm btn-success">Add All To Cart</button>
+              <label class="form-label mb-0 reorder-label">Reorder from last 3 orders</label>
+              <button type="button" id="recent-add-all" class="btn btn-sm reorder-add-all">Add All To Cart</button>
             </div>
-            <div class="input-group align-items-center flex-wrap">
-              <span class="input-group-text p-1" style="background:white;border:none;">
-                <img id="recent-reorder-img" src="{% static 'images/fresh_products.jpg' %}" alt="preview" style="width:40px;height:40px;object-fit:contain;" onerror="this.onerror=null;this.src='{% static 'images/fresh_products.jpg' %}';" />
+            <div class="input-group align-items-center flex-wrap recent-reorder-row">
+              <span class="input-group-text p-1 recent-reorder-preview-wrap">
+                <img id="recent-reorder-img" src="{% static 'images/fresh_products.jpg' %}" alt="preview" class="recent-reorder-preview" onerror="this.onerror=null;this.src='{% static 'images/fresh_products.jpg' %}';" />
               </span>
-              <div class="dropdown flex-grow-1" style="min-width: 0;">
-                <button class="btn btn-outline-secondary dropdown-toggle w-100 text-truncate" type="button" id="recent-reorder-button" data-bs-toggle="dropdown" aria-expanded="false">
+              <div class="dropdown flex-grow-1 recent-reorder-picker">
+                <button class="btn dropdown-toggle w-100 text-truncate recent-reorder-button" type="button" id="recent-reorder-button" data-bs-toggle="dropdown" aria-expanded="false">
                   Select item
                 </button>
-                <ul class="dropdown-menu w-100" aria-labelledby="recent-reorder-button" id="recent-reorder-menu" style="max-height: 260px; overflow-y: auto; max-width: 100vw;">
+                <ul class="dropdown-menu w-100 recent-reorder-menu" aria-labelledby="recent-reorder-button" id="recent-reorder-menu">
                   {% for it in recent_purchased_items %}
                   <li class="px-1">
                     <div class="d-flex align-items-center justify-content-between gap-2">
-                      <a class="dropdown-item d-flex align-items-center w-100" href="#" data-role="select" data-id="{{ it.product_id }}" data-img="{{ it.image_url }}" data-qty="{{ it.quantity }}" style="white-space: normal;">
+                      <a class="dropdown-item d-flex align-items-center w-100 recent-reorder-item" href="#" data-role="select" data-id="{{ it.product_id }}" data-img="{{ it.image_url }}" data-qty="{{ it.quantity }}">
                         {% if it.image_url and it.image_url != '/img/products/no-image.png' %}
-                          <img src="{{ it.image_url }}" alt="{{ it.name }}" class="me-2" style="width:28px;height:28px;object-fit:contain;" onerror="this.onerror=null;this.src='{% static 'images/fresh_products.jpg' %}';" />
+                          <img src="{{ it.image_url }}" alt="{{ it.name }}" class="me-2 recent-reorder-item-thumb" onerror="this.onerror=null;this.src='{% static 'images/fresh_products.jpg' %}';" />
                         {% else %}
-                          <img src="{% static 'images/fresh_products.jpg' %}" alt="{{ it.name }}" class="me-2" style="width:28px;height:28px;object-fit:contain;" />
+                          <img src="{% static 'images/fresh_products.jpg' %}" alt="{{ it.name }}" class="me-2 recent-reorder-item-thumb" />
                         {% endif %}
                         <span class="flex-grow-1">{{ it.name }} (last qty {{ it.quantity }})</span>
                       </a>
-                      <a class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" href="{% url 'product_detail' it.product_id %}" title="View product details">
-                        <i class="bi bi-eye"></i>
+                      <a class="btn btn-sm d-inline-flex align-items-center gap-1 recent-reorder-details-btn" href="{% url 'product_detail' it.product_id %}" title="View product details">
                         <span>Details</span>
                       </a>
                     </div>
@@ -159,15 +178,15 @@
                   {% endfor %}
                 </ul>
               </div>
-              <input type="number" id="recent-reorder-qty" class="form-control flex-grow-0" style="margin: 0 0 0 10px; width: 100px;" min="1" value="1" aria-label="Quantity" />
-              <button class="btn btn-primary flex-grow-0" type="submit">Add</button>
+              <input type="number" id="recent-reorder-qty" class="form-control flex-grow-0 recent-reorder-qty" min="1" value="1" aria-label="Quantity" />
+              <button class="btn flex-grow-0 recent-reorder-submit" type="submit">Add</button>
             </div>
           </form>
         </div>
       </div>
       {% endif %}
 
-      <form method="GET" action="" class="mb-3" id="search-form" novalidate>
+      <form method="GET" action="" class="mb-3 catalog-filter-form" id="search-form" novalidate>
         <div class="row g-3 align-items-end">
           <div class="col-lg-6">
             <label for="search-input" class="form-label">Search products</label>
@@ -176,7 +195,7 @@
                 type="text"
                 name="q"
                 id="search-input"
-                class="form-control"
+                class="form-control catalog-search-input"
                 placeholder="Search for products or categories..."
                 value="{{ request.GET.q }}"
                 autocomplete="off"
@@ -189,7 +208,7 @@
               />
               <div
                 id="search-suggestions"
-                class="dropdown-menu w-100"
+                class="dropdown-menu w-100 catalog-suggestions-menu"
                 role="listbox"
                 aria-label="Search suggestions"
                 data-suggest-url="{% url 'product_search_suggest' %}">
@@ -218,7 +237,7 @@
             </select>
             <div class="dropdown filter-custom-dropdown">
               <button
-                class="btn btn-light border dropdown-toggle w-100 text-start text-truncate"
+                class="btn dropdown-toggle w-100 text-start text-truncate catalog-filter-trigger"
                 type="button"
                 id="filter-l1-button"
                 data-bs-toggle="dropdown"
@@ -239,7 +258,7 @@
             </select>
             <div class="dropdown filter-custom-dropdown">
               <button
-                class="btn btn-light border dropdown-toggle w-100 text-start text-truncate"
+                class="btn dropdown-toggle w-100 text-start text-truncate catalog-filter-trigger"
                 type="button"
                 id="filter-l2-button"
                 data-bs-toggle="dropdown"
@@ -253,16 +272,16 @@
           </div>
         </div>
         <div class="mt-2">
-          <small class="text-white">Filters apply automatically.<a class="link2 link-light text-decoration-underline bg-warning text-dark px-1 rounded" href="{% url 'product_list' %}">Clear all filters</a>.</small>
+          <small class="catalog-filter-note">Filters apply automatically. <a class="catalog-clear-link" href="{% url 'product_list' %}">Clear all filters</a>.</small>
         </div>
       </form>
 
-      <div class="d-flex align-items-center flex-wrap gap-2 mt-3" id="bulk-toggle-wrapper">
+      <div class="d-flex align-items-center flex-wrap gap-2 mt-3 catalog-bulk-toggle" id="bulk-toggle-wrapper">
         <div class="form-check form-switch m-0">
           <input class="form-check-input" type="checkbox" id="hide-bulk-toggle" role="switch">
           <label class="bulk form-check-label" for="hide-bulk-toggle">Hide bulk items</label>
         </div>
-        <small class="bulk text-muted mb-0" id="bulk-hidden-summary">No bulk items hidden.</small>
+        <small class="bulk mb-0" id="bulk-hidden-summary">No bulk items hidden.</small>
       </div>
 
 {{ level1_names|json_script:"level1-names" }}
@@ -270,22 +289,23 @@
 {{ level2_map|json_script:"level2-map" }}
 
       <!-- Product Container -->
-      <div class="row gy-4" id="product-container">
+      <div class="row g-3 catalog-product-grid" id="product-container">
         {% for product in products %}
           {% include '_catalog/product_item.html' with product=product %}
         {% empty %}
           <div class="col-12">
-            <p class="text-muted">No products matched your filters.
+            <div class="catalog-empty-state">
+              <p class="mb-1">No products matched your filters.</p>
               <a href="{% url 'product_list' %}">Clear filters</a>
-            </p>
+            </div>
           </div>
         {% endfor %}
       </div>
 
       <!-- Pagination (replaces infinite scroll) -->
       {% if page_obj %}
-      <nav aria-label="Product pagination" class="mt-3">
-        <ul class="pagination justify-content-center">
+      <nav aria-label="Product pagination" class="mt-3 catalog-pagination-wrap">
+        <ul class="pagination justify-content-center catalog-pagination">
           <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
             {% if page_obj.has_previous %}
               <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&amp;q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.l1 %}&amp;l1={{ request.GET.l1|urlencode }}{% endif %}{% if request.GET.l2 %}&amp;l2={{ request.GET.l2|urlencode }}{% endif %}" aria-label="Previous">Previous</a>
@@ -399,10 +419,8 @@
           if (node.tagName === 'OPTGROUP') {
             const headerLi = document.createElement('li');
             const header = document.createElement('h6');
-            header.className = 'dropdown-header';
+            header.className = 'dropdown-header filter-custom-header';
             header.textContent = node.label;
-            header.style.backgroundColor = '#528941';
-            header.style.color = '#ffffff';
             headerLi.appendChild(header);
             l1Menu.appendChild(headerLi);
             Array.from(node.children).forEach(appendOption);
@@ -827,29 +845,6 @@
   });
 </script>
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-  const form   = document.getElementById('search-form');
-  const input  = document.getElementById('search-input');
-  const l1f    = document.getElementById('l1-field');
-  const l2f    = document.getElementById('l2-field');
-  const L1     = JSON.parse(document.getElementById('level1-names').textContent || "[]");
-  const L2     = JSON.parse(document.getElementById('level2-names').textContent || "[]");
-
-  const fold = s => (s || '').toLocaleLowerCase();
-
-  form.addEventListener('submit', function () {
-    const v = input.value.trim();
-    if (!v) return; // nothing to do
-
-    // Combined "Level1 › Level2"
-    if (v.includes('›')) {
-      const [l1, l2] = v.split('›').map(s => s.trim());
-      if (L1 - L2f.value = '';
-    // Otherwise: leave as free-text fuzzy search
-  });
-});
-</script>
-<script>
   document.addEventListener('DOMContentLoaded', function () {
     // Only on small screens
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
@@ -940,7 +935,7 @@ document.addEventListener('DOMContentLoaded', function () {
   form.addEventListener('submit', function () {
     const v = (input.value || '').trim();
     if (!v) return;
-    const seps = ['›','>'];
+    const seps = ['>'];
     for (const sep of seps) {
       if (v.includes(sep)) {
         const parts = v.split(sep).map(s => s.trim());
@@ -960,3 +955,4 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 {% endblock %}
+

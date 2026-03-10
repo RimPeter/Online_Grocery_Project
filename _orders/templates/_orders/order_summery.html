@@ -3,73 +3,84 @@
 
 {% block title %}Order Summary{% endblock %}
 
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@600;700&display=swap" rel="stylesheet">
+{% endblock %}
+
 {% block content %}
-<div class="container my-4">
-  <div class="d-flex align-items-center justify-content-between mb-3">
+<div class="container my-4 order-summary-lab">
+  <section class="order-summary-hero">
     <div>
-      <h1 class="h3 mb-0">Order Summary</h1>
-      <div class="text-muted">Order #{{ order.id }}</div>
+      <p class="order-summary-kicker mb-1">Order Overview</p>
+      <h1 class="order-summary-title mb-1">Order summary</h1>
+      <p class="order-summary-sub mb-0">Review your items, delivery slot, and payment status before final confirmation.</p>
+      <div class="order-summary-id mt-2">Order #{{ order.id }}</div>
     </div>
-    <a href="{% url 'cart_view' %}" class="btn btn-outline-secondary">Back to Cart</a>
-  </div>
+    <a href="{% url 'cart_view' %}" class="btn order-summary-back-btn">Back to Cart</a>
+  </section>
 
   <div class="row g-4">
-    <!-- Items -->
     <div class="col-lg-8">
-      <div class="card shadow-sm">
-        <div class="card-header bg-white"><strong>Items</strong></div>
-        <ul class="list-group list-group-flush">
+      <section class="order-shell-card">
+        <div class="order-card-header"><strong>Items</strong></div>
+        <ul class="list-group list-group-flush order-item-list">
           {% for item in order_items %}
-          <li class="list-group-item">
+          <li class="list-group-item order-item-row">
             <div class="d-flex align-items-center gap-3">
-              <a href="{% url 'product_detail' item.product.pk %}" class="flex-shrink-0">
-                <img src="{{ item.product.image_url }}" alt="{{ item.product.name }}" class="rounded" style="width:80px;height:80px;object-fit:cover;">
+              <a href="{% url 'product_detail' item.product.pk %}" class="flex-shrink-0 order-item-image-wrap">
+                {% if item.product.image_url %}
+                  <img src="{{ item.product.image_url }}" alt="{{ item.product.name }}" class="order-item-image">
+                {% else %}
+                  <img src="{% static 'images/default_product.jpg' %}" alt="{{ item.product.name }}" class="order-item-image">
+                {% endif %}
               </a>
               <div class="flex-grow-1">
-                <div class="fw-semibold">{{ item.product.name }}</div>
+                <div class="order-item-name">{{ item.product.name }}</div>
                 {% if item.product.variant %}
-                  <div class="text-muted small">{{ item.product.variant }}</div>
+                  <div class="order-item-variant">{{ item.product.variant }}</div>
                 {% endif %}
-                <div class="text-muted small">Qty: {{ item.quantity }} × £{{ item.price|floatformat:2 }}</div>
+                <div class="order-item-meta">Qty: {{ item.quantity }} x &pound;{{ item.price|floatformat:2 }}</div>
               </div>
-              <div class="ms-auto text-end fw-semibold">£{{ item.subtotal|floatformat:2 }}</div>
+              <div class="ms-auto text-end order-item-subtotal">&pound;{{ item.subtotal|floatformat:2 }}</div>
             </div>
           </li>
           {% empty %}
-          <li class="list-group-item text-muted">No items in this order.</li>
+          <li class="list-group-item order-empty-row">No items in this order.</li>
           {% endfor %}
         </ul>
-        <div class="card-footer bg-white d-flex justify-content-between">
+        <div class="order-card-footer d-flex justify-content-between">
           <div class="fw-semibold">Total</div>
-          <div class="fw-bold">£{{ total|floatformat:2 }}</div>
+          <div class="fw-bold">&pound;{{ total|floatformat:2 }}</div>
         </div>
-      </div>
+      </section>
     </div>
 
-    <!-- Summary -->
     <div class="col-lg-4">
-      <div class="card shadow-sm mb-3">
-        <div class="card-header bg-white"><strong>Delivery</strong></div>
-        <div class="card-body">
+      <section class="order-shell-card mb-3">
+        <div class="order-card-header"><strong>Delivery</strong></div>
+        <div class="order-card-body">
           {% if order.delivery_date or order.delivery_time %}
-            <div class="d-flex justify-content-between"><span class="text-muted">Date</span><span>{{ order.delivery_date }}</span></div>
-            <div class="d-flex justify-content-between"><span class="text-muted">Time</span><span>{{ order.delivery_time }}</span></div>
+            <div class="d-flex justify-content-between"><span class="order-label">Date</span><span>{{ order.delivery_date }}</span></div>
+            <div class="d-flex justify-content-between"><span class="order-label">Time</span><span>{{ order.delivery_time }}</span></div>
           {% else %}
-            <div class="text-muted">No slot selected</div>
+            <div class="order-muted">No slot selected</div>
           {% endif %}
           <div class="mt-3 d-flex gap-2">
-            <a href="{% url 'delivery_slots' %}?order_id={{ order.id }}" class="btn btn-outline-primary btn-sm">Change slot</a>
+            <a href="{% url 'delivery_slots' %}?order_id={{ order.id }}" class="btn btn-sm order-outline-btn">Change slot</a>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div class="card shadow-sm mb-3">
-        <div class="card-header bg-white"><strong>Customer</strong></div>
-        <div class="card-body">
-          <div class="mb-1"><span class="text-muted">Name</span><div>{{ request.user.get_full_name|default:request.user.username }}</div></div>
-          <div class="mb-1"><span class="text-muted">Email</span><div>{{ request.user.email }}</div></div>
+      <section class="order-shell-card mb-3">
+        <div class="order-card-header"><strong>Customer</strong></div>
+        <div class="order-card-body">
+          <div class="mb-1"><span class="order-label">Name</span><div>{{ request.user.get_full_name|default:request.user.username }}</div></div>
+          <div class="mb-1"><span class="order-label">Email</span><div>{{ request.user.email }}</div></div>
           {% if default_address %}
-          <div class="mb-0"><span class="text-muted">Address</span>
+          <div class="mb-0">
+            <span class="order-label">Address</span>
             <div>
               {{ default_address.street_address }} {{ default_address.house_number }}{% if default_address.apartment %}, {{ default_address.apartment }}{% endif %},
               {{ default_address.city }}, {{ default_address.postal_code }}
@@ -77,26 +88,26 @@
           </div>
           {% endif %}
         </div>
-      </div>
+      </section>
 
-      <div class="card shadow-sm mb-3">
-        <div class="card-header bg-white"><strong>Totals</strong></div>
-        <div class="card-body">
-          <div class="d-flex justify-content-between"><span class="text-muted">Subtotal</span><span>£{{ total|floatformat:2 }}</span></div>
-          <div class="d-flex justify-content-between"><span class="text-muted">Delivery charge</span><span>£{{ delivery_charge|floatformat:2 }}</span></div>
-          <div class="d-flex justify-content-between fw-bold"><span>Total</span><span>£{{ grand_total|floatformat:2 }}</span></div>
+      <section class="order-shell-card mb-3">
+        <div class="order-card-header"><strong>Totals</strong></div>
+        <div class="order-card-body">
+          <div class="d-flex justify-content-between"><span class="order-label">Subtotal</span><span>&pound;{{ total|floatformat:2 }}</span></div>
+          <div class="d-flex justify-content-between"><span class="order-label">Delivery charge</span><span>&pound;{{ delivery_charge|floatformat:2 }}</span></div>
+          <div class="d-flex justify-content-between fw-bold"><span>Total</span><span>&pound;{{ grand_total|floatformat:2 }}</span></div>
         </div>
-      </div>
+      </section>
 
       <div class="d-grid gap-2">
         {% if order.status == 'paid' %}
-          <a href="{% url 'invoice_page' order.id %}" class="btn btn-secondary">View invoice</a>
+          <a href="{% url 'invoice_page' order.id %}" class="btn order-primary-btn">View invoice</a>
           <form method="post" action="{% url 'invoice_email' order.id %}">
             {% csrf_token %}
-            <button class="btn btn-outline-secondary" type="submit">Email invoice</button>
+            <button class="btn order-outline-btn w-100" type="submit">Email invoice</button>
           </form>
         {% else %}
-          <a href="{% url 'checkout' order.id %}" class="btn btn-success">Proceed to Checkout</a>
+          <a href="{% url 'checkout' order.id %}" class="btn order-checkout-btn">Proceed to Checkout</a>
         {% endif %}
       </div>
     </div>

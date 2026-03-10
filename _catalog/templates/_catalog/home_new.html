@@ -3,82 +3,137 @@
 
 {% block title %}Fresh Groceries Delivered{% endblock %}
 
+{% block extra_css %}
+<link rel='preconnect' href='https://fonts.googleapis.com'>
+<link rel='preconnect' href='https://fonts.gstatic.com' crossorigin>
+<link href='https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap' rel='stylesheet'>
+{% endblock %}
+
 {% block content %}
-<!-- Callout -->
-{% if not user.is_authenticated %}
-<section class='pb-2'>
-  <div class='container'>
-    <div class='alert alert-success d-flex justify-content-between align-items-center' role='status'>
-      <div>New here? Create an account for a faster checkout next time.</div>
-      <a href="{% url 'signup' %}" class='btn btn-success btn-sm'>Sign up</a>
-    </div>
-  </div>
-</section>
-{% endif %}
-<!-- Hero -->
-<section class='py-5 rounded-3 mb-4 main-banner'>
-  <div class='container'>
-    <div class='row align-items-center g-4'>
+<div class='market-home'>
+  <section class='hero-shell'>
+    <div class='row g-4 align-items-center'>
       <div class='col-lg-7'>
-        <h1 class='display-5 fw-bold mb-3'>Fresh groceries delivered fast</h1>
-        <p class='lead text-muted mb-4'>Shop thousands of essentials at fair prices with convenient delivery windows.</p>
-        <div class='d-flex gap-2'>
-          <a href="{% url 'product_list' %}" class='btn btn-primary btn-lg'>Shop now</a>
+        {% if not user.is_authenticated %}
+        <div class='mini-intro'>New shoppers get faster checkout</div>
+        {% endif %}
+
+        <h1 class='hero-title'>Fresh groceries, chosen well and delivered on time.</h1>
+        <p class='hero-copy'>Build your basket in minutes from everyday essentials to family favorites, with pricing you can trust and delivery windows that fit your week.</p>
+
+        <div class='hero-actions'>
+          <a href="{% url 'product_list' %}" class='hero-btn-main'>Start shopping</a>
           {% if not user.is_authenticated %}
-          <a href="{% url 'signup' %}" class='create_account btn btn-outline-secondary btn-lg'>Create account</a>
+          <a href="{% url 'signup' %}" class='hero-btn-alt'>Create account</a>
           {% endif %}
         </div>
+
+        <ul class='hero-metrics'>
+          <li>
+            <span class='metric-value'>Flexible slots</span>
+            <span class='metric-label'>Delivery windows across the week</span>
+          </li>
+          <li>
+            <span class='metric-value'>Easy repeat orders</span>
+            <span class='metric-label'>Reorder your staples in seconds</span>
+          </li>
+          <li>
+            <span class='metric-value'>Curated range</span>
+            <span class='metric-label'>Produce, pantry, frozen and more</span>
+          </li>
+        </ul>
       </div>
+
       <div class='col-lg-5'>
-        <div class='ratio ratio-16x9 rounded overflow-hidden'>
-          <img src="{% static 'images/fresh_products.jpg' %}" alt='Fresh produce' class='w-100 h-100 object-fit-cover'>
-        </div>
+        <figure class='hero-media mb-0'>
+          <img src="{% static 'images/fresh_products.jpg' %}" alt='Colorful grocery produce'>
+          <figcaption class='delivery-chip'>
+            <strong>Today&apos;s drop windows</strong>
+            <span>Book at checkout while slots last</span>
+          </figcaption>
+        </figure>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- Value pillars -->
-<section class='mb-5'>
-  <div class='container'>
-    <div class='row text-center g-4'>
-      {% for pillar in value_pillars %}
-      <div class='col-12 col-md-4'>
-        <div class='p-3 border rounded h-100'>
-          <div class='fw-semibold mb-1'>{{ pillar.title }}</div>
-          <div class='text-muted small'>{{ pillar.subtitle }}</div>
-        </div>
+  <section class='pillars-grid'>
+    <div class='section-top'>
+      <div>
+        <p class='section-kicker'>Why Customers Return</p>
+        <h2 class='section-title'>Service built around real weekly shopping.</h2>
       </div>
-      {% endfor %}
+      <a class='section-link' href="{% url 'product_list' %}">Explore full catalog</a>
     </div>
-  </div>
-</section>
 
-<!-- Category shortcuts -->
-<section class='mb-5'>
-  <div class='container'>
+    <div class='row g-3'>
+      {% if value_pillars %}
+        {% for pillar in value_pillars %}
+        <div class='col-12 col-md-6 col-lg-4'>
+          <article class='pillar-card' style='--seq: {{ forloop.counter0 }};'>
+            <span class='pillar-index'>{{ forloop.counter|stringformat:'02d' }}</span>
+            <h3 class='pillar-title'>{{ pillar.title }}</h3>
+            <p class='pillar-subtitle'>{{ pillar.subtitle }}</p>
+          </article>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class='col-12 col-md-6 col-lg-4'>
+          <article class='pillar-card' style='--seq: 0;'>
+            <span class='pillar-index'>01</span>
+            <h3 class='pillar-title'>Dependable local delivery</h3>
+            <p class='pillar-subtitle'>Choose a slot that suits your day and receive your order with clear updates.</p>
+          </article>
+        </div>
+        <div class='col-12 col-md-6 col-lg-4'>
+          <article class='pillar-card' style='--seq: 1;'>
+            <span class='pillar-index'>02</span>
+            <h3 class='pillar-title'>Everything in one basket</h3>
+            <p class='pillar-subtitle'>From produce to frozen meals, fill your shop in one smooth checkout flow.</p>
+          </article>
+        </div>
+        <div class='col-12 col-md-6 col-lg-4'>
+          <article class='pillar-card' style='--seq: 2;'>
+            <span class='pillar-index'>03</span>
+            <h3 class='pillar-title'>Fair pricing every day</h3>
+            <p class='pillar-subtitle'>Consistent value on essential products your household buys every week.</p>
+          </article>
+        </div>
+      {% endif %}
+    </div>
+  </section>
+
+  <section>
+    <div class='section-top'>
+      <div>
+        <p class='section-kicker'>Browse By Aisle</p>
+        <h2 class='section-title'>Pick a section and jump straight in.</h2>
+      </div>
+      <a class='section-link' href="{% url 'product_list' %}">All products</a>
+    </div>
+
     {% if category_groups %}
       {% for group in category_groups %}
-      <div class='mb-4'>
-        <div class='d-flex justify-content-between align-items-center mb-2'>
-          <h3 class='h5 mb-0'>{{ group.label }}</h3>
-          <a href="{% url 'product_list' %}?l1={{ group.l1|urlencode }}" class='small text-decoration-none'>View all</a>
+      <div class='group-block'>
+        <div class='group-header'>
+          <h3 class='group-name'>{{ group.label }}</h3>
+          <a class='group-link' href="{% url 'product_list' %}?l1={{ group.l1|urlencode }}">View all</a>
         </div>
+
         <div class='row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3'>
           {% for sc in group.items %}
           <div class='col'>
-            <a href="{% url 'product_list' %}?l1={{ sc.l1|urlencode }}&l2={{ sc.l2|urlencode }}" class='text-decoration-none d-block h-100'>
-              <div class='card h-100'>
-                <div class='ratio ratio-1x1'>
-                  {% if sc.image_url %}
-                    <img src="{{ sc.image_url }}" alt="{{ sc.name }}" class='w-100 h-100 object-fit-cover'>
-                  {% else %}
-                    <img src="{% static 'images/default_product.jpg' %}" alt="{{ sc.name }}" class='w-100 h-100 object-fit-cover'>
-                  {% endif %}
-                </div>
-                <div class='card-body p-2 text-center'>
-                  <div class='small fw-semibold text-break'>{{ sc.name }}</div>
-                </div>
+            <a href="{% url 'product_list' %}?l1={{ sc.l1|urlencode }}&l2={{ sc.l2|urlencode }}" class='category-tile' style='--seq: {{ forloop.counter0 }};'>
+              <div class='tile-image-wrap'>
+                {% if sc.image_url %}
+                  <img src='{{ sc.image_url }}' alt='{{ sc.name }}'>
+                {% else %}
+                  <img src="{% static 'images/default_product.jpg' %}" alt='{{ sc.name }}'>
+                {% endif %}
+                <span class='tile-chip'>{{ sc.l1 }}</span>
+              </div>
+              <div class='tile-body'>
+                <h4 class='tile-name'>{{ sc.name }}</h4>
+                <p class='tile-sub'>Open category</p>
               </div>
             </a>
           </div>
@@ -87,42 +142,39 @@
       </div>
       {% endfor %}
     {% elif subcats %}
-      <div class='row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3'>
-        {% for sc in subcats %}
-        <div class='col'>
-          <a href="{% url 'product_list' %}?l1={{ sc.l1|urlencode }}&l2={{ sc.l2|urlencode }}" class='text-decoration-none d-block h-100'>
-            <div class='card h-100'>
-              <div class='ratio ratio-1x1'>
+      <div class='group-block'>
+        <div class='row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3'>
+          {% for sc in subcats %}
+          <div class='col'>
+            <a href="{% url 'product_list' %}?l1={{ sc.l1|urlencode }}&l2={{ sc.l2|urlencode }}" class='category-tile' style='--seq: {{ forloop.counter0 }};'>
+              <div class='tile-image-wrap'>
                 {% if sc.image_url %}
-                  <img src="{{ sc.image_url }}" alt="{{ sc.name }}" class='w-100 h-100 object-fit-cover'>
+                  <img src='{{ sc.image_url }}' alt='{{ sc.name }}'>
                 {% else %}
-                  <img src="{% static 'images/default_product.jpg' %}" alt="{{ sc.name }}" class='w-100 h-100 object-fit-cover'>
+                  <img src="{% static 'images/default_product.jpg' %}" alt='{{ sc.name }}'>
                 {% endif %}
+                <span class='tile-chip'>{{ sc.l1 }}</span>
               </div>
-              <div class='card-body p-2 text-center'>
-                <div class='small fw-semibold text-break'>{{ sc.l1 }} - {{ sc.name }}</div>
+              <div class='tile-body'>
+                <h4 class='tile-name'>{{ sc.name }}</h4>
+                <p class='tile-sub'>Open category</p>
               </div>
-            </div>
-          </a>
+            </a>
+          </div>
+          {% endfor %}
         </div>
-        {% endfor %}
       </div>
     {% else %}
-      <p class='text-muted small'>Browse all categories or use search above.</p>
+      <div class='empty-state'>Categories are being refreshed. Use the search bar or open the full catalog to continue shopping.</div>
     {% endif %}
-  </div>
-</section>
+  </section>
 
-<!-- Callout -->
-{% if not user.is_authenticated %}
-<section class='pb-2'>
-  <div class='container'>
-    <div class='alert alert-success d-flex justify-content-between align-items-center' role='status'>
-      <div>New here? Create an account for a faster checkout next time.</div>
-      <a href="{% url 'signup' %}" class='btn btn-success btn-sm'>Sign up</a>
-    </div>
-  </div>
-</section>
-{% endif %}
-
+  {% if not user.is_authenticated %}
+  <section class='signup-band'>
+    <p>New here? Create your account now for quicker checkout and easier order tracking.</p>
+    <a href="{% url 'signup' %}" class='btn btn-success'>Sign up</a>
+  </section>
+  {% endif %}
+</div>
 {% endblock %}
+

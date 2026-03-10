@@ -3,13 +3,32 @@
 
 {% block title %}Manage Addresses{% endblock %}
 
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@600;700&display=swap" rel="stylesheet">
+{% endblock %}
+
 {% block content %}
-<div class="row g-4">
-  <!-- Add Address Form -->
-  <div class="col-lg-6">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <h1 class="h4 mb-3">Add Delivery Address</h1>
+<div class="container my-4 address-lab">
+  <section class="address-hero">
+    <div>
+      <p class="address-kicker mb-1">Delivery Setup</p>
+      <h1 class="address-title mb-1">Manage your delivery addresses.</h1>
+      <p class="address-sub mb-0">Save locations, set your default, and keep checkout fast.</p>
+    </div>
+    {% if addresses %}
+      <div class="address-count-chip">
+        <strong>{{ addresses|length }}</strong>
+        <span>saved addresses</span>
+      </div>
+    {% endif %}
+  </section>
+
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <section class="address-shell-card">
+        <h2 class="h5 mb-3">Add Delivery Address</h2>
 
         <form method="post" action="{{ action|default:'' }}" class="address-form" novalidate>
           {% csrf_token %}
@@ -96,79 +115,56 @@
             </div>
           {% endif %}
 
-          <button type="submit" class="btn btn-primary">Save address</button>
+          <button type="submit" class="btn address-save-btn">Save address</button>
         </form>
-
-        {% comment %} <p class="text-muted small mt-3">
-          Tip: define Bootstrap classes on your Django widgets in the ModelForm for best results.
-        </p> {% endcomment %}
-      </div>
+      </section>
     </div>
-  </div>
 
-  <!-- Existing Addresses -->
-  <div class="col-lg-6">
-    <div class="card shadow-sm">
-      <div class="card-body">
+    <div class="col-lg-6">
+      <section class="address-shell-card">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h2 class="h5 m-0">Your Addresses</h2>
-          <small class="text-muted">Default address is used at checkout</small>
+          <small class="address-muted-note">Default address is used at checkout</small>
         </div>
 
         {% if addresses %}
-          <div class="list-group">
+          <div class="address-list">
             {% for addr in addresses %}
-              <div class="list-group-item d-flex justify-content-between align-items-start">
-                <div class="ms-2 me-auto">
-                  <div class="fw-semibold">
-                    {{ addr.street_address }} {{ addr.house_number }}{% if addr.apartment %}, {{ addr.apartment }}{% endif %}
+              <article class="address-entry">
+                <div class="address-entry-main">
+                  <div class="address-entry-line">
+                    <strong>{{ addr.street_address }} {{ addr.house_number }}{% if addr.apartment %}, {{ addr.apartment }}{% endif %}</strong>
                     {% if addr.is_default %}
-                      <span class="badge bg-success ms-2 align-self-start">Default</span>
+                      <span class="badge address-default-badge ms-2">Default</span>
                     {% endif %}
                   </div>
                   <div>{{ addr.city }}, {{ addr.postal_code }}</div>
                   {% if addr.delivery_instructions %}
-                    <div class="text-muted small mt-1">Instructions: {{ addr.delivery_instructions }}</div>
+                    <div class="address-instructions mt-1">Instructions: {{ addr.delivery_instructions }}</div>
                   {% endif %}
                 </div>
-                <div class="d-flex gap-2">
+                <div class="address-entry-actions">
                   <form method="post" action="{% url 'set_default_address' addr.id %}">
                     {% csrf_token %}
                     {% if addr.is_default %}
-                      <button type="submit" class="btn btn-success btn-sm" disabled>Default</button>
+                      <button type="submit" class="btn btn-sm address-default-btn" disabled>Default</button>
                     {% else %}
-                      <button type="submit" class="btn btn-outline-primary btn-sm">Make default</button>
+                      <button type="submit" class="btn btn-sm address-make-default-btn">Make default</button>
                     {% endif %}
                   </form>
                   <form method="post" action="{% url 'delete_address' addr.id %}" onsubmit="return confirm('Delete this address?');">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-outline-danger btn-sm">Delete</button>
+                    <button type="submit" class="btn btn-sm address-delete-btn">Delete</button>
                   </form>
                 </div>
-              </div>
+              </article>
             {% endfor %}
           </div>
         {% else %}
-          <p class="text-muted mb-0">You haven't added any addresses yet.</p>
+          <p class="address-empty mb-0">You haven&apos;t added any addresses yet.</p>
         {% endif %}
-      </div>
+      </section>
     </div>
   </div>
 </div>
-{% endblock %}
-
-{% block extra_css %}
-<style>
-  .card { border-radius: 1rem; }
-  .address-form input[type="text"],
-  .address-form textarea,
-  .address-form select {
-    display: block;
-    width: 100%;
-    padding: .375rem .75rem;
-    border: 1px solid #ced4da;
-    border-radius: .375rem;
-  }
-  .address-form input[type="checkbox"] { width: auto; display: inline-block; }
-</style>
 {% endblock %}

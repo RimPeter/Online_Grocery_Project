@@ -1,118 +1,153 @@
 {% extends 'base.html' %}
+{% load static %}
+
 {% block title %}My Profile{% endblock %}
 
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@600;700&display=swap" rel="stylesheet">
+{% endblock %}
+
 {% block content %}
-<h3>My Profile</h3>
-<form method='post' novalidate>
-  {% csrf_token %}
-  <div class='row g-3'>
-    <div class='col-md-6'>
-      <label for='id_username' class='form-label'>Username</label>
-      {{ form.username }}
-      {% if form.username.errors %}<div class='text-danger small'>{{ form.username.errors|striptags }}</div>{% endif %}
+<div class="container my-4 profile-lab">
+  <section class="profile-hero">
+    <div>
+      <p class="profile-kicker mb-1">Account Hub</p>
+      <h1 class="profile-title mb-1">Manage your profile.</h1>
+      <p class="profile-sub mb-0">Update contact details and keep delivery addresses in sync.</p>
     </div>
-    <div class='col-md-6'>
-      <label for='id_email' class='form-label'>Email</label>
-      {{ form.email }}
-      {% if form.email.errors %}<div class='text-danger small'>{{ form.email.errors|striptags }}</div>{% endif %}
-    </div>
-    <div class='col-md-6'>
-      <label for='id_first_name' class='form-label'>First name</label>
-      {{ form.first_name }}
-      {% if form.first_name.errors %}<div class='text-danger small'>{{ form.first_name.errors|striptags }}</div>{% endif %}
-    </div>
-    <div class='col-md-6'>
-      <label for='id_last_name' class='form-label'>Last name</label>
-      {{ form.last_name }}
-      {% if form.last_name.errors %}<div class='text-danger small'>{{ form.last_name.errors|striptags }}</div>{% endif %}
-    </div>
-    <div class='col-md-6'>
-      <label for='id_phone' class='form-label'>Phone</label>
-      {{ form.phone }}
-      {% if form.phone.errors %}<div class='text-danger small'>{{ form.phone.errors|striptags }}</div>{% endif %}
-    </div>
-  </div>
-  {% if form.non_field_errors %}
-    <div class='text-danger mt-2'>{{ form.non_field_errors }}</div>
-  {% endif %}
-  <div class='mt-3'>
-    <button type='submit' name='profile_submit' value='1' class='btn btn-primary'>Save changes</button>
-    <a href='{% url 'home' %}' class='btn btn-outline-secondary ms-2'>Cancel</a>
-  </div>
-  <p class='text-muted mt-3'>To change your password use the Change Password option in the Account menu.</p>
-</form>
+    <span class="profile-user-chip">{{ request.user.username }}</span>
+  </section>
 
-<hr class='my-4'>
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <section class="profile-shell-card">
+        <h2 class="h5 mb-3">Profile details</h2>
 
-<h4>Addresses</h4>
-
-{% if addresses %}
-  <div class='list-group mb-3'>
-    {% for a in addresses %}
-      <div class='list-group-item d-flex justify-content-between align-items-start'>
-        <div>
-          <div class='fw-semibold'>{{ a.street_address }} {{ a.house_number }}{% if a.apartment %}, {{ a.apartment }}{% endif %}</div>
-          <div class='text-muted small'>{{ a.city }} {{ a.postal_code }}</div>
-          {% if a.is_default %}<span class='badge bg-success mt-1'>Default</span>{% endif %}
-        </div>
-        <div class='ms-3'>
-          {% if not a.is_default %}
-          <form method='post' action='{% url 'set_default_address' a.pk %}' class='d-inline'>
-            {% csrf_token %}
-            <button type='submit' class='btn btn-sm btn-outline-primary'>Make default</button>
-          </form>
+        <form method="post" novalidate class="profile-edit-form">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="id_username" class="form-label">Username</label>
+              {{ form.username }}
+              {% if form.username.errors %}<div class="text-danger small">{{ form.username.errors|striptags }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label for="id_email" class="form-label">Email</label>
+              {{ form.email }}
+              {% if form.email.errors %}<div class="text-danger small">{{ form.email.errors|striptags }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label for="id_first_name" class="form-label">First name</label>
+              {{ form.first_name }}
+              {% if form.first_name.errors %}<div class="text-danger small">{{ form.first_name.errors|striptags }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label for="id_last_name" class="form-label">Last name</label>
+              {{ form.last_name }}
+              {% if form.last_name.errors %}<div class="text-danger small">{{ form.last_name.errors|striptags }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label for="id_phone" class="form-label">Phone</label>
+              {{ form.phone }}
+              {% if form.phone.errors %}<div class="text-danger small">{{ form.phone.errors|striptags }}</div>{% endif %}
+            </div>
+          </div>
+          {% if form.non_field_errors %}
+            <div class="text-danger mt-2">{{ form.non_field_errors }}</div>
           {% endif %}
-          <form method='post' action='{% url 'delete_address' a.pk %}' class='d-inline ms-2'>
-            {% csrf_token %}
-            <button type='submit' class='btn btn-sm btn-outline-danger'>Delete</button>
-          </form>
-        </div>
-      </div>
-    {% endfor %}
-  </div>
-{% else %}
-  <p class='text-muted'>No addresses yet.</p>
-{% endif %}
+          <div class="mt-3 d-flex gap-2 flex-wrap">
+            <button type="submit" name="profile_submit" value="1" class="btn profile-save-btn">Save changes</button>
+            <a href="{% url 'home' %}" class="btn profile-cancel-btn">Cancel</a>
+          </div>
+          <p class="profile-note mt-3 mb-0">To change your password use the Change Password option in the Account menu.</p>
+        </form>
+      </section>
+    </div>
 
-<h5>Add new address</h5>
-<form method='post' novalidate>
-  {% csrf_token %}
-  <div class='row g-3'>
-    <div class='col-md-6'>
-      <label for='id_street_address' class='form-label'>Street address</label>
-      {{ address_form.street_address }}
-    </div>
-    <div class='col-md-3'>
-      <label for='id_house_number' class='form-label'>House number</label>
-      {{ address_form.house_number }}
-    </div>
-    <div class='col-md-3'>
-      <label for='id_apartment' class='form-label'>Apartment</label>
-      {{ address_form.apartment }}
-    </div>
-    <div class='col-md-6'>
-      <label for='id_city' class='form-label'>City</label>
-      {{ address_form.city }}
-    </div>
-    <div class='col-md-6'>
-      <label for='id_postal_code' class='form-label'>Postal code</label>
-      {{ address_form.postal_code }}
-      <div class='form-text'>We currently deliver only to HU districts (e.g. HU1-HU19).</div>
-      {% if address_form.postal_code.errors %}
-        <div class='postal-error-callout' role='alert'>{{ address_form.postal_code.errors|striptags }}</div>
-      {% endif %}
-    </div>
-    <div class='col-12'>
-      <label for='id_delivery_instructions' class='form-label'>Delivery instructions</label>
-      {{ address_form.delivery_instructions }}
-    </div>
-    <div class='col-12 form-check'>
-      {{ address_form.is_default }}
-      <label class='form-check-label' for='id_is_default'>Set as default</label>
+    <div class="col-lg-5">
+      <section class="profile-shell-card mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h3 class="h6 m-0">Saved addresses</h3>
+          <small class="profile-muted">Default is used at checkout</small>
+        </div>
+
+        {% if addresses %}
+          <div class="profile-address-list">
+            {% for a in addresses %}
+              <article class="profile-address-entry">
+                <div>
+                  <div class="profile-address-line fw-semibold">
+                    {{ a.street_address }} {{ a.house_number }}{% if a.apartment %}, {{ a.apartment }}{% endif %}
+                    {% if a.is_default %}<span class="badge profile-default-badge mt-1">Default</span>{% endif %}
+                  </div>
+                  <div class="profile-address-meta">{{ a.city }} {{ a.postal_code }}</div>
+                </div>
+                <div class="profile-address-actions">
+                  {% if not a.is_default %}
+                  <form method="post" action="{% url 'set_default_address' a.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm profile-default-btn">Make default</button>
+                  </form>
+                  {% endif %}
+                  <form method="post" action="{% url 'delete_address' a.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm profile-delete-btn">Delete</button>
+                  </form>
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="profile-empty mb-0">No addresses yet.</p>
+        {% endif %}
+      </section>
+
+      <section class="profile-shell-card">
+        <h3 class="h6 mb-3">Add new address</h3>
+        <form method="post" novalidate class="profile-address-form">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="id_street_address" class="form-label">Street address</label>
+              {{ address_form.street_address }}
+            </div>
+            <div class="col-md-3">
+              <label for="id_house_number" class="form-label">House number</label>
+              {{ address_form.house_number }}
+            </div>
+            <div class="col-md-3">
+              <label for="id_apartment" class="form-label">Apartment</label>
+              {{ address_form.apartment }}
+            </div>
+            <div class="col-md-6">
+              <label for="id_city" class="form-label">City</label>
+              {{ address_form.city }}
+            </div>
+            <div class="col-md-6">
+              <label for="id_postal_code" class="form-label">Postal code</label>
+              {{ address_form.postal_code }}
+              <div class="form-text">We currently deliver only to HU districts (e.g. HU1-HU19).</div>
+              {% if address_form.postal_code.errors %}
+                <div class="postal-error-callout" role="alert">{{ address_form.postal_code.errors|striptags }}</div>
+              {% endif %}
+            </div>
+            <div class="col-12">
+              <label for="id_delivery_instructions" class="form-label">Delivery instructions</label>
+              {{ address_form.delivery_instructions }}
+            </div>
+            <div class="col-12 form-check">
+              {{ address_form.is_default }}
+              <label class="form-check-label" for="id_is_default">Set as default</label>
+            </div>
+          </div>
+          <div class="mt-3">
+            <button type="submit" name="address_submit" value="1" class="btn profile-add-address-btn">Add address</button>
+          </div>
+        </form>
+      </section>
     </div>
   </div>
-  <div class='mt-3'>
-    <button type='submit' name='address_submit' value='1' class='btn btn-primary'>Add address</button>
-  </div>
-</form>
+</div>
 {% endblock %}
