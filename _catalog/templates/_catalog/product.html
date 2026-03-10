@@ -138,50 +138,15 @@
     <!-- Right Column: Search Form & Product Listing -->
     <div class="col-md-9 catalog-main-col">
 
-      {# Quick reorder from last 3 orders #}
-      {% if user.is_authenticated and recent_purchased_items %}
+      {# Reorder shortcut #}
+      {% if user.is_authenticated %}
       <div class="card mb-3 reorder-card">
-        <div class="card-body reorder-card-body">
-          <form id="recent-reorder-form" method="POST">
-            {% csrf_token %}
-            <input type="hidden" name="return_to" value="{{ request.get_full_path }}" />
-            <input type="hidden" id="recent-reorder-id" />
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-              <label class="form-label mb-0 reorder-label">Reorder from last 3 orders</label>
-              <button type="button" id="recent-add-all" class="btn btn-sm reorder-add-all">Add All To Cart</button>
-            </div>
-            <div class="input-group align-items-center flex-wrap recent-reorder-row">
-              <span class="input-group-text p-1 recent-reorder-preview-wrap">
-                <img id="recent-reorder-img" src="{% static 'images/fresh_products.jpg' %}" alt="preview" class="recent-reorder-preview" onerror="this.onerror=null;this.src='{% static 'images/fresh_products.jpg' %}';" />
-              </span>
-              <div class="dropdown flex-grow-1 recent-reorder-picker">
-                <button class="btn dropdown-toggle w-100 text-truncate recent-reorder-button" type="button" id="recent-reorder-button" data-bs-toggle="dropdown" aria-expanded="false">
-                  Select item
-                </button>
-                <ul class="dropdown-menu w-100 recent-reorder-menu" aria-labelledby="recent-reorder-button" id="recent-reorder-menu">
-                  {% for it in recent_purchased_items %}
-                  <li class="px-1">
-                    <div class="d-flex align-items-center justify-content-between gap-2">
-                      <a class="dropdown-item d-flex align-items-center w-100 recent-reorder-item" href="#" data-role="select" data-id="{{ it.product_id }}" data-img="{{ it.image_url }}" data-qty="{{ it.quantity }}">
-                        {% if it.image_url and it.image_url != '/img/products/no-image.png' %}
-                          <img src="{{ it.image_url }}" alt="{{ it.name }}" class="me-2 recent-reorder-item-thumb" onerror="this.onerror=null;this.src='{% static 'images/fresh_products.jpg' %}';" />
-                        {% else %}
-                          <img src="{% static 'images/fresh_products.jpg' %}" alt="{{ it.name }}" class="me-2 recent-reorder-item-thumb" />
-                        {% endif %}
-                        <span class="flex-grow-1">{{ it.name }} (last qty {{ it.quantity }})</span>
-                      </a>
-                      <a class="btn btn-sm d-inline-flex align-items-center gap-1 recent-reorder-details-btn" href="{% url 'product_detail' it.product_id %}" title="View product details">
-                        <span>Details</span>
-                      </a>
-                    </div>
-                  </li>
-                  {% endfor %}
-                </ul>
-              </div>
-              <input type="number" id="recent-reorder-qty" class="form-control flex-grow-0 recent-reorder-qty" min="1" value="1" aria-label="Quantity" />
-              <button class="btn flex-grow-0 recent-reorder-submit" type="submit">Add</button>
-            </div>
-          </form>
+        <div class="card-body reorder-card-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+          <div>
+            <label class="form-label mb-1 reorder-label">Reorder from last 3 orders</label>
+            <p class="mb-0 text-muted small">Open your recent order items in one page.</p>
+          </div>
+          <a href="{% url 'reorder_page' %}" class="btn btn-sm reorder-add-all">Open Reorder Page</a>
         </div>
       </div>
       {% endif %}
@@ -721,116 +686,6 @@
   });
 </script>
 
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    const form = document.getElementById('recent-reorder-form');
-    if (!form) return;
-    const idInput = document.getElementById('recent-reorder-id');
-    const qty = document.getElementById('recent-reorder-qty');
-    const img = document.getElementById('recent-reorder-img');
-    const btn = document.getElementById('recent-reorder-button');
-    const menu = document.getElementById('recent-reorder-menu');
-    const addAllBtn = document.getElementById('recent-add-all');
-    const addUrlTemplate = "{% url 'add_to_cart' 999999 %}".replace('999999', '__ID__');
-
-    const formatButtonLabel = (fullLabel) => {
-      if (!fullLabel) return 'Select item';
-      const withoutQty = fullLabel.replace(/\s*\(last qty.*\)$/i, '').trim();
-      const text = withoutQty || fullLabel.trim();
-      const MAX_CHARS = 32;
-      if (text.length <= MAX_CHARS) {
-        return text;
-      }
-      return text.slice(0, MAX_CHARS - 3) + '...';
-    };
-
-    const selectItem = (pid, label, imageUrl) => {
-      if (idInput) idInput.value = pid;
-      if (btn) btn.textContent = formatButtonLabel(label);
-      if (img) {
-        if (imageUrl && imageUrl !== '/img/products/no-image.png') {
-          img.src = imageUrl;
-        } else {
-          img.src = "{% static 'images/fresh_products.jpg' %}";
-        }
-      }
-    };
-
-    menu && menu.addEventListener('click', function (e) {
-      const a = e.target.closest('a[data-role="select"]');
-      if (!a) return;
-      e.preventDefault();
-      const pid = a.getAttribute('data-id');
-      const imageUrl = a.getAttribute('data-img') || '';
-      const label = (a.querySelector('span') && a.querySelector('span').textContent) || a.textContent || '';
-      selectItem(pid, label.trim(), imageUrl);
-    });
-
-    // Preselect first item if available
-    const first = menu && menu.querySelector('a[data-role="select"]');
-    if (first) {
-      const pid = first.getAttribute('data-id');
-      const imageUrl = first.getAttribute('data-img') || '';
-      const label = (first.querySelector('span') && first.querySelector('span').textContent) || first.textContent || '';
-      selectItem(pid, label.trim(), imageUrl);
-    }
-
-    form.addEventListener('submit', function (e) {
-      const pid = idInput && idInput.value;
-      if (!pid) {
-        e.preventDefault();
-        return;
-      }
-      // Update action to the product-specific add_to_cart URL
-      form.action = addUrlTemplate.replace('__ID__', pid);
-
-      // Ensure quantity field exists for POST
-      let qInput = form.querySelector('input[name="quantity"]');
-      if (!qInput) {
-        qInput = document.createElement('input');
-        qInput.type = 'hidden';
-        qInput.name = 'quantity';
-        form.appendChild(qInput);
-      }
-      const q = parseInt((qty && qty.value) || '1', 10);
-      qInput.value = isNaN(q) || q < 1 ? 1 : q;
-    });
-
-    // Add all items to cart using fetch
-    addAllBtn && addAllBtn.addEventListener('click', async function () {
-      const anchors = menu ? Array.from(menu.querySelectorAll('a[data-role="select"]')) : [];
-      if (!anchors.length) return;
-      const csrf = form.querySelector('input[name="csrfmiddlewaretoken"]').value;
-      const returnTo = form.querySelector('input[name="return_to"]').value;
-      addAllBtn.disabled = true;
-      addAllBtn.textContent = 'Adding...';
-      try {
-        for (const a of anchors) {
-          const pid = a.getAttribute('data-id');
-          const q = parseInt(a.getAttribute('data-qty') || '1', 10) || 1;
-          const url = addUrlTemplate.replace('__ID__', pid);
-          await fetch(url, {
-            method: 'POST',
-            headers: {
-              'X-CSRFToken': csrf,
-              'X-Requested-With': 'XMLHttpRequest',
-              'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({ quantity: q, return_to: returnTo })
-          });
-        }
-        // After all requests complete, reload or redirect to reflect cart updates
-        window.location.href = returnTo || window.location.href;
-      } catch (e) {
-        console.error('Failed to add all items', e);
-        addAllBtn.disabled = false;
-        addAllBtn.textContent = 'Add All To Cart';
-      }
-    });
-
-    // Preview handled in selectItem and initial preselect; nothing else to do
-  });
-</script>
 <!-- Removed legacy hidden-field parser; selects are used instead -->
 <script>
   document.addEventListener('DOMContentLoaded', function () {

@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Reorder from Last 3 Orders{% endblock %}
+
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@600;700&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container py-3 order-history-lab">
+  <section class="order-history-hero mb-3">
+    <div>
+      <p class="order-history-kicker mb-1">Quick Reorder</p>
+      <h1 class="order-history-title mb-1">Reorder from last 3 orders</h1>
+      <p class="order-history-sub mb-0">All items from your latest 3 paid/processed/delivered orders.</p>
+    </div>
+    <span class="order-history-count-chip">{{ total_items }} items</span>
+  </section>
+
+  {% if not order_groups or not total_items %}
+    <section class="order-history-empty text-center">
+      <img src="{% static 'images/fresh_products.jpg' %}" alt="No recent order items" class="rounded mb-3 order-history-empty-image" />
+      <p class="lead mb-3">No recent reorder items found.</p>
+      <a href="{% url 'product_list' %}" class="btn order-history-primary-btn">Browse Products</a>
+    </section>
+  {% else %}
+    <div class="accordion order-history-accordion" id="recentReorderAccordion">
+      {% for group in order_groups %}
+      <div class="accordion-item order-history-order-card">
+        <h2 class="accordion-header" id="recent-order-heading-{{ group.order.id }}">
+          <button class="accordion-button collapsed order-history-order-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#recentOrderPanel{{ group.order.id }}" aria-expanded="false" aria-controls="recentOrderPanel{{ group.order.id }}">
+            <div class="w-100 d-flex align-items-center justify-content-between">
+              <div class="me-3">
+                <div class="order-history-order-id">Order #{{ group.order.id }}</div>
+                <div class="order-history-order-date">{{ group.order.created_at|date:"Y-m-d H:i" }}</div>
+              </div>
+              <div class="text-end">
+                <span class="order-status-chip {% if group.order.status == 'paid' %}status-paid{% elif group.order.status == 'processed' %}status-processed{% elif group.order.status == 'delivered' %}status-delivered{% else %}status-pending{% endif %}">{{ group.order.get_status_display }}</span>
+              </div>
+            </div>
+          </button>
+        </h2>
+        <div id="recentOrderPanel{{ group.order.id }}" class="accordion-collapse collapse" aria-labelledby="recent-order-heading-{{ group.order.id }}" data-bs-parent="#recentReorderAccordion">
+          <div class="accordion-body order-history-body">
+            <div class="d-flex justify-content-end mb-3">
+              <form action="{% url 'order_reorder' group.order.id %}" method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="return_to" value="{{ request.get_full_path }}" />
+                <button type="submit" class="btn order-history-primary-btn">Reorder Entire Order</button>
+              </form>
+            </div>
+            <div class="row g-3">
+              {% for item in group.items %}
+              <div class="col-12 col-md-6 col-lg-4">
+                <article class="order-history-item-card card h-100">
+                  <div class="card-body d-flex align-items-center">
+                    <a href="{% url 'product_detail' item.product_id %}" class="me-3 text-decoration-none flex-shrink-0 order-history-item-thumb-wrap">
+                      {% if item.image_url and item.image_url != '/img/products/no-image.png' %}
+                        <img src="{{ item.image_url }}" alt="{{ item.name }}" class="rounded order-history-item-thumb" onerror="this.onerror=null;this.src='{% static 'images/fresh_products.jpg' %}';" />
+                      {% else %}
+                        <img src="{% static 'images/fresh_products.jpg' %}" alt="{{ item.name }}" class="rounded order-history-item-thumb" />
+                      {% endif %}
+                    </a>
+                    <div class="flex-grow-1 overflow-hidden order-history-item-main">
+                      <a href="{% url 'product_detail' item.product_id %}" class="text-decoration-none text-dark d-block">
+                        <div class="order-history-item-name text-truncate" title="{{ item.name }}">{{ item.name }}</div>
+                      </a>
+                      <div class="order-history-item-meta text-truncate">
+                        Qty: {{ item.quantity }} | &pound;{{ item.price|floatformat:2 }}
+                      </div>
+                    </div>
+                    <div class="ms-2 flex-shrink-0">
+                      <form action="{% url 'add_to_cart' item.product_id %}" method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="quantity" value="{{ item.quantity|default:1 }}" />
+                        <input type="hidden" name="return_to" value="{{ request.get_full_path }}" />
+                        <button type="submit" class="btn btn-sm order-history-item-reorder-btn">Add</button>
+                      </form>
+                    </div>
+                  </div>
+                </article>
+              </div>
+              {% empty %}
+              <div class="col-12"><em class="order-history-empty-items">No items found for this order.</em></div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -731,33 +731,6 @@ def product_list(request):
     except Exception:
         pass
 
-    # Build recent_purchased_items for quick reorder widget
-    recent_purchased_items = []
-    if request.user.is_authenticated:
-        try:
-            recent_orders = (
-                Order.objects
-                .filter(user=request.user)
-                .exclude(status__in=['pending', 'canceled'])
-                .order_by('-created_at')[:3]
-            )
-            seen_product_ids = set()
-            for order in recent_orders:
-                for item in order.items.select_related('product'):
-                    pid = item.product_id
-                    if pid in seen_product_ids:
-                        continue
-                    seen_product_ids.add(pid)
-                    product = item.product
-                    recent_purchased_items.append({
-                        'product_id': pid,
-                        'name': getattr(product, 'name', '') or '',
-                        'image_url': getattr(product, 'image_url', '') or '',
-                        'quantity': item.quantity,
-                    })
-        except Exception:
-            recent_purchased_items = []
-
     context = {
         'products': page_obj,
         'page_obj': page_obj,
@@ -769,9 +742,46 @@ def product_list(request):
         'level2_map': level2_map,
         'initial_level2_options': level2_map.get(l1, []) if l1 else [],
     }
-
-    context['recent_purchased_items'] = recent_purchased_items
     return render(request, '_catalog/product.html', context)
+
+
+@login_required
+def reorder_page(request):
+    recent_orders = (
+        Order.objects
+        .filter(user=request.user)
+        .exclude(status__in=['pending', 'canceled'])
+        .prefetch_related('items__product')
+        .order_by('-created_at')[:3]
+    )
+
+    order_groups = []
+    total_items = 0
+    for order in recent_orders:
+        items = []
+        for item in order.items.all():
+            product = item.product
+            items.append({
+                'product_id': product.id,
+                'name': getattr(product, 'name', '') or 'Unnamed product',
+                'image_url': getattr(product, 'image_url', '') or '',
+                'quantity': int(item.quantity or 0),
+                'price': item.price,
+            })
+            total_items += 1
+        order_groups.append({
+            'order': order,
+            'items': items,
+        })
+
+    return render(
+        request,
+        '_catalog/reorder.html',
+        {
+            'order_groups': order_groups,
+            'total_items': total_items,
+        },
+    )
 
 
 @login_required
