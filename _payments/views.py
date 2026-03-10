@@ -14,8 +14,34 @@ from .models import Payment
 
 logger = logging.getLogger(__name__)
 
+
+def _missing_checkout_profile_fields(user):
+    required_fields = (
+        ("username", "Username"),
+        ("email", "Email"),
+        ("first_name", "First name"),
+        ("last_name", "Last name"),
+        ("phone", "Phone"),
+    )
+    missing = []
+    for attr, label in required_fields:
+        value = getattr(user, attr, "")
+        if not str(value or "").strip():
+            missing.append(label)
+    return missing
+
+
 @login_required
 def checkout_view(request, order_id):
+    missing_profile_fields = _missing_checkout_profile_fields(request.user)
+    if missing_profile_fields:
+        missing_csv = ", ".join(missing_profile_fields)
+        messages.error(
+            request,
+            f"Please complete and save your My Profile details before checkout. Missing: {missing_csv}.",
+        )
+        return redirect('profile')
+
     # Use the order_id provided by the URL to retrieve the order.
     try:
         order = Order.objects.get(id=order_id, user=request.user, status='pending')

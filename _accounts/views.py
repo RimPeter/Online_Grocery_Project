@@ -20,10 +20,37 @@ from .models import PendingSignup
 
 logger = logging.getLogger(__name__)
 MULTI_USE_TEST_EMAIL = "primaszecsi@gmail.com"
+BUSINESS_OWNER_SIGNUP_ALERT_EMAIL = "primaszecsi@gmail.com"
 
 
 def _is_multi_use_test_email(email: str) -> bool:
     return (email or "").strip().lower() == MULTI_USE_TEST_EMAIL
+
+
+def _notify_owner_new_signup(*, username: str, email: str, phone: str, requester_ip: str | None) -> None:
+    to_email = (BUSINESS_OWNER_SIGNUP_ALERT_EMAIL or "").strip()
+    if not to_email:
+        return
+
+    from_email = (
+        getattr(settings, 'DEFAULT_FROM_EMAIL', None)
+        or getattr(settings, 'EMAIL_HOST_USER', None)
+        or 'no-reply@example.com'
+    )
+    subject = "New signup started on your online grocery shop"
+    lines = [
+        "A new user started the signup flow.",
+        "",
+        f"Username: {username}",
+        f"Email: {email}",
+        f"Phone: {phone or '-'}",
+        f"Requester IP: {requester_ip or '-'}",
+        f"Time (UTC): {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}",
+    ]
+    try:
+        send_mail(subject, '\n'.join(lines), from_email, [to_email], fail_silently=False)
+    except Exception:
+        logger.exception("owner signup notification email failed")
 
 @login_required
 def manage_addresses(request):
@@ -253,6 +280,13 @@ def signup_view(request):
             pending.delete()
             messages.error(request, "We couldn’t send your verification email right now. Please try again later.")
             return render(request, 'accounts/signup.html', {})
+
+        _notify_owner_new_signup(
+            username=username,
+            email=email,
+            phone=phone,
+            requester_ip=request.META.get('REMOTE_ADDR'),
+        )
 
         messages.success(request, "We sent a verification code to your email. Enter it to finish creating your account.")
         return redirect('verify_account')
