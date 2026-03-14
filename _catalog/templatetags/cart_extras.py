@@ -1,6 +1,7 @@
 from django import template
 from decimal import Decimal
 from _catalog.models import All_Products
+from _orders.pricing import calculate_checkout_totals
 
 register = template.Library()
 
@@ -63,4 +64,5 @@ def cart_total_value(context):
 
         total += unit_price * quantity
 
-    return total.quantize(Decimal('0.01'))
+    pricing = calculate_checkout_totals(total, has_items=total > 0)
+    return pricing['grand_total']
