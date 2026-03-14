@@ -17,7 +17,7 @@ from decimal import Decimal
 from django.views.decorators.http import require_http_methods, require_POST
 import threading
 from _catalog.models import All_Products, HomeCategoryTile, HomeValuePillar, CategoryNodeSetting
-from .models import LeafletCopy, SubcategoryPipelineRun, DeliverySlotSettings
+from .models import LeafletCopy, SubcategoryPipelineRun, DeliverySlotSettings, BasketPricingSettings
 from .constants import LEAFLET_TEXT_DEFAULTS
 from _orders.models import Order, OrderItem
 from django.contrib import messages
@@ -1375,6 +1375,61 @@ def delivery_slot_settings(request):
     return render(
         request,
         '_product_management/delivery_slot_settings.html',
+        current,
+    )
+
+
+@staff_or_superuser_required
+@require_http_methods(["GET", "POST"])
+def basket_pricing_settings(request):
+    pricing_settings = BasketPricingSettings.get_solo()
+
+    def _parse_money(value, default, min_value=None, max_value=None):
+        try:
+            parsed = Decimal(str(value or '')).quantize(Decimal('0.01'))
+        except Exception:
+            parsed = Decimal(str(default)).quantize(Decimal('0.01'))
+        if min_value is not None and parsed < min_value:
+            parsed = min_value
+        if max_value is not None and parsed > max_value:
+            parsed = max_value
+        return parsed
+
+    current = {
+        'minimum_order_total': pricing_settings.minimum_order_total,
+        'delivery_charge': pricing_settings.delivery_charge,
+        'discount_threshold': pricing_settings.discount_threshold,
+        'discount_amount': pricing_settings.discount_amount,
+    }
+
+    if request.method == 'POST':
+        parsed = {
+            'minimum_order_total': _parse_money(request.POST.get('minimum_order_total'), current['minimum_order_total'], Decimal('0.00'), Decimal('1000.00')),
+            'delivery_charge': _parse_money(request.POST.get('delivery_charge'), current['delivery_charge'], Decimal('0.00'), Decimal('250.00')),
+            'discount_threshold': _parse_money(request.POST.get('discount_threshold'), current['discount_threshold'], Decimal('0.00'), Decimal('1000.00')),
+            'discount_amount': _parse_money(request.POST.get('discount_amount'), current['discount_amount'], Decimal('0.00'), Decimal('500.00')),
+        }
+
+        pricing_settings.minimum_order_total = parsed['minimum_order_total']
+        pricing_settings.delivery_charge = parsed['delivery_charge']
+        pricing_settings.discount_threshold = parsed['discount_threshold']
+        pricing_settings.discount_amount = parsed['discount_amount']
+        pricing_settings.save(
+            update_fields=[
+                'minimum_order_total',
+                'delivery_charge',
+                'discount_threshold',
+                'discount_amount',
+                'updated_at',
+            ]
+        )
+
+        messages.success(request, 'Basket pricing settings saved.')
+        return redirect('_product_management:basket_pricing_settings')
+
+    return render(
+        request,
+        '_product_management/basket_pricing_settings.html',
         current,
     )
 

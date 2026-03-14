@@ -115,14 +115,17 @@
     <section class="cart-summary-shell mt-3">
       <div class="cart-summary-values">
         <div class="cart-summary-line"><span>Subtotal</span><strong>&pound;{{ total_price|floatformat:2 }}</strong></div>
+        {% if basket_reward_discount > 0 %}
+          <div class="cart-summary-line"><span>Basket reward</span><strong>-&pound;{{ basket_reward_discount|floatformat:2 }}</strong></div>
+        {% endif %}
         <div class="cart-summary-line"><span>Delivery charge</span><strong>&pound;{{ delivery_charge|floatformat:2 }}</strong></div>
         <div class="cart-summary-total"><span>Total</span><strong>&pound;{{ grand_total|floatformat:2 }}</strong></div>
       </div>
 
       <div class="cart-summary-actions text-md-end">
         <a href="{% url 'product_list' %}" class="btn cart-continue-btn">Continue Shopping</a>
-        {% if total_price < 40 %}
-          <button class="btn cart-checkout-btn" type="button" disabled aria-disabled="true" title="Minimum order &pound;40.00">
+        {% if total_price < minimum_order_total %}
+          <button class="btn cart-checkout-btn" type="button" disabled aria-disabled="true" title="Minimum order &pound;{{ minimum_order_total|floatformat:2 }}">
             Proceed to Checkout
           </button>
         {% else %}
@@ -130,7 +133,12 @@
             Proceed to Checkout
           </a>
         {% endif %}
-        <p class="cart-min-note mb-0">(Minimum &pound;40 to spend to proceed to checkout)</p>
+        {% if qualifies_for_basket_reward %}
+          <p class="cart-min-note mb-1">&pound;{{ basket_reward_amount|floatformat:2 }} free to spend has been applied to this basket.</p>
+        {% else %}
+          <p class="cart-min-note mb-1">Spend &pound;{{ basket_reward_shortfall|floatformat:2 }} more to unlock &pound;{{ basket_reward_amount|floatformat:2 }} free to spend at &pound;{{ basket_reward_threshold|floatformat:2 }}.</p>
+        {% endif %}
+        <p class="cart-min-note mb-0">(Minimum &pound;{{ minimum_order_total|floatformat:2 }} to spend to proceed to checkout)</p>
       </div>
     </section>
   {% else %}

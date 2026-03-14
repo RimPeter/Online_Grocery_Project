@@ -152,3 +152,23 @@ class DeliverySlotSettings(models.Model):
             cursor += step
             loops += 1
         return options
+
+
+class BasketPricingSettings(models.Model):
+    minimum_order_total = models.DecimalField(max_digits=10, decimal_places=2, default=40)
+    delivery_charge = models.DecimalField(max_digits=10, decimal_places=2, default=1.50)
+    discount_threshold = models.DecimalField(max_digits=10, decimal_places=2, default=95)
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=15)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Basket pricing settings"
+        verbose_name_plural = "Basket pricing settings"
+
+    def __str__(self):
+        return "Basket pricing settings"
+
+    @classmethod
+    def get_solo(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj

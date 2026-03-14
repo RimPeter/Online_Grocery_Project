@@ -13,6 +13,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse, Http404, HttpResponseForbidden
 from django.views.decorators.http import require_GET, require_POST
 from _orders.models import Order, OrderItem
+from _orders.pricing import calculate_checkout_totals
 from django.contrib.auth.decorators import login_required
 from pathlib import Path
 from django.urls import reverse
@@ -898,17 +899,14 @@ def cart_view(request):
                 price=price_dec
             )
 
-    # Fixed delivery charge applied on cart totals display
-    delivery_charge = Decimal('1.50') if cart_items else Decimal('0.00')
-    grand_total = (total_price + delivery_charge).quantize(Decimal('0.01'))
+    pricing = calculate_checkout_totals(total_price, has_items=bool(cart_items))
 
     context = {
         'cart_items': cart_items,
         'total_price': total_price.quantize(Decimal('0.01')),
-        'delivery_charge': delivery_charge,
-        'grand_total': grand_total,
         'order': order,  # This order now has updated OrderItems.
         'created_new': created_new,
+        **pricing,
     }
     return render(request, '_catalog/cart.html', context)
 

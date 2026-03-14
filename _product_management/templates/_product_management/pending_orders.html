@@ -58,7 +58,7 @@
                 {% endif %}
               </td>
               <td>
-                {% if o.computed_total %}&pound;{{ o.computed_total|floatformat:2 }}{% else %}&pound;{{ o.total|floatformat:2 }}{% endif %}
+                {% if o.computed_total %}&pound;{{ o.computed_total|checkout_grand_total|floatformat:2 }}{% else %}&pound;{{ o.total|checkout_grand_total|floatformat:2 }}{% endif %}
               </td>
               <td>{{ o.created_at|date:"Y-m-d H:i" }}</td>
               <td>
@@ -128,7 +128,7 @@
 
                   <div class="mt-3 text-end">
                     <strong>Grand Total:</strong>
-                    {% if o.computed_total %}&pound;{{ o.computed_total|floatformat:2 }}{% else %}&pound;{{ o.total|floatformat:2 }}{% endif %}
+                    {% if o.computed_total %}&pound;{{ o.computed_total|checkout_grand_total|floatformat:2 }}{% else %}&pound;{{ o.total|checkout_grand_total|floatformat:2 }}{% endif %}
                   </div>
                 </div>
               </td>

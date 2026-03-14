@@ -51,7 +51,7 @@
           {% endfor %}
         </ul>
         <div class="order-card-footer d-flex justify-content-between">
-          <div class="fw-semibold">Total</div>
+          <div class="fw-semibold">Items subtotal</div>
           <div class="fw-bold">&pound;{{ total|floatformat:2 }}</div>
         </div>
       </section>
@@ -94,6 +94,9 @@
         <div class="order-card-header"><strong>Totals</strong></div>
         <div class="order-card-body">
           <div class="d-flex justify-content-between"><span class="order-label">Subtotal</span><span>&pound;{{ total|floatformat:2 }}</span></div>
+          {% if basket_reward_discount > 0 %}
+            <div class="d-flex justify-content-between"><span class="order-label">Basket reward</span><span>-&pound;{{ basket_reward_discount|floatformat:2 }}</span></div>
+          {% endif %}
           <div class="d-flex justify-content-between"><span class="order-label">Delivery charge</span><span>&pound;{{ delivery_charge|floatformat:2 }}</span></div>
           <div class="d-flex justify-content-between fw-bold"><span>Total</span><span>&pound;{{ grand_total|floatformat:2 }}</span></div>
         </div>

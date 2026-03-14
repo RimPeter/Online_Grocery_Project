@@ -18,6 +18,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from django.urls import reverse
 from django.db.models import Sum, F, DecimalField, ExpressionWrapper
+from .pricing import calculate_checkout_totals, get_basket_pricing_settings
 
 # Statuses that permit invoice access/download/email
 ALLOWED_INVOICE_STATUSES = ('paid', 'processed', 'delivered')
@@ -44,9 +45,7 @@ def order_summery_view(request, order_id):
     for item in order_items:
         item.subtotal = item.price * item.quantity
     total = sum(item.subtotal for item in order_items)
-    # Fixed delivery charge to match cart display
-    delivery_charge = Decimal('1.50') if order_items else Decimal('0.00')
-    grand_total = (Decimal(total) + delivery_charge).quantize(Decimal('0.01'))
+    pricing = calculate_checkout_totals(total, has_items=bool(order_items))
 
     # Get the user's default address (fallback to first if none marked default)
     addresses = Address.objects.filter(user=request.user)
@@ -59,9 +58,8 @@ def order_summery_view(request, order_id):
         'order': order,
         'order_items': order_items,
         'total': total,
-        'delivery_charge': delivery_charge,
-        'grand_total': grand_total,
         'default_address': default_address, 
+        **pricing,
     }
     return render(request, '_orders/order_summery.html', context)
 
@@ -69,11 +67,8 @@ def order_summery_view(request, order_id):
 def delivery_slots_view(request):
     order_id = request.GET.get('order_id')
 
-    # Enforce minimum order total before allowing checkout
-    try:
-        MIN_ORDER_TOTAL = Decimal('40.00')
-    except Exception:
-        MIN_ORDER_TOTAL = Decimal('40.00')
+    pricing_settings = get_basket_pricing_settings()
+    MIN_ORDER_TOTAL = pricing_settings['minimum_order_total']
 
     # Compute current cart total from session (pack-aware)
     cart = request.session.get('cart', {})
@@ -306,8 +301,7 @@ def invoice_page_view(request, order_id):
 
     total = sum(i.subtotal for i in order_items)
     vat_included = vat_included.quantize(Decimal('0.01'))
-    delivery_charge = Decimal('1.50') if order_items else Decimal('0.00')
-    grand_total = (Decimal(total) + delivery_charge).quantize(Decimal('0.01'))
+    pricing = calculate_checkout_totals(total, has_items=bool(order_items))
 
     # If you show addresses on the invoice, pick default/fallback:
     default_address = Address.objects.filter(user=request.user).order_by('-is_default').first()
@@ -329,10 +323,9 @@ def invoice_page_view(request, order_id):
             'order_items': order_items,
             'total': total,
             'vat_included': vat_included,
-            'delivery_charge': delivery_charge,
-            'grand_total': grand_total,
             'default_address': default_address,
             'company': company,
+            **pricing,
         }
     )
 
@@ -497,18 +490,16 @@ def _build_invoice_pdf_bytes(request, order):
     except Exception:
         vat_included = Decimal('0.00')
 
-    delivery_charge = Decimal('1.50') if order_items else Decimal('0.00')
-    try:
-        grand_total = (Decimal(total_val) + delivery_charge).quantize(Decimal('0.01'))
-    except Exception:
-        grand_total = Decimal('0.00')
+    pricing = calculate_checkout_totals(total_val, has_items=bool(order_items))
 
     # Summary block
     elements.append(Paragraph(f"Subtotal: \u00A3{total_val:.2f}", styles['Normal']))
     elements.append(Paragraph(f"VAT (included): \u00A3{vat_included:.2f}", styles['Normal']))
-    elements.append(Paragraph(f"Delivery: \u00A3{delivery_charge:.2f}", styles['Normal']))
+    if pricing['basket_reward_discount'] > 0:
+        elements.append(Paragraph(f"Basket reward: -\u00A3{pricing['basket_reward_discount']:.2f}", styles['Normal']))
+    elements.append(Paragraph(f"Delivery: \u00A3{pricing['delivery_charge']:.2f}", styles['Normal']))
     elements.append(Spacer(1, 4))
-    elements.append(Paragraph(f"<b>Total:</b> \u00A3{grand_total:.2f}", styles['Heading3']))
+    elements.append(Paragraph(f"<b>Total:</b> \u00A3{pricing['grand_total']:.2f}", styles['Heading3']))
 
     # Delivery slot
     if order.delivery_date or order.delivery_time:

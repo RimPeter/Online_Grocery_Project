@@ -1,6 +1,7 @@
 from django import template
 from datetime import time
 from decimal import Decimal, InvalidOperation
+from _orders.pricing import calculate_checkout_totals
 
 register = template.Library()
 
@@ -104,5 +105,14 @@ def add_delivery_if_paid(total, status):
         st = ''
 
     if st in ('paid', 'processed', 'delivered'):
-        amt += Decimal('1.50')
+        return calculate_checkout_totals(amt, has_items=amt > 0)['grand_total']
     return amt
+
+
+@register.filter
+def checkout_grand_total(total):
+    try:
+        amt = Decimal(str(total or 0))
+    except (InvalidOperation, ValueError, TypeError):
+        amt = Decimal('0.00')
+    return calculate_checkout_totals(amt, has_items=amt > 0)['grand_total']

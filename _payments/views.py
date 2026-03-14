@@ -10,6 +10,7 @@ from django.urls import reverse
 from decimal import Decimal, ROUND_HALF_UP
 from _catalog.models import All_Products
 from _orders.models import Order, OrderItem
+from _orders.pricing import calculate_checkout_totals
 from .models import Payment
 
 logger = logging.getLogger(__name__)
@@ -83,12 +84,14 @@ def checkout_view(request, order_id):
                 price=product.price
             )
 
-    # If the order total is zero, recalculate it from OrderItems.
-    if order.total == 0:
-        calculated_total = sum(item.price * item.quantity for item in order.items.all())
-        order.total = calculated_total
-        order.save()
-        print(f"Recalculated order total: {order.total}")
+    order_items = list(order.items.all())
+    subtotal = sum(item.price * item.quantity for item in order_items)
+    if order.total != subtotal:
+        order.total = subtotal
+        order.save(update_fields=['total'])
+
+    pricing = calculate_checkout_totals(subtotal, has_items=bool(order_items))
+    payable_total = pricing['grand_total']
 
     stripe_currency = (getattr(settings, "STRIPE_CURRENCY", "gbp") or "gbp").strip().lower()
 
@@ -97,20 +100,18 @@ def checkout_view(request, order_id):
         user=request.user,
         order=order,
         defaults={
-            'amount': order.total,
+            'amount': payable_total,
             'currency': stripe_currency,
             'status': 'created',
         }
     )
     if not created:
-        payment.amount = order.total
+        payment.amount = payable_total
         payment.currency = stripe_currency
         payment.save()
 
     # Calculate amount in cents (using proper rounding if needed)
-    from decimal import Decimal, ROUND_HALF_UP
-    amount_in_cents = int((order.total * Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
-    print(f"Order total: {order.total} | Amount in cents: {amount_in_cents}")
+    amount_in_cents = int((payable_total * Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
 
     # Optional: check if amount is below minimum
     if amount_in_cents < 50:
@@ -156,6 +157,9 @@ def checkout_view(request, order_id):
         'STRIPE_PUBLIC_KEY': stripe_public_key,
         'payment': payment,
         'success_url': success_url,
+        'order': order,
+        'subtotal': subtotal,
+        **pricing,
     }
     return render(request, '_payments/checkout.html', context)
 

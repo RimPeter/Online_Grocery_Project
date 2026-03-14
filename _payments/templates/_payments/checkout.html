@@ -22,7 +22,7 @@
   <section class="checkout-shell">
     <div class="checkout-shell-head">
       <h2 class="h5 mb-1">Payment details</h2>
-      <p class="mb-0">Use card or wallet options shown below.</p>
+      <p class="mb-0">Use card or wallet options shown below. Amount due: <strong>&pound;{{ payment.amount|floatformat:2 }}</strong></p>
     </div>
 
     <form id="payment-form" class="checkout-payment-form">
@@ -30,6 +30,16 @@
       <button id="submit" class="btn checkout-pay-btn mt-3">Pay Now</button>
       <div id="error-message" class="checkout-error mt-2"></div>
     </form>
+  </section>
+
+  <section class="checkout-note-card mt-4">
+    <p class="mb-2"><strong>Order total</strong></p>
+    <div class="d-flex justify-content-between"><span>Subtotal</span><span>&pound;{{ subtotal|floatformat:2 }}</span></div>
+    {% if basket_reward_discount > 0 %}
+      <div class="d-flex justify-content-between"><span>Basket reward</span><span>-&pound;{{ basket_reward_discount|floatformat:2 }}</span></div>
+    {% endif %}
+    <div class="d-flex justify-content-between"><span>Delivery</span><span>&pound;{{ delivery_charge|floatformat:2 }}</span></div>
+    <div class="d-flex justify-content-between fw-bold"><span>Total</span><span>&pound;{{ grand_total|floatformat:2 }}</span></div>
   </section>
 
   <section class="checkout-note-card mt-4">
