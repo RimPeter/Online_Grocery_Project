@@ -41,10 +41,16 @@ DEFAULT_HOME_PILLARS = [
         'sort_order': 20,
     },
     {
+        'key': 'basket_reward',
+        'title': 'Unlock basket rewards',
+        'subtitle': 'Reach the basket reward threshold and enjoy extra savings on bigger shops.',
+        'sort_order': 30,
+    },
+    {
         'key': 'reorders',
         'title': 'Easy reorders',
         'subtitle': 'Save time with your recent items and favorites',
-        'sort_order': 30,
+        'sort_order': 40,
     },
 ]
 
