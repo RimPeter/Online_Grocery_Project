@@ -107,3 +107,9 @@ class HomeCategoryFavoritesTests(TestCase):
         self.assertEqual(len(fav_products), 1)
         self.assertEqual(fav_products[0].id, product.id)
 
+        # Add-all button behavior
+        add_all_resp = self.client.post(reverse('favorite_add_all_to_cart'))
+        self.assertEqual(add_all_resp.status_code, 302)
+        cart = self.client.session.get('cart', {})
+        self.assertEqual(cart.get(str(product.id)), 1)
+

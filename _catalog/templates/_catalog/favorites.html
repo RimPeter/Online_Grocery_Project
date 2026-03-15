@@ -15,6 +15,12 @@
         <strong>{{ favorite_count }}</strong>
         <span>favorites</span>
       </div>
+      <div class="mt-3">
+        <form method="post" action="{% url 'favorite_add_all_to_cart' %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary">Add all to cart</button>
+        </form>
+      </div>
     </section>
 
     {% if products %}

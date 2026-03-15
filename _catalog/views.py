@@ -305,6 +305,27 @@ def favorite_products(request):
     })
 
 
+@require_POST
+@login_required
+def favorite_add_all_to_cart(request):
+    favorite_ids = list(ProductFavorite.objects.filter(user=request.user).values_list('product_id', flat=True))
+    if not favorite_ids:
+        messages.info(request, 'No favorited products to add to cart.')
+        return redirect('favorite_products')
+
+    cart = request.session.get('cart', {}) or {}
+    added = 0
+    for pid in favorite_ids:
+        key = str(pid)
+        current = int(cart.get(key, 0))
+        cart[key] = current + 1
+        added += 1
+
+    request.session['cart'] = cart
+    messages.success(request, f'Added {added} favorite product(s) to your cart.')
+    return redirect('favorite_products')
+
+
 def _ensure_rsp(product):
     """Ensure RSP is set for display.
 
