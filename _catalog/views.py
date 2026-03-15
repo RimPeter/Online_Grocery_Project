@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from collections import defaultdict
-from .models import All_Products, HomeCategoryTile, HomeValuePillar, CategoryNodeSetting
+from .models import All_Products, HomeCategoryTile, HomeValuePillar, CategoryNodeSetting, HomeCategoryTileFavorite
 from django.conf import settings
 from django.contrib import messages
 import json
@@ -203,12 +203,52 @@ def home(request):
         category_groups = _group_home_tiles(subcats)
         using_manual = False
 
+    # favorite mapping for authenticated users, case-insensitive
+    favorite_set = set()
+    if request.user.is_authenticated:
+        favorites = HomeCategoryTileFavorite.objects.filter(user=request.user)
+        favorite_set = set(
+            (f.l1.strip().casefold(), f.l2.strip().casefold())
+            for f in favorites
+        )
+
+    def embed_favorite_flag(tiles):
+        for sc in tiles:
+            key = (sc.get('l1', '').strip().casefold(), sc.get('l2', '').strip().casefold())
+            sc['is_favourite'] = key in favorite_set
+
+    for group in category_groups:
+        embed_favorite_flag(group['items'])
+    embed_favorite_flag(subcats)
+
+    favorite_tiles = [sc for sc in subcats if sc.get('is_favourite')]
+
     return render(request, '_catalog/home_new.html', {
         'subcats': subcats,
         'category_groups': category_groups,
         'home_tiles_are_manual': using_manual,
         'value_pillars': value_pillars,
+        'favorite_tiles': favorite_tiles,
     })
+
+@require_POST
+@login_required
+def toggle_home_tile_favorite(request):
+    l1 = (request.POST.get('l1') or '').strip()
+    l2 = (request.POST.get('l2') or '').strip()
+
+    if not l1:
+        return JsonResponse({'success': False, 'error': 'Main category value (l1) is required.'}, status=400)
+
+    if HomeCategoryTileFavorite.objects.filter(user=request.user, l1__iexact=l1, l2__iexact=l2).exists():
+        HomeCategoryTileFavorite.objects.filter(user=request.user, l1__iexact=l1, l2__iexact=l2).delete()
+        is_favourite = False
+    else:
+        HomeCategoryTileFavorite.objects.create(user=request.user, l1=l1, l2=l2)
+        is_favourite = True
+
+    return JsonResponse({'success': True, 'is_favourite': is_favourite})
+
 
 def _ensure_rsp(product):
     """Ensure RSP is set for display.

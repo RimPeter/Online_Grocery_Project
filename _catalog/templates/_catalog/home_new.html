@@ -7,6 +7,7 @@
 <link rel='preconnect' href='https://fonts.googleapis.com'>
 <link rel='preconnect' href='https://fonts.gstatic.com' crossorigin>
 <link href='https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap' rel='stylesheet'>
+<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css' integrity='sha512-M9uG/xXXNLf4uB9rMxQn4EWKs0qqP9ZUP9yxax3tBjEsU6YV4qzLBGL+DJgPtFLiTeUvG5L9uazv7D0R8xWGjkQ==' crossorigin='anonymous' referrerpolicy='no-referrer' />
 {% endblock %}
 
 {% block content %}
@@ -110,7 +111,42 @@
       </div>
       <a class='section-link' href="{% url 'product_list' %}">All products</a>
     </div>
+    {% if favorite_tiles %}
+      <div class='favorites-section'>
+        <div class='section-top'>
+          <div>
+            <p class='section-kicker'>My Favorites</p>
+            <h2 class='section-title'>Your saved aisles</h2>
+          </div>
+        </div>
 
+        <div class='row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3'>
+          {% for sc in favorite_tiles %}
+          <div class='col'>
+            <a href="{% url 'product_list' %}?l1={{ sc.l1|urlencode }}&l2={{ sc.l2|urlencode }}" class='category-tile' style='--seq: {{ forloop.counter0 }};'>
+              <div class='tile-image-wrap'>
+                {% if sc.image_url %}
+                  <img src='{{ sc.image_url }}' alt='{{ sc.name }}'>
+                {% else %}
+                  <img src="{% static 'images/default_product.jpg' %}" alt='{{ sc.name }}'>
+                {% endif %}
+                {% if user.is_authenticated %}
+                  <button type='button' class='favorite-btn' data-l1='{{ sc.l1 }}' data-l2='{{ sc.l2 }}' aria-label='Toggle favorite'>
+                    <span class='favorite-emoji'>{% if sc.is_favourite %}❤️{% else %}♡{% endif %}</span>
+                  </button>
+                {% endif %}
+                <span class='tile-chip'>{{ sc.l1 }}</span>
+              </div>
+              <div class='tile-body'>
+                <h4 class='tile-name'>{{ sc.name }}</h4>
+                <p class='tile-sub'>Open category</p>
+              </div>
+            </a>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
     {% if category_groups %}
       {% for group in category_groups %}
       <div class='group-block'>
@@ -128,6 +164,11 @@
                   <img src='{{ sc.image_url }}' alt='{{ sc.name }}'>
                 {% else %}
                   <img src="{% static 'images/default_product.jpg' %}" alt='{{ sc.name }}'>
+                {% endif %}
+                {% if user.is_authenticated %}
+                  <button type='button' class='favorite-btn' data-l1='{{ sc.l1 }}' data-l2='{{ sc.l2 }}' aria-label='Toggle favorite'>
+                    <span class='favorite-emoji'>{% if sc.is_favourite %}❤️{% else %}♡{% endif %}</span>
+                  </button>
                 {% endif %}
                 <span class='tile-chip'>{{ sc.l1 }}</span>
               </div>
@@ -153,6 +194,11 @@
                 {% else %}
                   <img src="{% static 'images/default_product.jpg' %}" alt='{{ sc.name }}'>
                 {% endif %}
+                {% if user.is_authenticated %}
+                  <button type='button' class='favorite-btn' data-l1='{{ sc.l1 }}' data-l2='{{ sc.l2 }}' aria-label='Toggle favorite'>
+                    <span class='favorite-emoji'>{% if sc.is_favourite %}❤️{% else %}♡{% endif %}</span>
+                  </button>
+                {% endif %}
                 <span class='tile-chip'>{{ sc.l1 }}</span>
               </div>
               <div class='tile-body'>
@@ -175,6 +221,155 @@
     <a href="{% url 'signup' %}" class='btn btn-success'>Sign up</a>
   </section>
   {% endif %}
+
+  <div id='favorite-toast' class='favorite-toast' aria-live='polite' aria-atomic='true' hidden>
+    <span id='favorite-toast-message'>Favorited.</span>
+    <button id='favorite-toast-undo' class='btn btn-link btn-sm'>Undo</button>
+  </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function updateHeartIcon(button, isFavourite) {
+    const emoji = button.querySelector('.favorite-emoji');
+    if (!emoji) return;
+    emoji.textContent = isFavourite ? '❤️' : '♡';
+}
+
+function showToast(message, undoCallback) {
+    const toast = document.getElementById('favorite-toast');
+    const toastMessage = document.getElementById('favorite-toast-message');
+    const undoBtn = document.getElementById('favorite-toast-undo');
+
+    if (!toast || !toastMessage || !undoBtn) {
+        return;
+    }
+
+    toastMessage.textContent = message;
+    toast.hidden = false;
+
+    const clearTimer = setTimeout(() => {
+        toast.hidden = true;
+    }, 3200);
+
+    undoBtn.onclick = function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        clearTimeout(clearTimer);
+        toast.hidden = true;
+        if (typeof undoCallback === 'function') {
+            undoCallback();
+        }
+    };
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const buttons = document.querySelectorAll('.favorite-btn');
+    const csrfToken = getCookie('csrftoken');
+
+    buttons.forEach(btn => {
+        btn.addEventListener('click', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const l1 = this.dataset.l1 || '';
+            const l2 = this.dataset.l2 || '';
+
+            if (!l1) {
+                return;
+            }
+
+            const currentBtn = this;
+
+            const postToggle = () => {
+                return fetch('{% url "home_tile_favorite_toggle" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                        'X-CSRFToken': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: new URLSearchParams({ l1: l1, l2: l2 })
+                }).then(response => response.json());
+            };
+
+            postToggle().then(data => {
+                if (data.success) {
+                    updateHeartIcon(currentBtn, data.is_favourite);
+                    const message = data.is_favourite ? 'Aisle added to favorites.' : 'Aisle removed from favorites.';
+                    showToast(message, () => {
+                        postToggle().then(result => {
+                            if (result.success) {
+                                updateHeartIcon(currentBtn, result.is_favourite);
+                            }
+                        }).catch(err => console.error('Undo request failed', err));
+                    });
+
+                    // Refresh the page to make UI state consistent and move modified tile to favorites section.
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 400);
+                } else {
+                    console.error('Favorite toggle failed', data.error || data);
+                }
+            }).catch(err => {
+                console.error('Favorite toggle request failed', err);
+            });
+        });
+    });
+});
+</script>
+
+<style>
+.category-tile .favorite-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 5;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    color: #ff4d4f;
+}
+..category-tile .favorite-btn i {
+    font-size: 0.85rem;
+}
+.category-tile .favorite-btn .favorite-emoji {
+    font-size: 1rem;
+    line-height: 1;
+}
+.category-tile .favorite-btn:hover {
+    background: rgba(255, 255, 255, 1);
+}
+
+.favorites-section {
+    margin-bottom: 1.25rem;
+}
+
+.favorites-section .section-top {
+    margin-bottom: 0.75rem;
+}
+</style>
 {% endblock %}
 

@@ -13,4 +13,5 @@ urlpatterns = [
     path('load_more_products/', views.load_more_products, name='load_more_products'),
     path('api/search/', views.search_api, name='product_search_api'),
     path('api/search/suggest/', views.search_suggest, name='product_search_suggest'),
+    path('home/favorite-toggle/', views.toggle_home_tile_favorite, name='home_tile_favorite_toggle'),
 ]

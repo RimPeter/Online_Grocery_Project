@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 import re
 
@@ -153,6 +154,26 @@ class HomeCategoryTile(models.Model):
         if self.l2:
             return f"{self.l1} → {self.l2}"
         return self.l1
+
+
+class HomeCategoryTileFavorite(models.Model):
+    """Per-user favorite marker for home category tiles."""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='home_category_tile_favorites'
+    )
+    l1 = models.CharField(max_length=255)
+    l2 = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'l1', 'l2')
+        verbose_name = 'Home category tile favorite'
+        verbose_name_plural = 'Home category tile favorites'
+
+    def __str__(self):
+        return f"{self.user.username} favorite {self.l1}/{self.l2 or '(root)'}"
 
 
 class HomeValuePillar(models.Model):
