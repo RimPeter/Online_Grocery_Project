@@ -16,5 +16,7 @@ urlpatterns = [
     path('home/favorite-toggle/', views.toggle_home_tile_favorite, name='home_tile_favorite_toggle'),
     path('products/favorite-toggle/', views.toggle_product_favorite, name='product_favorite_toggle'),
     path('favorites/add-all/', views.favorite_add_all_to_cart, name='favorite_add_all_to_cart'),
+    path('favorites/remove/<int:product_id>/', views.favorite_remove, name='favorite_remove'),
+    path('favorites/remove-all/', views.favorite_remove_all, name='favorite_remove_all'),
     path('favorites/', views.favorite_products, name='favorite_products'),
 ]

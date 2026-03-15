@@ -113,3 +113,14 @@ class HomeCategoryFavoritesTests(TestCase):
         cart = self.client.session.get('cart', {})
         self.assertEqual(cart.get(str(product.id)), 1)
 
+        # Remove individual favorite from favorites page
+        remove_resp = self.client.post(reverse('favorite_remove', args=[product.id]))
+        self.assertEqual(remove_resp.status_code, 302)
+        self.assertFalse(ProductFavorite.objects.filter(user=self.user, product=product).exists())
+
+        # Re-add, then remove all
+        ProductFavorite.objects.create(user=self.user, product=product)
+        remove_all_resp = self.client.post(reverse('favorite_remove_all'))
+        self.assertEqual(remove_all_resp.status_code, 302)
+        self.assertFalse(ProductFavorite.objects.filter(user=self.user).exists())
+

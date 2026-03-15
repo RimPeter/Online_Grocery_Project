@@ -101,7 +101,7 @@
         <p class="card-text product-price-unavailable">Price unavailable</p>
       {% endif %}
 
-      <div class="mt-auto product-cosmos-actions">
+      <div class="mt-auto product-cosmos-actions d-flex flex-wrap align-items-center gap-2">
         <a href="{% url 'product_detail' product.pk %}" class="btn product-detail-btn" aria-label="View details for {{ product.name }}">Details</a>
 
         <form method="POST" action="{% url 'add_to_cart' product.id %}" class="add-to-cart-form product-add-form" data-action-url="{% url 'add_to_cart' product.id %}">
@@ -112,6 +112,13 @@
             <button type="submit" class="btn product-add-btn" aria-label="Add {{ product.name }} to cart">Add</button>
           </div>
         </form>
+
+        {% if show_remove_fav %}
+          <form method="POST" action="{% url 'favorite_remove' product.id %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+          </form>
+        {% endif %}
       </div>
     </div>
   </article>

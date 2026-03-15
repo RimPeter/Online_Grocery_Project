@@ -326,6 +326,28 @@ def favorite_add_all_to_cart(request):
     return redirect('favorite_products')
 
 
+@require_POST
+@login_required
+def favorite_remove(request, product_id):
+    deleted, _ = ProductFavorite.objects.filter(user=request.user, product_id=product_id).delete()
+    if deleted:
+        messages.success(request, 'Product removed from favorites.')
+    else:
+        messages.info(request, 'Product was not in favorites.')
+    return redirect('favorite_products')
+
+
+@require_POST
+@login_required
+def favorite_remove_all(request):
+    count, _ = ProductFavorite.objects.filter(user=request.user).delete()
+    if count:
+        messages.success(request, f'Removed {count} product(s) from favorites.')
+    else:
+        messages.info(request, 'No favorite products to remove.')
+    return redirect('favorite_products')
+
+
 def _ensure_rsp(product):
     """Ensure RSP is set for display.
 
