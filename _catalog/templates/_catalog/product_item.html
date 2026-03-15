@@ -6,7 +6,7 @@
     {% endif %}
 
     {% if user.is_superuser %}
-      <div class="dropdown position-absolute top-0 end-0 m-2 product-admin-dropdown">
+      <div class="dropdown position-absolute top-0 start-0 m-2 product-admin-dropdown">
         <button class="btn btn-sm product-admin-btn dropdown-toggle" type="button" id="adminMenu{{ product.id }}" data-bs-toggle="dropdown" aria-expanded="false">
           Admin
         </button>
@@ -50,6 +50,15 @@
         </ul>
       </div>
     {% endif %}
+
+    <button
+      type="button"
+      class="btn btn-sm product-favorite-btn position-absolute top-0 end-0 m-2"
+      data-product-id="{{ product.id }}"
+      aria-label="Toggle favorite"
+    >
+      <span class="favorite-emoji">{% if product.is_favourite %}❤️{% else %}♡{% endif %}</span>
+    </button>
 
     <a href="{% url 'product_detail' product.pk %}" class="product-media-link">
       {% if product.image_url and product.image_url != '/img/products/no-image.png' %}

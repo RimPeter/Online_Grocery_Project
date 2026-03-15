@@ -68,6 +68,9 @@
           <li class="nav-item">
             <a class="nav-link navbar-button {% if url_name == 'product_list' %}active{% endif %}" {% if url_name == 'product_list' %}aria-current="page"{% endif %} href="{% url 'product_list' %}">Products</a>
           </li>
+          <li class="nav-item">
+            <a class="nav-link navbar-button {% if url_name == 'favorite_products' %}active{% endif %}" {% if url_name == 'favorite_products' %}aria-current="page"{% endif %} href="{% url 'favorite_products' %}" aria-label="View favorite products">Favorites ♥</a>
+          </li>
           {% if user.is_superuser %}
           <li class="nav-item dropdown">
             <a

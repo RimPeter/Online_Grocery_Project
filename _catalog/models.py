@@ -176,6 +176,29 @@ class HomeCategoryTileFavorite(models.Model):
         return f"{self.user.username} favorite {self.l1}/{self.l2 or '(root)'}"
 
 
+class ProductFavorite(models.Model):
+    """Per-user favorite marker for products."""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='product_favorites'
+    )
+    product = models.ForeignKey(
+        All_Products,
+        on_delete=models.CASCADE,
+        related_name='favorite_entries'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'product')
+        verbose_name = 'Product favorite'
+        verbose_name_plural = 'Product favorites'
+
+    def __str__(self):
+        return f"{self.user.username} favorite {self.product.name}"
+
+
 class HomeValuePillar(models.Model):
     """Editable marketing blurbs shown on the home page."""
     key = models.CharField(

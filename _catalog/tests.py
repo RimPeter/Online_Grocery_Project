@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from .models import All_Products, HomeCategoryTileFavorite
+from .models import All_Products, HomeCategoryTileFavorite, ProductFavorite
 
 
 class HomeCategoryFavoritesTests(TestCase):
@@ -62,4 +62,48 @@ class HomeCategoryFavoritesTests(TestCase):
 
         fav = resp.context['favorite_tiles']
         self.assertTrue(any(item.get('l1').lower() == 'produce' and item.get('l2').lower() == 'fruit' and item.get('is_favourite') for item in fav))
+
+    def test_productfavorite_creation_and_toggle_endpoint(self):
+        self.client.login(username='testuser', password='testpass')
+        product = All_Products.objects.first()
+
+        # initially not favorited
+        self.assertFalse(ProductFavorite.objects.filter(user=self.user, product=product).exists())
+
+        url_toggle = reverse('product_favorite_toggle')
+        resp = self.client.post(url_toggle, {'product_id': product.id}, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json().get('success'))
+        self.assertTrue(resp.json().get('is_favourite'))
+        self.assertTrue(ProductFavorite.objects.filter(user=self.user, product=product).exists())
+
+        # toggle off, case-insensitive behavior irrelevant for numeric ID
+        resp2 = self.client.post(url_toggle, {'product_id': product.id}, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+        self.assertEqual(resp2.status_code, 200)
+        self.assertTrue(resp2.json().get('success'))
+        self.assertFalse(resp2.json().get('is_favourite'))
+        self.assertFalse(ProductFavorite.objects.filter(user=self.user, product=product).exists())
+
+        # Protected endpoint for unauthenticated
+        self.client.logout()
+        response = self.client.post(url_toggle, {'product_id': product.id})
+        self.assertEqual(response.status_code, 302)
+
+    def test_product_list_marks_favorites_and_favorites_page(self):
+        product = All_Products.objects.first()
+        ProductFavorite.objects.create(user=self.user, product=product)
+
+        self.client.login(username='testuser', password='testpass')
+        resp = self.client.get(reverse('product_list') + '?l1=Produce&l2=Fruit')
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('products', resp.context)
+        products = list(resp.context['products'])
+        self.assertTrue(any(getattr(p, 'is_favourite', False) for p in products))
+
+        fav_resp = self.client.get(reverse('favorite_products'))
+        self.assertEqual(fav_resp.status_code, 200)
+        self.assertIn('products', fav_resp.context)
+        fav_products = list(fav_resp.context['products'])
+        self.assertEqual(len(fav_products), 1)
+        self.assertEqual(fav_products[0].id, product.id)
 

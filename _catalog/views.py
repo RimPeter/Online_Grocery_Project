@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from collections import defaultdict
-from .models import All_Products, HomeCategoryTile, HomeValuePillar, CategoryNodeSetting, HomeCategoryTileFavorite
+from .models import All_Products, HomeCategoryTile, HomeValuePillar, CategoryNodeSetting, HomeCategoryTileFavorite, ProductFavorite
 from django.conf import settings
 from django.contrib import messages
 import json
@@ -248,6 +248,61 @@ def toggle_home_tile_favorite(request):
         is_favourite = True
 
     return JsonResponse({'success': True, 'is_favourite': is_favourite})
+
+
+@require_POST
+@login_required
+def toggle_product_favorite(request):
+    product_id = request.POST.get('product_id')
+    if not product_id:
+        return JsonResponse({'success': False, 'error': 'Product ID is required.'}, status=400)
+
+    try:
+        product = All_Products.objects.get(id=product_id)
+    except All_Products.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Product not found.'}, status=404)
+
+    favorite_record = ProductFavorite.objects.filter(user=request.user, product=product).first()
+    if favorite_record:
+        favorite_record.delete()
+        is_favourite = False
+    else:
+        ProductFavorite.objects.create(user=request.user, product=product)
+        is_favourite = True
+
+    return JsonResponse({'success': True, 'is_favourite': is_favourite})
+
+
+@login_required
+def favorite_products(request):
+    favorite_ids = list(ProductFavorite.objects.filter(user=request.user).values_list('product_id', flat=True))
+    products = All_Products.objects.filter(id__in=favorite_ids)
+
+    # Respect visibility rules similarly to product_list
+    if not request.user.is_superuser:
+        products = products.filter(is_visible_to_customers=True)
+        products = _exclude_hidden_category_products(products)
+
+    products = products.order_by('name', 'id')
+
+    paginator = Paginator(products, 24)
+    page_number = request.GET.get('page')
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    for p in page_obj:
+        p.is_favourite = True
+        _ensure_rsp(p)
+
+    return render(request, '_catalog/favorites.html', {
+        'products': page_obj,
+        'page_obj': page_obj,
+        'favorite_count': len(favorite_ids),
+    })
 
 
 def _ensure_rsp(product):
@@ -777,6 +832,13 @@ def product_list(request):
             _ensure_rsp(p)
     except Exception:
         pass
+
+    # Mark favorites for authenticated users
+    favorite_product_ids = set()
+    if request.user.is_authenticated:
+        favorite_product_ids = set(ProductFavorite.objects.filter(user=request.user).values_list('product_id', flat=True))
+    for p in page_obj:
+        p.is_favourite = p.id in favorite_product_ids
 
     context = {
         'products': page_obj,
