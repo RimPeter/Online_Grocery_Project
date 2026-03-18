@@ -10,6 +10,7 @@ from django.urls import reverse
 from decimal import Decimal, ROUND_HALF_UP
 from _catalog.models import All_Products
 from _orders.models import Order, OrderItem
+from _orders.notifications import send_paid_order_notification
 from _orders.pricing import calculate_checkout_totals
 from .models import Payment
 
@@ -179,6 +180,7 @@ def payment_success_view(request):
     if order and order.status == 'pending':
         order.status = 'paid'
         order.save()
+        send_paid_order_notification(order)
         messages.success(request, f"Order #{order.id} is now paid.")
         if 'cart' in request.session:
             del request.session['cart']
@@ -217,6 +219,8 @@ def stripe_webhook_view(request):
                 if order and order.status == 'pending':
                     order.status = 'paid'
                     order.save()
+                if order and order.status == 'paid':
+                    send_paid_order_notification(order)
 
             except Payment.DoesNotExist:
                 pass

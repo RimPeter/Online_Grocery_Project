@@ -20,6 +20,7 @@ from _catalog.models import All_Products, HomeCategoryTile, HomeValuePillar, Cat
 from .models import LeafletCopy, SubcategoryPipelineRun, DeliverySlotSettings, BasketPricingSettings
 from .constants import LEAFLET_TEXT_DEFAULTS
 from _orders.models import Order, OrderItem
+from _orders.notifications import send_paid_order_notification
 from django.contrib import messages
 
 import ipaddress
@@ -921,6 +922,7 @@ def mark_order_paid(request, order_id: int):
     if order.status in ('pending', 'processed'):
         order.status = 'paid'
         order.save(update_fields=['status'])
+        send_paid_order_notification(order)
         messages.success(request, f'Order #{order.id} moved back to Paid.')
     else:
         messages.info(request, f'Order #{order.id} is already {order.get_status_display().lower()}.')
