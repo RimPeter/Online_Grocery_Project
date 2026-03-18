@@ -16,6 +16,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from django.views.decorators.http import require_http_methods, require_POST
 import threading
+from _analytics.tracking import track_event
 from _catalog.models import All_Products, HomeCategoryTile, HomeValuePillar, CategoryNodeSetting
 from .models import LeafletCopy, SubcategoryPipelineRun, DeliverySlotSettings, BasketPricingSettings
 from .constants import LEAFLET_TEXT_DEFAULTS
@@ -922,6 +923,34 @@ def mark_order_paid(request, order_id: int):
     if order.status in ('pending', 'processed'):
         order.status = 'paid'
         order.save(update_fields=['status'])
+        track_event(
+            request,
+            'paid_order',
+            value=order.total,
+            properties={
+                'order_id': order.id,
+                'source': 'staff_mark_paid',
+            },
+            path=request.path,
+        )
+        for item in order.items.select_related('product'):
+            track_event(
+                request,
+                'order_item_paid',
+                label=item.product.name,
+                value=item.quantity,
+                properties={
+                    'order_id': order.id,
+                    'product_id': item.product_id,
+                    'quantity': item.quantity,
+                    'line_total': str(item.price * item.quantity),
+                    'main_category': item.product.main_category,
+                    'sub_category': item.product.sub_category,
+                    'sub_subcategory': item.product.sub_subcategory,
+                    'source': 'staff_mark_paid',
+                },
+                path=request.path,
+            )
         send_paid_order_notification(order)
         messages.success(request, f'Order #{order.id} moved back to Paid.')
     else:

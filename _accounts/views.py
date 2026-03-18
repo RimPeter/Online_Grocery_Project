@@ -16,6 +16,7 @@ from smtplib import SMTPException, SMTPAuthenticationError
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 from datetime import timedelta
+from _analytics.tracking import track_event
 from .models import PendingSignup
 
 logger = logging.getLogger(__name__)
@@ -287,6 +288,14 @@ def signup_view(request):
             phone=phone,
             requester_ip=request.META.get('REMOTE_ADDR'),
         )
+        track_event(
+            request,
+            'signup_started',
+            properties={
+                'has_phone': bool(phone),
+            },
+            path='/accounts/signup/',
+        )
 
         messages.success(request, "We sent a verification code to your email. Enter it to finish creating your account.")
         return redirect('verify_account')
@@ -345,6 +354,14 @@ def verify_account(request):
         except IntegrityError:
             return render(request, 'accounts/verify_account.html', {'error': 'That username or email was just taken. Please try again.'})
 
+        track_event(
+            request,
+            'signup_completed',
+            properties={
+                'user_id': user.id,
+            },
+            path='/accounts/verify/',
+        )
         messages.success(request, "Your email has been verified and your account is now active. You can log in!")
         return redirect('login')
 

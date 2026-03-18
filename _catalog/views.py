@@ -12,6 +12,7 @@ from django.db.utils import DatabaseError
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse, Http404, HttpResponseForbidden
 from django.views.decorators.http import require_GET, require_POST
+from _analytics.tracking import track_event
 from _orders.models import Order, OrderItem
 from _orders.pricing import calculate_checkout_totals
 from django.contrib.auth.decorators import login_required
@@ -1080,6 +1081,32 @@ def add_to_cart(request, product_id):
 
     # Save back to session
     request.session['cart'] = cart
+
+    product = All_Products.objects.filter(pk=product_id).only(
+        'id',
+        'name',
+        'main_category',
+        'sub_category',
+        'sub_subcategory',
+        'price',
+    ).first()
+    if product is not None:
+        track_event(
+            request,
+            'add_to_cart',
+            label=product.name,
+            value=qty,
+            properties={
+                'product_id': product.id,
+                'quantity': qty,
+                'main_category': product.main_category,
+                'sub_category': product.sub_category,
+                'sub_subcategory': product.sub_subcategory,
+                'unit_price': str(product.price),
+                'cart_quantity': cart.get(pid, 0),
+            },
+            path=reverse('product_detail', args=[product.id]),
+        )
 
     # Feedback
     if current:

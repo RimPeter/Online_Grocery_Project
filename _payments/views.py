@@ -8,6 +8,7 @@ from django.contrib import messages
 from django.http import HttpResponse
 from django.urls import reverse
 from decimal import Decimal, ROUND_HALF_UP
+from _analytics.tracking import track_event
 from _catalog.models import All_Products
 from _orders.models import Order, OrderItem
 from _orders.notifications import send_paid_order_notification
@@ -162,6 +163,20 @@ def checkout_view(request, order_id):
         'subtotal': subtotal,
         **pricing,
     }
+    track_event(
+        request,
+        'checkout_started',
+        value=payable_total,
+        properties={
+            'order_id': order.id,
+            'items_count': len(order_items),
+            'subtotal': str(subtotal),
+            'delivery_charge': str(pricing['delivery_charge']),
+            'discount_amount': str(pricing['discount_amount']),
+            'grand_total': str(payable_total),
+        },
+        path=reverse('checkout', args=[order.id]),
+    )
     return render(request, '_payments/checkout.html', context)
 
 def payment_success_view(request):
@@ -180,6 +195,35 @@ def payment_success_view(request):
     if order and order.status == 'pending':
         order.status = 'paid'
         order.save()
+        track_event(
+            request,
+            'paid_order',
+            value=payment.amount,
+            properties={
+                'order_id': order.id,
+                'payment_id': payment.id,
+                'currency': payment.currency,
+                'subtotal': str(order.total),
+            },
+            path=reverse('payment_success'),
+        )
+        for item in order.items.select_related('product'):
+            track_event(
+                request,
+                'order_item_paid',
+                label=item.product.name,
+                value=item.quantity,
+                properties={
+                    'order_id': order.id,
+                    'product_id': item.product_id,
+                    'quantity': item.quantity,
+                    'line_total': str(item.price * item.quantity),
+                    'main_category': item.product.main_category,
+                    'sub_category': item.product.sub_category,
+                    'sub_subcategory': item.product.sub_subcategory,
+                },
+                path=reverse('payment_success'),
+            )
         send_paid_order_notification(order)
         messages.success(request, f"Order #{order.id} is now paid.")
         if 'cart' in request.session:

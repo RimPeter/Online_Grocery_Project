@@ -2,259 +2,895 @@
 
 {% block title %}Visits Dashboard{% endblock %}
 
+{% block extra_css %}
+<style>
+  .analytics-foundation {
+    --analytics-ink: #1c2730;
+    --analytics-muted: #627181;
+    --analytics-line: rgba(28, 39, 48, 0.08);
+    --analytics-cream: #f6f1e7;
+    --analytics-mint: #d7efe6;
+    --analytics-ocean: #0b6b68;
+    --analytics-orange: #d87a2f;
+    --analytics-blue: #2f6fd8;
+    --analytics-surface: rgba(255, 255, 255, 0.94);
+    --analytics-shadow: 0 18px 45px rgba(19, 37, 43, 0.08);
+    color: var(--analytics-ink);
+    position: relative;
+  }
+
+  .analytics-foundation::before,
+  .analytics-foundation::after {
+    content: "";
+    position: absolute;
+    inset: auto;
+    border-radius: 999px;
+    filter: blur(18px);
+    pointer-events: none;
+  }
+
+  .analytics-foundation::before {
+    width: 260px;
+    height: 260px;
+    top: 40px;
+    right: 16px;
+    background: rgba(11, 107, 104, 0.14);
+  }
+
+  .analytics-foundation::after {
+    width: 220px;
+    height: 220px;
+    top: 660px;
+    left: -40px;
+    background: rgba(216, 122, 47, 0.14);
+  }
+
+  .analytics-shell {
+    position: relative;
+    z-index: 1;
+  }
+
+  .analytics-hero {
+    background:
+      radial-gradient(circle at top right, rgba(255,255,255,0.16), transparent 32%),
+      linear-gradient(135deg, #143d41 0%, #0b6b68 56%, #19534a 100%);
+    border-radius: 30px;
+    padding: 1.5rem;
+    color: #fff;
+    box-shadow: 0 22px 60px rgba(18, 57, 58, 0.18);
+    border: 1px solid rgba(255,255,255,0.14);
+  }
+
+  .analytics-title {
+    font-size: clamp(2rem, 4vw, 3.1rem);
+    line-height: 0.96;
+    letter-spacing: -0.05em;
+    margin-bottom: 0.5rem;
+  }
+
+  .analytics-subtitle {
+    color: rgba(255,255,255,0.78);
+    max-width: 60rem;
+  }
+
+  .analytics-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  .analytics-chip {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 999px;
+    padding: 0.55rem 0.9rem;
+    font-size: 0.84rem;
+    backdrop-filter: blur(8px);
+  }
+
+  .analytics-control-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.85rem;
+    margin-top: 1.25rem;
+  }
+
+  .analytics-control label {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.78);
+  }
+
+  .analytics-control input,
+  .analytics-control select {
+    min-height: 42px;
+    border-radius: 14px;
+    border: none;
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    background: rgba(255,255,255,0.92);
+    color: var(--analytics-ink);
+    font-weight: 700;
+  }
+
+  .analytics-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 42px;
+    padding: 0.72rem 0.8rem;
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 14px;
+    color: #fff;
+    font-weight: 700;
+  }
+
+  .analytics-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: end;
+  }
+
+  .analytics-btn {
+    border: none;
+    border-radius: 999px;
+    min-height: 42px;
+    padding: 0.7rem 1.1rem;
+    font-weight: 800;
+  }
+
+  .analytics-btn-primary {
+    background: linear-gradient(135deg, #ffd9a9 0%, #ffbf76 100%);
+    color: #4c2d12;
+    box-shadow: 0 12px 24px rgba(216, 122, 47, 0.22);
+  }
+
+  .analytics-btn-secondary {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.16);
+  }
+
+  .analytics-saved-views {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 1rem;
+  }
+
+  .analytics-saved-chip {
+    border: 1px solid rgba(255,255,255,0.16);
+    background: rgba(255,255,255,0.10);
+    color: #fff;
+    border-radius: 999px;
+    padding: 0.55rem 0.9rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+
+  .analytics-panel {
+    background: var(--analytics-surface);
+    border-radius: 24px;
+    border: 1px solid rgba(255,255,255,0.7);
+    box-shadow: var(--analytics-shadow);
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+  }
+
+  .analytics-panel .card-body {
+    padding: 1.15rem 1.2rem;
+  }
+
+  .analytics-panel-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+    margin-bottom: 0.9rem;
+  }
+
+  .analytics-panel-title {
+    font-size: 1.03rem;
+    margin: 0;
+  }
+
+  .analytics-panel-copy {
+    margin: 0.15rem 0 0;
+    color: var(--analytics-muted);
+    font-size: 0.9rem;
+  }
+
+  .analytics-status {
+    color: var(--analytics-muted);
+    font-size: 0.82rem;
+    font-weight: 800;
+  }
+
+  .analytics-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.9rem;
+    margin-top: 1rem;
+  }
+
+  .analytics-kpi {
+    min-height: 184px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.88)),
+      linear-gradient(180deg, var(--analytics-cream), #fff);
+  }
+
+  .analytics-kpi-label {
+    color: var(--analytics-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.74rem;
+    font-weight: 800;
+  }
+
+  .analytics-kpi-value {
+    font-size: clamp(1.7rem, 3vw, 2.6rem);
+    line-height: 0.96;
+    letter-spacing: -0.05em;
+    margin: 0.55rem 0 0.35rem;
+  }
+
+  .analytics-kpi-note {
+    color: var(--analytics-muted);
+    font-size: 0.88rem;
+  }
+
+  .analytics-kpi-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.32rem 0.6rem;
+    border-radius: 999px;
+    margin-top: 0.7rem;
+    background: rgba(11, 107, 104, 0.10);
+    color: var(--analytics-ocean);
+    font-size: 0.8rem;
+    font-weight: 800;
+  }
+
+  .analytics-chart-shell {
+    min-height: 320px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 18px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.86), rgba(242,247,246,0.96));
+    border: 1px solid var(--analytics-line);
+  }
+
+  .analytics-chart-shell::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(to right, rgba(11,107,104,0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(11,107,104,0.04) 1px, transparent 1px);
+    background-size: 28px 28px;
+    pointer-events: none;
+  }
+
+  .analytics-chart-shell canvas {
+    position: relative;
+    z-index: 1;
+  }
+
+  .analytics-inline-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.9rem;
+  }
+
+  .analytics-bars {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .analytics-bar-row {
+    display: grid;
+    gap: 0.3rem;
+  }
+
+  .analytics-bar-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    font-size: 0.86rem;
+  }
+
+  .analytics-bar-track {
+    height: 10px;
+    border-radius: 999px;
+    background: rgba(11, 107, 104, 0.08);
+    overflow: hidden;
+  }
+
+  .analytics-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #0b6b68 0%, #2f6fd8 100%);
+  }
+
+  .analytics-table {
+    width: 100%;
+    margin-bottom: 0;
+  }
+
+  .analytics-table th {
+    color: var(--analytics-muted);
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 800;
+    border-bottom: 1px solid var(--analytics-line);
+    padding-bottom: 0.7rem;
+  }
+
+  .analytics-table td {
+    border-color: var(--analytics-line);
+    padding: 0.78rem 0;
+    vertical-align: top;
+  }
+
+  .analytics-page-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 0.95rem;
+  }
+
+  .analytics-page-controls input,
+  .analytics-page-controls select {
+    min-height: 40px;
+    border-radius: 12px;
+    border: 1px solid var(--analytics-line);
+    padding: 0.6rem 0.75rem;
+    background: #fff;
+  }
+
+  .analytics-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.6rem;
+    border-radius: 999px;
+    background: rgba(47, 111, 216, 0.08);
+    color: var(--analytics-blue);
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  .analytics-page-link {
+    background: transparent;
+    border: none;
+    color: var(--analytics-ocean);
+    font-weight: 800;
+    padding: 0;
+    text-align: left;
+  }
+
+  .analytics-pagination {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    align-items: center;
+    margin-top: 1rem;
+  }
+
+  .analytics-mini-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.8rem;
+  }
+
+  .analytics-mini-card {
+    border-radius: 18px;
+    border: 1px solid var(--analytics-line);
+    background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(246,241,231,0.56));
+    padding: 0.9rem;
+  }
+
+  .analytics-mini-card strong {
+    display: block;
+    font-size: 1.25rem;
+    line-height: 1;
+    margin-top: 0.35rem;
+  }
+
+  .analytics-annotation-list {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .analytics-annotation {
+    display: grid;
+    grid-template-columns: 14px 1fr;
+    gap: 0.8rem;
+    align-items: start;
+  }
+
+  .analytics-annotation-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+    margin-top: 0.25rem;
+  }
+
+  .analytics-empty {
+    color: var(--analytics-muted);
+    font-size: 0.92rem;
+    margin: 0;
+  }
+
+  .analytics-error {
+    border-radius: 18px;
+    font-weight: 700;
+  }
+
+  @media (max-width: 1199.98px) {
+    .analytics-control-grid,
+    .analytics-kpi-grid,
+    .analytics-inline-grid,
+    .analytics-mini-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 767.98px) {
+    .analytics-hero {
+      padding: 1.15rem;
+      border-radius: 24px;
+    }
+
+    .analytics-control-grid,
+    .analytics-kpi-grid,
+    .analytics-inline-grid,
+    .analytics-mini-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<section class="pm-hub-page">
-  <div class="pm-hero">
-    <div>
-      <p class="pm-eyebrow">Product Management</p>
-      <h1 class="pm-title">Visits Dashboard</h1>
-      <p class="pm-subtitle">Session-based traffic overview for staff monitoring, trend analysis, and page-level performance checks.</p>
-    </div>
-    <div class="pm-hero-actions">
-      <label for="daysSelect" class="form-label mb-0 text-white-50">Range</label>
-      <select id="daysSelect" class="form-select form-select-sm" style="width: 8rem;">
-        <option value="7">Last 7 days</option>
-        <option value="30">Last 30 days</option>
-        <option value="90">Last 90 days</option>
-        <option value="365">Last 365 days</option>
-      </select>
-      <button id="refreshBtn" type="button" class="btn btn-light btn-sm">Refresh</button>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-body">
-      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-        <div class="text-muted small">Visits per day for /</div>
-        <div id="homeStatusText" class="text-muted small"></div>
+<section class="pm-hub-page analytics-foundation">
+  <div class="analytics-shell">
+    <div class="analytics-hero">
+      <p class="pm-eyebrow mb-2">Analytics</p>
+      <h1 class="analytics-title">Traffic, journey, and conversion foundation</h1>
+      <p class="analytics-subtitle">This dashboard now combines sessions, unique visitors, pageviews, conversions, attribution, and page drilldown so you can monitor acquisition and storefront intent in one place.</p>
+      <div class="analytics-chip-row">
+        <span class="analytics-chip">Custom date windows</span>
+        <span class="analytics-chip">Previous-period comparison</span>
+        <span class="analytics-chip">Device, browser, source, user filters</span>
+        <span class="analytics-chip">Journey and conversion signals</span>
       </div>
-      <div class="mt-2 pm-chart-shell">
-        <canvas id="homeVisitsChart" style="width: 100%; height: 100%;"></canvas>
-      </div>
-    </div>
-  </div>
 
-  <div class="row g-3 mt-1">
-    <div class="col-12 col-md-3">
-      <div class="card h-100 pm-kpi-card">
-        <div class="card-body">
-          <div class="text-muted small mb-2">Total visits</div>
-          <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0">
-              <tbody>
-                <tr>
-                  <th scope="row" class="fw-normal">Total</th>
-                  <td id="totalVisits" class="text-end fs-4 fw-semibold">-</td>
-                </tr>
-                <tr>
-                  <th scope="row" class="fw-normal">Avg / day</th>
-                  <td id="avgVisitsPerDay" class="text-end">-</td>
-                </tr>
-              </tbody>
-            </table>
+      <div class="analytics-control-grid">
+        <div class="analytics-control">
+          <label for="rangeSelect">Quick range</label>
+          <select id="rangeSelect">
+            <option value="7">Last 7 days</option>
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 90 days</option>
+            <option value="365">Last 365 days</option>
+          </select>
+        </div>
+        <div class="analytics-control">
+          <label for="startDate">Start date</label>
+          <input id="startDate" type="date">
+        </div>
+        <div class="analytics-control">
+          <label for="endDate">End date</label>
+          <input id="endDate" type="date">
+        </div>
+        <div class="analytics-control">
+          <label for="deviceFilter">Device</label>
+          <select id="deviceFilter">
+            <option value="">All devices</option>
+          </select>
+        </div>
+        <div class="analytics-control">
+          <label for="browserFilter">Browser</label>
+          <select id="browserFilter">
+            <option value="">All browsers</option>
+          </select>
+        </div>
+        <div class="analytics-control">
+          <label for="sourceFilter">Source</label>
+          <select id="sourceFilter">
+            <option value="">All sources</option>
+          </select>
+        </div>
+        <div class="analytics-control">
+          <label for="userScopeFilter">User type</label>
+          <select id="userScopeFilter">
+            <option value="all">All users</option>
+            <option value="authenticated">Logged in</option>
+            <option value="anonymous">Anonymous</option>
+          </select>
+        </div>
+        <div class="analytics-control">
+          <label for="campaignFilter">Campaign</label>
+          <input id="campaignFilter" type="text" placeholder="utm_campaign">
+        </div>
+        <div class="analytics-control">
+          <label>&nbsp;</label>
+          <label class="analytics-checkbox" for="compareToggle">
+            <input id="compareToggle" type="checkbox">
+            <span>Compare previous period</span>
+          </label>
+        </div>
+        <div class="analytics-actions">
+          <button id="refreshBtn" type="button" class="analytics-btn analytics-btn-primary">Refresh</button>
+          <button id="resetBtn" type="button" class="analytics-btn analytics-btn-secondary">Reset</button>
+        </div>
+      </div>
+
+      <div id="savedViewsRow" class="analytics-saved-views"></div>
+    </div>
+
+    <div id="dashboardError" class="alert alert-danger analytics-error{% if not analytics_boot_error %} d-none{% endif %} mt-3 mb-0">{% if analytics_boot_error %}{{ analytics_boot_error }}{% endif %}</div>
+
+    <div class="analytics-kpi-grid mt-3">
+      <div class="card analytics-panel analytics-kpi"><div class="card-body"><div class="analytics-kpi-label">Sessions</div><div id="kpiSessions" class="analytics-kpi-value">-</div><div id="kpiSessionsNote" class="analytics-kpi-note">Window sessions</div><div id="kpiSessionsDelta" class="analytics-kpi-delta d-none"></div></div></div>
+      <div class="card analytics-panel analytics-kpi"><div class="card-body"><div class="analytics-kpi-label">Unique visitors</div><div id="kpiVisitors" class="analytics-kpi-value">-</div><div class="analytics-kpi-note">Distinct session or signed-in visitor keys.</div><div id="kpiVisitorsDelta" class="analytics-kpi-delta d-none"></div></div></div>
+      <div class="card analytics-panel analytics-kpi"><div class="card-body"><div class="analytics-kpi-label">Pageviews</div><div id="kpiPageviews" class="analytics-kpi-value">-</div><div class="analytics-kpi-note">Tracked HTML page impressions in the active window.</div><div id="kpiPageviewsDelta" class="analytics-kpi-delta d-none"></div></div></div>
+      <div class="card analytics-panel analytics-kpi"><div class="card-body"><div class="analytics-kpi-label">Active now</div><div id="kpiActiveUsers" class="analytics-kpi-value">-</div><div class="analytics-kpi-note">Visits seen in the last five minutes.</div></div></div>
+      <div class="card analytics-panel analytics-kpi"><div class="card-body"><div class="analytics-kpi-label">Avg session</div><div id="kpiAvgSession" class="analytics-kpi-value">-</div><div class="analytics-kpi-note">Average seconds from session start to latest activity.</div></div></div>
+      <div class="card analytics-panel analytics-kpi"><div class="card-body"><div class="analytics-kpi-label">Bounce rate</div><div id="kpiBounceRate" class="analytics-kpi-value">-</div><div id="kpiBounceNote" class="analytics-kpi-note">Single-page sessions across the selected window.</div></div></div>
+    </div>
+
+    <div class="row g-3 mt-1">
+      <div class="col-12 col-xl-8">
+        <div class="card analytics-panel">
+          <div class="card-body">
+            <div class="analytics-panel-head">
+              <div>
+                <h2 class="analytics-panel-title">Sessions vs pageviews</h2>
+                <p class="analytics-panel-copy">Daily trend for the current date window. The second line lets you see whether deeper browsing is keeping pace with traffic.</p>
+              </div>
+              <div id="trendStatus" class="analytics-status"></div>
+            </div>
+            <div class="analytics-chart-shell">
+              <canvas id="trendChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-xl-4">
+        <div class="card analytics-panel h-100">
+          <div class="card-body">
+            <div class="analytics-panel-head">
+              <div>
+                <h2 class="analytics-panel-title">Journey funnel</h2>
+                <p class="analytics-panel-copy">Sessions through product discovery, cart intent, checkout, and paid orders.</p>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="analytics-table">
+                <thead>
+                  <tr><th>Step</th><th class="text-end">Count</th><th class="text-end">Step rate</th></tr>
+                </thead>
+                <tbody id="funnelRows"><tr><td colspan="3" class="text-muted">Loading...</td></tr></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
     </div>
-    <div class="col-12 col-md-3">
-      <div class="card h-100 pm-kpi-card">
-        <div class="card-body">
-          <div class="text-muted small">Today</div>
-          <div id="todayVisits" class="fs-3 fw-semibold">-</div>
-        </div>
-      </div>
+
+    <div class="analytics-inline-grid mt-3">
+      <div class="card analytics-panel"><div class="card-body"><div class="analytics-panel-head"><div><h2 class="analytics-panel-title">Traffic sources</h2><p class="analytics-panel-copy">Session acquisition split.</p></div></div><div id="sourceBars" class="analytics-bars"></div></div></div>
+      <div class="card analytics-panel"><div class="card-body"><div class="analytics-panel-head"><div><h2 class="analytics-panel-title">Device mix</h2><p class="analytics-panel-copy">How shoppers arrive across desktop and handheld screens.</p></div></div><div id="deviceBars" class="analytics-bars"></div></div></div>
+      <div class="card analytics-panel"><div class="card-body"><div class="analytics-panel-head"><div><h2 class="analytics-panel-title">Browser mix</h2><p class="analytics-panel-copy">Useful for QA and checkout reliability checks.</p></div></div><div id="browserBars" class="analytics-bars"></div></div></div>
     </div>
-    <div class="col-12 col-md-6">
-      <div class="card h-100">
-        <div class="card-body">
-          <div class="d-flex align-items-center justify-content-between">
-            <div class="text-muted small">Visits per day</div>
-            <div id="statusText" class="text-muted small"></div>
+
+    <div class="row g-3 mt-1">
+      <div class="col-12 col-xl-6">
+        <div class="card analytics-panel">
+          <div class="card-body">
+            <div class="analytics-panel-head">
+              <div>
+                <h2 class="analytics-panel-title">Campaign attribution</h2>
+                <p class="analytics-panel-copy">UTM campaign sessions and paid-order counts captured in the selected window.</p>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="analytics-table">
+                <thead><tr><th>Campaign</th><th class="text-end">Sessions</th><th class="text-end">Paid orders</th></tr></thead>
+                <tbody id="campaignRows"><tr><td colspan="3" class="text-muted">Loading...</td></tr></tbody>
+              </table>
+            </div>
           </div>
-          <div class="mt-2 pm-chart-shell-lg">
-            <canvas id="visitsChart" style="width: 100%; height: 100%;"></canvas>
+        </div>
+      </div>
+      <div class="col-12 col-xl-6">
+        <div class="card analytics-panel">
+          <div class="card-body">
+            <div class="analytics-panel-head">
+              <div>
+                <h2 class="analytics-panel-title">Top referrers</h2>
+                <p class="analytics-panel-copy">The strongest external domains sending traffic into the shop.</p>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="analytics-table">
+                <thead><tr><th>Referrer</th><th class="text-end">Sessions</th></tr></thead>
+                <tbody id="referrerRows"><tr><td colspan="2" class="text-muted">Loading...</td></tr></tbody>
+              </table>
+            </div>
           </div>
-          <div id="errorBox" class="alert alert-danger mt-3 d-none mb-0"></div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="card mt-3">
-    <div class="card-body">
-      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-        <div class="text-muted small">Visits per day</div>
-        <button id="downloadCsvBtn" type="button" class="btn btn-sm btn-outline-secondary">Download CSV</button>
-      </div>
-      <div class="table-responsive mt-2">
-        <table class="table table-sm table-striped align-middle mb-0">
-          <thead>
-            <tr>
-              <th scope="col">Day</th>
-              <th scope="col" class="text-end">Visits</th>
-            </tr>
-          </thead>
-          <tbody id="perDayRows">
-            <tr><td colspan="2" class="text-muted">Loading...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <div class="card mt-3">
-    <div class="card-body">
-      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-        <div>
-          <div class="text-muted small">HTML pages (tracked by landing path)</div>
-          <div class="text-muted small">Total, last week, this week, today</div>
+    <div class="row g-3 mt-1">
+      <div class="col-12 col-xl-6">
+        <div class="card analytics-panel">
+          <div class="card-body">
+            <div class="analytics-panel-head">
+              <div>
+                <h2 class="analytics-panel-title">Product performance</h2>
+                <p class="analytics-panel-copy">Top products by paid quantity and paid revenue from tracked paid-order item events.</p>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="analytics-table">
+                <thead><tr><th>Product</th><th class="text-end">Add to cart</th><th class="text-end">Paid qty</th><th class="text-end">Paid revenue</th></tr></thead>
+                <tbody id="productRows"><tr><td colspan="4" class="text-muted">Loading...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
         </div>
-        <div id="pagesStatusText" class="text-muted small"></div>
       </div>
-      <div class="table-responsive mt-2">
-        <table class="table table-sm table-striped align-middle mb-0">
-          <thead>
-            <tr>
-              <th scope="col">HTML</th>
-              <th scope="col" class="text-end">Total visits</th>
-              <th scope="col" class="text-end">Last week</th>
-              <th scope="col" class="text-end">This week</th>
-              <th scope="col" class="text-end">Today</th>
-            </tr>
-          </thead>
-          <tbody id="pageStatsRows">
-            <tr><td colspan="5" class="text-muted">Loading...</td></tr>
-          </tbody>
-        </table>
+      <div class="col-12 col-xl-6">
+        <div class="card analytics-panel">
+          <div class="card-body">
+            <div class="analytics-panel-head">
+              <div>
+                <h2 class="analytics-panel-title">Category performance</h2>
+                <p class="analytics-panel-copy">Which sub-categories are turning interest into paid volume.</p>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="analytics-table">
+                <thead><tr><th>Category</th><th class="text-end">Add to cart</th><th class="text-end">Paid qty</th><th class="text-end">Paid revenue</th></tr></thead>
+                <tbody id="categoryRows"><tr><td colspan="4" class="text-muted">Loading...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
 
-  <script id="analyticsConfig" type="application/json">
-    {"defaultDays": {{ default_days|default:30 }}, "summaryUrl": "{{ visits_summary_url }}", "pagesUrl": "{{ visits_pages_summary_url }}", "pageDailyUrl": "{{ visits_page_daily_url }}"}
-  </script>
+    <div class="row g-3 mt-1">
+      <div class="col-12 col-xl-4">
+        <div class="card analytics-panel h-100">
+          <div class="card-body">
+            <div class="analytics-panel-head">
+              <div>
+                <h2 class="analytics-panel-title">Conversion events</h2>
+                <p class="analytics-panel-copy">Tracked intent and purchase milestones in the current window.</p>
+              </div>
+            </div>
+            <div id="conversionCards" class="analytics-mini-grid"></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-xl-8">
+        <div class="card analytics-panel h-100">
+          <div class="card-body">
+            <div class="analytics-panel-head">
+              <div>
+                <h2 class="analytics-panel-title">Annotations and campaign notes</h2>
+                <p class="analytics-panel-copy">These come from analytics annotations so you can line traffic movement up with promotions or site changes.</p>
+              </div>
+            </div>
+            <div id="annotationList" class="analytics-annotation-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card analytics-panel mt-3">
+      <div class="card-body">
+        <div class="analytics-panel-head">
+          <div>
+            <h2 class="analytics-panel-title">Page performance explorer</h2>
+            <p class="analytics-panel-copy">Search, sort, and paginate the tracked HTML paths, then click a row to inspect trend and next-page movement.</p>
+          </div>
+          <div id="pagesStatus" class="analytics-status"></div>
+        </div>
+
+        <div class="analytics-page-controls">
+          <input id="pageSearchInput" type="text" placeholder="Search path">
+          <select id="pageSortSelect">
+            <option value="pageviews">Sort by pageviews</option>
+            <option value="sessions">Sort by sessions</option>
+            <option value="avg_dwell">Sort by avg dwell</option>
+            <option value="path">Sort by path</option>
+          </select>
+          <button id="pageSearchBtn" type="button" class="analytics-btn analytics-btn-secondary" style="color: var(--analytics-ink); border-color: var(--analytics-line); background: #fff;">Apply</button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="analytics-table">
+            <thead>
+              <tr>
+                <th>Path</th>
+                <th class="text-end">Pageviews</th>
+                <th class="text-end">Sessions</th>
+                <th class="text-end">Avg dwell</th>
+              </tr>
+            </thead>
+            <tbody id="pagesRows"><tr><td colspan="4" class="text-muted">Loading...</td></tr></tbody>
+          </table>
+        </div>
+
+        <div class="analytics-pagination">
+          <button id="pagesPrevBtn" type="button" class="analytics-btn analytics-btn-secondary" style="color: var(--analytics-ink); border-color: var(--analytics-line); background: #fff;">Previous</button>
+          <div id="pagesPagerLabel" class="analytics-pill">Page 1</div>
+          <button id="pagesNextBtn" type="button" class="analytics-btn analytics-btn-secondary" style="color: var(--analytics-ink); border-color: var(--analytics-line); background: #fff;">Next</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3 mt-1">
+      <div class="col-12 col-xl-8">
+        <div class="card analytics-panel">
+          <div class="card-body">
+            <div class="analytics-panel-head">
+              <div>
+                <h2 class="analytics-panel-title">Page drilldown</h2>
+                <p id="pageDrilldownCopy" class="analytics-panel-copy">Select a page from the explorer to inspect day-by-day movement and downstream navigation.</p>
+              </div>
+              <div id="detailStatus" class="analytics-status"></div>
+            </div>
+            <div class="analytics-chart-shell">
+              <canvas id="pageDetailChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-xl-4">
+        <div class="card analytics-panel h-100">
+          <div class="card-body">
+            <div class="analytics-panel-head">
+              <div>
+                <h2 class="analytics-panel-title">Next-page paths</h2>
+                <p class="analytics-panel-copy">Most common follow-on destinations after the selected page.</p>
+              </div>
+            </div>
+            <div id="nextPagesBars" class="analytics-bars"></div>
+            <hr>
+            <h3 class="analytics-panel-title" style="font-size: 0.98rem;">Page referrers</h3>
+            <div id="pageReferrers" class="analytics-bars mt-3"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script id="analyticsConfig" type="application/json">
+      {"defaultDays": {{ default_days|default:30 }}, "summaryUrl": "{{ visits_summary_url }}", "pagesUrl": "{{ visits_pages_summary_url }}", "pageDailyUrl": "{{ visits_page_daily_url }}"}
+    </script>
+    {{ saved_views|json_script:"savedViewsData" }}
+  </div>
 </section>
 {% endblock %}
 
 {% block extra_js %}
 <script>
   (function () {
-    const configEl = document.getElementById("analyticsConfig");
-    const config = JSON.parse(configEl.textContent);
+    const config = JSON.parse(document.getElementById("analyticsConfig").textContent);
+    const savedViews = JSON.parse(document.getElementById("savedViewsData").textContent || "[]");
 
-    const daysSelect = document.getElementById("daysSelect");
+    const rangeSelect = document.getElementById("rangeSelect");
+    const startDate = document.getElementById("startDate");
+    const endDate = document.getElementById("endDate");
+    const deviceFilter = document.getElementById("deviceFilter");
+    const browserFilter = document.getElementById("browserFilter");
+    const sourceFilter = document.getElementById("sourceFilter");
+    const userScopeFilter = document.getElementById("userScopeFilter");
+    const campaignFilter = document.getElementById("campaignFilter");
+    const compareToggle = document.getElementById("compareToggle");
     const refreshBtn = document.getElementById("refreshBtn");
-    const homeStatusTextEl = document.getElementById("homeStatusText");
-    const homeCanvas = document.getElementById("homeVisitsChart");
-    const totalVisitsEl = document.getElementById("totalVisits");
-    const todayVisitsEl = document.getElementById("todayVisits");
-    const avgVisitsPerDayEl = document.getElementById("avgVisitsPerDay");
-    const statusTextEl = document.getElementById("statusText");
-    const perDayRowsEl = document.getElementById("perDayRows");
-    const pagesStatusTextEl = document.getElementById("pagesStatusText");
-    const pageStatsRowsEl = document.getElementById("pageStatsRows");
-    const errorBoxEl = document.getElementById("errorBox");
-    const downloadCsvBtn = document.getElementById("downloadCsvBtn");
-    const canvas = document.getElementById("visitsChart");
+    const resetBtn = document.getElementById("resetBtn");
+    const dashboardError = document.getElementById("dashboardError");
+    const savedViewsRow = document.getElementById("savedViewsRow");
+    const trendStatus = document.getElementById("trendStatus");
+    const pagesStatus = document.getElementById("pagesStatus");
+    const detailStatus = document.getElementById("detailStatus");
 
-    let lastData = null;
-    let lastHomePerDay = null;
+    const pageState = {
+      page: 1,
+      q: "",
+      sort: "pageviews",
+      selectedPath: "/",
+      totalPages: 1
+    };
 
-    function setStatus(text) {
-      statusTextEl.textContent = text || "";
-    }
-
-    function setHomeStatus(text) {
-      if (!homeStatusTextEl) return;
-      homeStatusTextEl.textContent = text || "";
-    }
-
-    function setPagesStatus(text) {
-      if (!pagesStatusTextEl) return;
-      pagesStatusTextEl.textContent = text || "";
-    }
-
-    function showError(message) {
-      errorBoxEl.textContent = message;
-      errorBoxEl.classList.remove("d-none");
-    }
-
-    function clearError() {
-      errorBoxEl.textContent = "";
-      errorBoxEl.classList.add("d-none");
-    }
-
-    function toCsv(rows) {
-      const header = ["day", "visits"];
-      const lines = [header.join(",")];
-      for (const r of rows) {
-        lines.push([r.day, r.visits].join(","));
-      }
-      return lines.join("\n");
-    }
-
-    function downloadCsv(filename, csvText) {
-      const blob = new Blob([csvText], { type: "text/csv;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    }
-
-    function setTable(perDay) {
-      if (!perDay || perDay.length === 0) {
-        perDayRowsEl.innerHTML = '<tr><td colspan="2" class="text-muted">No data</td></tr>';
-        return;
-      }
-      perDayRowsEl.innerHTML = perDay
-        .map((r) => {
-          const day = String(r.day || "");
-          const visits = Number(r.visits || 0);
-          return `<tr><td>${day}</td><td class="text-end">${visits}</td></tr>`;
-        })
-        .join("");
-    }
+    let lastSummary = null;
+    let lastDetail = null;
 
     function escapeHtml(text) {
       return String(text || "")
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
-        .replace(/\"/g, "&quot;")
+        .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
     }
 
-    function setPagesTable(pages) {
-      if (!pageStatsRowsEl) return;
-      if (!pages || pages.length === 0) {
-        pageStatsRowsEl.innerHTML = '<tr><td colspan="5" class="text-muted">No data</td></tr>';
-        return;
-      }
-      pageStatsRowsEl.innerHTML = pages
-        .map((p) => {
-          const path = String(p.landing_path || "");
-          const total = Number(p.total_visits || 0);
-          const lastWeek = Number(p.last_week_visits || 0);
-          const thisWeek = Number(p.this_week_visits || 0);
-          const today = Number(p.today_visits || 0);
-          const safeText = escapeHtml(path);
-          const href = escapeHtml(encodeURI(path));
-          return `<tr>
-            <td class="text-truncate" style="max-width: 420px;"><a href="${href}">${safeText}</a></td>
-            <td class="text-end">${total}</td>
-            <td class="text-end">${lastWeek}</td>
-            <td class="text-end">${thisWeek}</td>
-            <td class="text-end">${today}</td>
-          </tr>`;
-        })
-        .join("");
+    function formatNumber(value) {
+      return Number(value || 0).toLocaleString();
     }
 
-    function resizeCanvasToDisplaySize(canvas, ctx) {
+    function formatMoney(value) {
+      return "GBP " + Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function formatSeconds(value) {
+      const seconds = Number(value || 0);
+      if (!seconds) return "0s";
+      if (seconds >= 3600) return (seconds / 3600).toFixed(1) + "h";
+      if (seconds >= 60) return (seconds / 60).toFixed(1) + "m";
+      return Math.round(seconds) + "s";
+    }
+
+    function setError(message) {
+      if (!message) {
+        dashboardError.classList.add("d-none");
+        dashboardError.textContent = "";
+        return;
+      }
+      dashboardError.textContent = message;
+      dashboardError.classList.remove("d-none");
+    }
+
+    function buildWindowFromRange(days) {
+      const end = new Date();
+      const start = new Date();
+      start.setDate(end.getDate() - Number(days || 30) + 1);
+      startDate.value = start.toISOString().slice(0, 10);
+      endDate.value = end.toISOString().slice(0, 10);
+    }
+
+    function currentQuery() {
+      const params = new URLSearchParams();
+      params.set("days", rangeSelect.value || config.defaultDays || 30);
+      if (startDate.value && endDate.value) {
+        params.set("start", startDate.value);
+        params.set("end", endDate.value);
+      }
+      if (deviceFilter.value) params.set("device", deviceFilter.value);
+      if (browserFilter.value) params.set("browser", browserFilter.value);
+      if (sourceFilter.value) params.set("source", sourceFilter.value);
+      if (userScopeFilter.value) params.set("user_scope", userScopeFilter.value);
+      if (campaignFilter.value.trim()) params.set("campaign", campaignFilter.value.trim());
+      if (compareToggle.checked) params.set("compare", "1");
+      return params;
+    }
+
+    function populateSelect(selectEl, values, blankLabel, selectedValue) {
+      const options = ['<option value="">' + blankLabel + '</option>'];
+      for (const value of values || []) {
+        const safeValue = escapeHtml(String(value || ""));
+        const selected = String(selectedValue || "") === String(value || "") ? " selected" : "";
+        options.push('<option value="' + safeValue + '"' + selected + ">" + safeValue + "</option>");
+      }
+      selectEl.innerHTML = options.join("");
+    }
+
+    function resizeCanvas(canvas, ctx) {
       const dpr = window.devicePixelRatio || 1;
       const rect = canvas.getBoundingClientRect();
       const width = Math.max(10, Math.floor(rect.width * dpr));
@@ -268,205 +904,394 @@
       return { width: rect.width, height: rect.height };
     }
 
-    function drawLineChart(canvas, labels, values) {
+    function drawDualLineChart(canvas, rows, leftKey, rightKey, emptyLabel) {
       const ctx = canvas.getContext("2d");
-      const size = resizeCanvasToDisplaySize(canvas, ctx);
+      const size = resizeCanvas(canvas, ctx);
       const w = size.width;
       const h = size.height;
-
       ctx.clearRect(0, 0, w, h);
 
-      if (!values || values.length === 0) {
-        ctx.fillStyle = "#6c757d";
-        ctx.font = "14px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
-        ctx.fillText("No data", 10, 24);
+      if (!rows || !rows.length) {
+        ctx.fillStyle = "#627181";
+        ctx.font = "14px sans-serif";
+        ctx.fillText(emptyLabel || "No data", 14, 28);
         return;
       }
 
-      const padding = { left: 48, right: 16, top: 12, bottom: 28 };
+      const padding = { left: 48, right: 18, top: 16, bottom: 34 };
       const chartW = Math.max(10, w - padding.left - padding.right);
       const chartH = Math.max(10, h - padding.top - padding.bottom);
-
-      const maxVal = Math.max(1, ...values.map((v) => Number(v) || 0));
+      const allValues = rows.flatMap((row) => [Number(row[leftKey] || 0), Number(row[rightKey] || 0)]);
+      const maxVal = Math.max(1, ...allValues);
       const ticks = 4;
-      const tickStep = Math.ceil(maxVal / ticks);
-      const yMax = tickStep * ticks;
+      const yMax = Math.ceil(maxVal / ticks) * ticks || 4;
 
-      function xFor(i) {
-        if (values.length === 1) return padding.left + chartW / 2;
-        return padding.left + (i / (values.length - 1)) * chartW;
-      }
-      function yFor(v) {
-        const vv = Number(v) || 0;
-        return padding.top + (1 - vv / yMax) * chartH;
+      function xFor(index) {
+        if (rows.length === 1) return padding.left + chartW / 2;
+        return padding.left + (index / (rows.length - 1)) * chartW;
       }
 
-      ctx.strokeStyle = "rgba(0,0,0,0.08)";
+      function yFor(value) {
+        return padding.top + (1 - Number(value || 0) / yMax) * chartH;
+      }
+
+      ctx.strokeStyle = "rgba(28,39,48,0.09)";
+      ctx.fillStyle = "#627181";
       ctx.lineWidth = 1;
-      ctx.fillStyle = "#6c757d";
-      ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
-
-      for (let t = 0; t <= ticks; t++) {
-        const yValue = t * tickStep;
+      ctx.font = "12px sans-serif";
+      for (let index = 0; index <= ticks; index += 1) {
+        const yValue = (yMax / ticks) * index;
         const y = yFor(yValue);
         ctx.beginPath();
         ctx.moveTo(padding.left, y);
         ctx.lineTo(padding.left + chartW, y);
         ctx.stroke();
-        ctx.fillText(String(yValue), 8, y + 4);
+        ctx.fillText(String(Math.round(yValue)), 8, y + 4);
       }
 
-      ctx.beginPath();
-      values.forEach((v, i) => {
-        const x = xFor(i);
-        const y = yFor(v);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      });
-      ctx.strokeStyle = "rgba(13,110,253,0.95)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      ctx.lineTo(xFor(values.length - 1), padding.top + chartH);
-      ctx.lineTo(xFor(0), padding.top + chartH);
-      ctx.closePath();
-      ctx.fillStyle = "rgba(13,110,253,0.12)";
-      ctx.fill();
-
-      ctx.fillStyle = "rgba(13,110,253,0.95)";
-      values.forEach((v, i) => {
-        const x = xFor(i);
-        const y = yFor(v);
+      function drawSeries(key, lineColor, fillColor) {
         ctx.beginPath();
-        ctx.arc(x, y, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-      });
+        rows.forEach((row, index) => {
+          const x = xFor(index);
+          const y = yFor(row[key]);
+          if (index === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.strokeStyle = lineColor;
+        ctx.lineWidth = 2.6;
+        ctx.stroke();
 
-      const labelEvery = Math.ceil(values.length / 6);
-      ctx.fillStyle = "#6c757d";
+        ctx.lineTo(xFor(rows.length - 1), padding.top + chartH);
+        ctx.lineTo(xFor(0), padding.top + chartH);
+        ctx.closePath();
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+
+        ctx.fillStyle = lineColor;
+        rows.forEach((row, index) => {
+          const x = xFor(index);
+          const y = yFor(row[key]);
+          ctx.beginPath();
+          ctx.arc(x, y, 2.8, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+
+      drawSeries(rightKey, "rgba(47,111,216,0.95)", "rgba(47,111,216,0.10)");
+      drawSeries(leftKey, "rgba(11,107,104,0.95)", "rgba(11,107,104,0.10)");
+
+      const labelEvery = Math.max(1, Math.ceil(rows.length / 7));
+      ctx.fillStyle = "#627181";
       ctx.textAlign = "center";
-      for (let i = 0; i < labels.length; i += labelEvery) {
-        const x = xFor(i);
-        const label = String(labels[i] || "");
-        ctx.fillText(label, x, padding.top + chartH + 18);
+      for (let index = 0; index < rows.length; index += labelEvery) {
+        ctx.fillText(String(rows[index].day || "").slice(5), xFor(index), padding.top + chartH + 18);
       }
       ctx.textAlign = "start";
+
+      ctx.fillStyle = "rgba(11,107,104,0.95)";
+      ctx.fillRect(padding.left, h - 12, 12, 3);
+      ctx.fillStyle = "#1c2730";
+      ctx.fillText("Sessions", padding.left + 18, h - 8);
+      ctx.fillStyle = "rgba(47,111,216,0.95)";
+      ctx.fillRect(padding.left + 92, h - 12, 12, 3);
+      ctx.fillStyle = "#1c2730";
+      ctx.fillText("Pageviews", padding.left + 110, h - 8);
     }
 
-    async function load() {
-      clearError();
-      setStatus("Loading...");
-      setHomeStatus("Loading...");
-      setPagesStatus("Loading...");
-
-      const days = Number(daysSelect.value || config.defaultDays || 30);
-      const url = `${config.summaryUrl}?days=${encodeURIComponent(days)}`;
-      const summaryPromise = fetch(url, { headers: { "Accept": "application/json" }, cache: "no-store" });
-      const homePromise = config.pageDailyUrl
-        ? fetch(
-            `${config.pageDailyUrl}?days=${encodeURIComponent(days)}&path=${encodeURIComponent("/")}`,
-            { headers: { "Accept": "application/json" }, cache: "no-store" }
-          )
-        : Promise.resolve(null);
-      const pagesPromise = config.pagesUrl
-        ? fetch(config.pagesUrl, { headers: { "Accept": "application/json" }, cache: "no-store" })
-        : Promise.resolve(null);
-
-      try {
-        const res = await summaryPromise;
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        lastData = data;
-
-        totalVisitsEl.textContent = String(data.total_visits ?? "-");
-        todayVisitsEl.textContent = String(data.today_visits ?? "-");
-        if (avgVisitsPerDayEl) {
-          const total = Number(data.total_visits || 0);
-          const dayCount = Number(data.days || 0);
-          const avg = dayCount > 0 ? total / dayCount : 0;
-          avgVisitsPerDayEl.textContent = dayCount > 0 ? String(Math.round(avg * 10) / 10) : "-";
-        }
-
-        const perDay = Array.isArray(data.per_day) ? data.per_day : [];
-        const labels = perDay.map((r) => String(r.day || ""));
-        const values = perDay.map((r) => Number(r.visits || 0));
-
-        setTable(perDay);
-        drawLineChart(canvas, labels, values);
-        setStatus("");
-      } catch (e) {
-        setStatus("");
-        showError(`Failed to load analytics data: ${e && e.message ? e.message : e}`);
-        if (avgVisitsPerDayEl) avgVisitsPerDayEl.textContent = "-";
-        perDayRowsEl.innerHTML = '<tr><td colspan="2" class="text-muted">No data</td></tr>';
-        drawLineChart(canvas, [], []);
+    function renderBars(containerId, rows, emptyText) {
+      const el = document.getElementById(containerId);
+      if (!rows || !rows.length) {
+        el.innerHTML = '<p class="analytics-empty">' + escapeHtml(emptyText || "No data for the selected window.") + "</p>";
+        return;
       }
+      const maxCount = Math.max(...rows.map((row) => Number(row.count || 0)), 1);
+      el.innerHTML = rows.map((row) => {
+        const label = escapeHtml(row.label || "Unknown");
+        const count = Number(row.count || 0);
+        const width = Math.max(6, Math.round((count / maxCount) * 100));
+        return '<div class="analytics-bar-row"><div class="analytics-bar-meta"><span>' + label + '</span><strong>' + formatNumber(count) + '</strong></div><div class="analytics-bar-track"><div class="analytics-bar-fill" style="width:' + width + '%;"></div></div></div>';
+      }).join("");
+    }
 
-      try {
-        const homeRes = await homePromise;
-        if (!homeRes) {
-          setHomeStatus("");
-        } else {
-          if (!homeRes.ok) throw new Error(`HTTP ${homeRes.status}`);
-          const homeData = await homeRes.json();
-          const perDay = Array.isArray(homeData.per_day) ? homeData.per_day : [];
-          lastHomePerDay = perDay;
-          const labels = perDay.map((r) => String(r.day || ""));
-          const values = perDay.map((r) => Number(r.visits || 0));
-          if (homeCanvas) drawLineChart(homeCanvas, labels, values);
-          setHomeStatus("");
-        }
-      } catch (e) {
-        setHomeStatus("Failed to load");
-        if (homeCanvas) drawLineChart(homeCanvas, [], []);
+    function renderTableBody(tbodyId, rows, renderer, colspan, emptyText) {
+      const tbody = document.getElementById(tbodyId);
+      if (!rows || !rows.length) {
+        tbody.innerHTML = '<tr><td colspan="' + colspan + '" class="text-muted">' + escapeHtml(emptyText || "No data.") + "</td></tr>";
+        return;
       }
+      tbody.innerHTML = rows.map(renderer).join("");
+    }
 
+    function renderDelta(elementId, payload) {
+      const el = document.getElementById(elementId);
+      if (!payload || payload.delta_pct === null || payload.delta_pct === undefined) {
+        el.classList.add("d-none");
+        el.textContent = "";
+        return;
+      }
+      const sign = payload.delta_pct > 0 ? "+" : "";
+      el.textContent = sign + payload.delta_pct + "% vs previous";
+      el.classList.remove("d-none");
+    }
+
+    function applyKpis(summary) {
+      const totals = summary.totals || {};
+      document.getElementById("kpiSessions").textContent = formatNumber(totals.sessions);
+      document.getElementById("kpiSessionsNote").textContent = "Today: " + formatNumber(totals.today_sessions);
+      document.getElementById("kpiVisitors").textContent = formatNumber(totals.unique_visitors);
+      document.getElementById("kpiPageviews").textContent = formatNumber(totals.pageviews);
+      document.getElementById("kpiActiveUsers").textContent = formatNumber(totals.active_users);
+      document.getElementById("kpiAvgSession").textContent = formatSeconds(totals.avg_session_seconds);
+      document.getElementById("kpiBounceRate").textContent = Number(totals.bounce_rate || 0).toFixed(1) + "%";
+      document.getElementById("kpiBounceNote").textContent = "Avg dwell: " + formatSeconds(totals.avg_page_dwell_seconds);
+      renderDelta("kpiSessionsDelta", summary.comparison && summary.comparison.sessions);
+      renderDelta("kpiVisitorsDelta", summary.comparison && summary.comparison.unique_visitors);
+      renderDelta("kpiPageviewsDelta", summary.comparison && summary.comparison.pageviews);
+    }
+
+    function renderFunnel(rows) {
+      renderTableBody("funnelRows", rows, function (row) {
+        const rate = row.rate_from_previous === null || row.rate_from_previous === undefined ? "-" : Number(row.rate_from_previous).toFixed(1) + "%";
+        return "<tr><td>" + escapeHtml(row.label) + "</td><td class=\"text-end\">" + formatNumber(row.count) + "</td><td class=\"text-end\">" + rate + "</td></tr>";
+      }, 3, "No funnel data.");
+    }
+
+    function renderCampaigns(rows) {
+      renderTableBody("campaignRows", rows, function (row) {
+        return "<tr><td>" + escapeHtml(row.label) + "</td><td class=\"text-end\">" + formatNumber(row.sessions) + "</td><td class=\"text-end\">" + formatNumber(row.paid_orders) + "</td></tr>";
+      }, 3, "No tracked campaigns in this window.");
+    }
+
+    function renderReferrers(rows, tbodyId, emptyText) {
+      renderTableBody(tbodyId, rows, function (row) {
+        return "<tr><td>" + escapeHtml(row.label) + "</td><td class=\"text-end\">" + formatNumber(row.count) + "</td></tr>";
+      }, 2, emptyText);
+    }
+
+    function renderPerformance(rows, tbodyId) {
+      renderTableBody(tbodyId, rows, function (row) {
+        return "<tr><td>" + escapeHtml(row.label) + "</td><td class=\"text-end\">" + formatNumber(row.add_to_cart) + "</td><td class=\"text-end\">" + formatNumber(row.paid_quantity) + "</td><td class=\"text-end\">" + formatMoney(row.paid_revenue) + "</td></tr>";
+      }, 4, "No tracked paid-item data in this window.");
+    }
+
+    function renderConversions(conversions) {
+      const rows = [
+        { label: "Signup started", value: conversions.signup_started || 0 },
+        { label: "Signup completed", value: conversions.signup_completed || 0 },
+        { label: "Add to cart", value: conversions.add_to_cart || 0 },
+        { label: "Checkout started", value: conversions.checkout_started || 0 },
+        { label: "Paid orders", value: conversions.paid_order || 0 },
+        { label: "Paid items", value: conversions.order_item_paid || 0 }
+      ];
+      document.getElementById("conversionCards").innerHTML = rows.map((row) => {
+        return '<div class="analytics-mini-card"><span class="analytics-kpi-label">' + escapeHtml(row.label) + '</span><strong>' + formatNumber(row.value) + "</strong></div>";
+      }).join("");
+    }
+
+    function renderAnnotations(rows) {
+      const el = document.getElementById("annotationList");
+      if (!rows || !rows.length) {
+        el.innerHTML = '<p class="analytics-empty">No annotations for this date window. Add them in the analytics admin when campaigns or site changes go live.</p>';
+        return;
+      }
+      el.innerHTML = rows.map((row) => {
+        const color = escapeHtml(row.color || "#0b6b68");
+        return '<div class="analytics-annotation"><span class="analytics-annotation-dot" style="background:' + color + ';"></span><div><div class="analytics-pill mb-2">' + escapeHtml(row.date) + '</div><div class="fw-bold">' + escapeHtml(row.title) + '</div><div class="text-muted small">' + escapeHtml(row.note || "") + '</div></div></div>';
+      }).join("");
+    }
+
+    function updateAvailableFilters(summary) {
+      const available = summary.available_filters || {};
+      populateSelect(deviceFilter, available.devices || [], "All devices", summary.filters && summary.filters.device);
+      populateSelect(browserFilter, available.browsers || [], "All browsers", summary.filters && summary.filters.browser);
+      populateSelect(sourceFilter, available.sources || [], "All sources", summary.filters && summary.filters.source);
+    }
+
+    function renderSavedViews() {
+      if (!savedViews || !savedViews.length) {
+        savedViewsRow.innerHTML = '<span class="analytics-chip">No saved presets yet. Create analytics saved views in admin if you want one-click presets.</span>';
+        return;
+      }
+      savedViewsRow.innerHTML = savedViews.map((view) => {
+        return '<button type="button" class="analytics-saved-chip" data-index="' + escapeHtml(String(savedViews.indexOf(view))) + '">' + escapeHtml(view.name + (view.is_default ? " (Default)" : "")) + "</button>";
+      }).join("");
+    }
+
+    function applySavedView(configObj) {
+      if (configObj.days) rangeSelect.value = String(configObj.days);
+      if (configObj.start) startDate.value = configObj.start;
+      if (configObj.end) endDate.value = configObj.end;
+      if (configObj.device !== undefined) deviceFilter.value = configObj.device || "";
+      if (configObj.browser !== undefined) browserFilter.value = configObj.browser || "";
+      if (configObj.source !== undefined) sourceFilter.value = configObj.source || "";
+      if (configObj.user_scope !== undefined) userScopeFilter.value = configObj.user_scope || "all";
+      if (configObj.campaign !== undefined) campaignFilter.value = configObj.campaign || "";
+      compareToggle.checked = Boolean(configObj.compare);
+      loadDashboard();
+    }
+
+    function renderPages(results) {
+      renderTableBody("pagesRows", results, function (row) {
+        const path = String(row.path || "");
+        return '<tr><td><button type="button" class="analytics-page-link" data-path="' + escapeHtml(path) + '">' + escapeHtml(path) + '</button></td><td class="text-end">' + formatNumber(row.pageviews) + '</td><td class="text-end">' + formatNumber(row.sessions) + '</td><td class="text-end">' + formatSeconds(row.avg_dwell_seconds) + "</td></tr>";
+      }, 4, "No pages for the selected filters.");
+    }
+
+    async function loadPages() {
+      pagesStatus.textContent = "Loading pages...";
+      const params = currentQuery();
+      params.set("page", String(pageState.page));
+      params.set("q", pageState.q);
+      params.set("sort", pageState.sort);
+      params.set("per_page", "12");
+
+      const response = await fetch(config.pagesUrl + "?" + params.toString(), { headers: { Accept: "application/json" }, cache: "no-store" });
+      if (!response.ok) throw new Error("Page explorer failed with HTTP " + response.status);
+      const payload = await response.json();
+      pageState.totalPages = Number(payload.pages || 1);
+      renderPages(payload.results || []);
+      document.getElementById("pagesPagerLabel").textContent = "Page " + payload.page + " of " + payload.pages;
+      document.getElementById("pagesPrevBtn").disabled = payload.page <= 1;
+      document.getElementById("pagesNextBtn").disabled = payload.page >= payload.pages;
+      pagesStatus.textContent = "Window: " + payload.window.start + " to " + payload.window.end;
+    }
+
+    async function loadPageDetail(path) {
+      if (!path) return;
+      detailStatus.textContent = "Loading drilldown...";
+      const params = currentQuery();
+      params.set("path", path);
+      const response = await fetch(config.pageDailyUrl + "?" + params.toString(), { headers: { Accept: "application/json" }, cache: "no-store" });
+      if (!response.ok) throw new Error("Page drilldown failed with HTTP " + response.status);
+      const payload = await response.json();
+      pageState.selectedPath = path;
+      lastDetail = payload;
+      document.getElementById("pageDrilldownCopy").textContent = path + " with " + formatNumber(payload.total_pageviews) + " pageviews and " + formatNumber(payload.total_sessions) + " sessions. Avg dwell: " + formatSeconds(payload.avg_dwell_seconds) + ".";
+      drawDualLineChart(document.getElementById("pageDetailChart"), payload.per_day || [], "sessions", "pageviews", "No drilldown data");
+      renderBars("nextPagesBars", payload.next_pages || [], "No follow-on page sequences tracked for this page.");
+      renderBars("pageReferrers", payload.top_referrers || [], "No referrers recorded for this page.");
+      detailStatus.textContent = payload.window.start + " to " + payload.window.end;
+    }
+
+    async function loadDashboard() {
+      setError("");
+      trendStatus.textContent = "Loading overview...";
       try {
-        const pagesRes = await pagesPromise;
-        if (!pagesRes) {
-          setPagesStatus("");
-          return;
-        }
-        if (!pagesRes.ok) throw new Error(`HTTP ${pagesRes.status}`);
-        const pagesData = await pagesRes.json();
-        const pages = Array.isArray(pagesData.pages) ? pagesData.pages : [];
-        setPagesTable(pages);
-        setPagesStatus("");
-      } catch (e) {
-        setPagesStatus("Failed to load");
-        if (pageStatsRowsEl) pageStatsRowsEl.innerHTML = '<tr><td colspan="5" class="text-muted">No data</td></tr>';
+        const response = await fetch(config.summaryUrl + "?" + currentQuery().toString(), { headers: { Accept: "application/json" }, cache: "no-store" });
+        if (!response.ok) throw new Error("Dashboard failed with HTTP " + response.status);
+        const summary = await response.json();
+        lastSummary = summary;
+
+        updateAvailableFilters(summary);
+        applyKpis(summary);
+        renderFunnel(summary.funnel || []);
+        renderBars("sourceBars", summary.source_breakdown || [], "No source data.");
+        renderBars("deviceBars", summary.device_breakdown || [], "No device data.");
+        renderBars("browserBars", summary.browser_breakdown || [], "No browser data.");
+        renderCampaigns(summary.campaigns || []);
+        renderReferrers(summary.top_referrers || [], "referrerRows", "No referrers for this window.");
+        renderPerformance(summary.product_performance || [], "productRows");
+        renderPerformance(summary.category_performance || [], "categoryRows");
+        renderConversions(summary.conversion_totals || {});
+        renderAnnotations(summary.annotations || []);
+        drawDualLineChart(document.getElementById("trendChart"), summary.per_day || [], "sessions", "pageviews", "No trend data for the selected window.");
+        trendStatus.textContent = summary.window.start + " to " + summary.window.end;
+        await loadPages();
+        await loadPageDetail(pageState.selectedPath || "/");
+      } catch (error) {
+        setError(error && error.message ? error.message : String(error));
+        trendStatus.textContent = "Failed";
+        pagesStatus.textContent = "";
+        detailStatus.textContent = "";
       }
     }
 
-    function init() {
-      const initialDays = Number(config.defaultDays || 30);
-      daysSelect.value = String(initialDays);
-      refreshBtn.addEventListener("click", load);
-      daysSelect.addEventListener("change", load);
-      downloadCsvBtn.addEventListener("click", function () {
-        if (!lastData || !Array.isArray(lastData.per_day)) return;
-        const days = Number(daysSelect.value || initialDays);
-        const csv = toCsv(lastData.per_day.map((r) => ({ day: String(r.day || ""), visits: Number(r.visits || 0) })));
-        downloadCsv(`visits_last_${days}_days.csv`, csv);
+    function resetControls() {
+      rangeSelect.value = String(config.defaultDays || 30);
+      buildWindowFromRange(rangeSelect.value);
+      deviceFilter.value = "";
+      browserFilter.value = "";
+      sourceFilter.value = "";
+      userScopeFilter.value = "all";
+      campaignFilter.value = "";
+      compareToggle.checked = false;
+      pageState.page = 1;
+      pageState.q = "";
+      pageState.sort = "pageviews";
+      pageState.selectedPath = "/";
+      document.getElementById("pageSearchInput").value = "";
+      document.getElementById("pageSortSelect").value = "pageviews";
+      loadDashboard();
+    }
+
+    rangeSelect.addEventListener("change", function () {
+      buildWindowFromRange(rangeSelect.value);
+    });
+
+    refreshBtn.addEventListener("click", function () {
+      pageState.page = 1;
+      loadDashboard();
+    });
+
+    resetBtn.addEventListener("click", resetControls);
+
+    document.getElementById("pageSearchBtn").addEventListener("click", function () {
+      pageState.page = 1;
+      pageState.q = document.getElementById("pageSearchInput").value.trim();
+      pageState.sort = document.getElementById("pageSortSelect").value;
+      loadPages().then(function () {
+        return loadPageDetail(pageState.selectedPath || "/");
+      }).catch(function (error) {
+        setError(error && error.message ? error.message : String(error));
       });
+    });
 
-      window.addEventListener("resize", function () {
-        if (!lastData || !Array.isArray(lastData.per_day)) return;
-        const labels = lastData.per_day.map((r) => String(r.day || ""));
-        const values = lastData.per_day.map((r) => Number(r.visits || 0));
-        drawLineChart(canvas, labels, values);
-
-        if (homeCanvas && Array.isArray(lastHomePerDay)) {
-          const homeLabels = lastHomePerDay.map((r) => String(r.day || ""));
-          const homeValues = lastHomePerDay.map((r) => Number(r.visits || 0));
-          drawLineChart(homeCanvas, homeLabels, homeValues);
-        }
+    document.getElementById("pagesPrevBtn").addEventListener("click", function () {
+      if (pageState.page <= 1) return;
+      pageState.page -= 1;
+      loadPages().catch(function (error) {
+        setError(error && error.message ? error.message : String(error));
       });
+    });
 
-      load();
-    }
+    document.getElementById("pagesNextBtn").addEventListener("click", function () {
+      if (pageState.page >= pageState.totalPages) return;
+      pageState.page += 1;
+      loadPages().catch(function (error) {
+        setError(error && error.message ? error.message : String(error));
+      });
+    });
 
-    init();
+    document.getElementById("pagesRows").addEventListener("click", function (event) {
+      const button = event.target.closest("[data-path]");
+      if (!button) return;
+      loadPageDetail(button.getAttribute("data-path")).catch(function (error) {
+        setError(error && error.message ? error.message : String(error));
+      });
+    });
+
+    savedViewsRow.addEventListener("click", function (event) {
+      const button = event.target.closest("[data-index]");
+      if (!button) return;
+      const index = Number(button.getAttribute("data-index"));
+      const savedView = savedViews[index];
+      if (!savedView) return;
+      applySavedView(savedView.config || {});
+    });
+
+    window.addEventListener("resize", function () {
+      if (lastSummary) {
+        drawDualLineChart(document.getElementById("trendChart"), lastSummary.per_day || [], "sessions", "pageviews", "No trend data");
+      }
+      if (lastDetail) {
+        drawDualLineChart(document.getElementById("pageDetailChart"), lastDetail.per_day || [], "sessions", "pageviews", "No drilldown data");
+      }
+    });
+
+    renderSavedViews();
+    buildWindowFromRange(config.defaultDays || 30);
+    rangeSelect.value = String(config.defaultDays || 30);
+    loadDashboard();
   })();
 </script>
 {% endblock %}
