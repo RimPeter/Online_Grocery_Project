@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 from decimal import Decimal, InvalidOperation
 from urllib.parse import parse_qs, urlparse
 
@@ -164,7 +164,7 @@ def _get_user(request):
 def _timestamp_to_datetime(value):
     if not isinstance(value, int):
         return None
-    return timezone.datetime.fromtimestamp(value, tz=timezone.utc)
+    return datetime.fromtimestamp(value, tz=dt_timezone.utc)
 
 
 def get_or_create_active_visit(request, *, now=None, create=True):

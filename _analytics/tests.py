@@ -1,4 +1,5 @@
 import json
+from datetime import timezone as dt_timezone
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -6,6 +7,7 @@ from django.db import DatabaseError
 from django.test import RequestFactory, SimpleTestCase
 
 from _analytics.tracking import (
+    _timestamp_to_datetime,
     classify_browser_family,
     classify_device_type,
     extract_utm_data,
@@ -53,6 +55,13 @@ class AnalyticsHelpersTests(SimpleTestCase):
 
 
 class AnalyticsTrackingTests(SimpleTestCase):
+    def test_timestamp_to_datetime_returns_aware_utc_datetime(self):
+        converted = _timestamp_to_datetime(1710000000)
+
+        self.assertIsNotNone(converted)
+        self.assertEqual(converted.tzinfo, dt_timezone.utc)
+        self.assertEqual(int(converted.timestamp()), 1710000000)
+
     @patch('_analytics.tracking.get_or_create_active_visit', side_effect=DatabaseError('missing table'))
     def test_track_event_swallow_schema_errors(self, _get_visit_mock):
         request = RequestFactory().post('/cart/')
