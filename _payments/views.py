@@ -172,7 +172,7 @@ def checkout_view(request, order_id):
             'items_count': len(order_items),
             'subtotal': str(subtotal),
             'delivery_charge': str(pricing['delivery_charge']),
-            'discount_amount': str(pricing['discount_amount']),
+            'discount_amount': str(pricing['basket_reward_discount']),
             'grand_total': str(payable_total),
         },
         path=reverse('checkout', args=[order.id]),
