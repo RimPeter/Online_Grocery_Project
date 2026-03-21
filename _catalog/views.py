@@ -21,6 +21,7 @@ from django.urls import reverse
 from decimal import Decimal, InvalidOperation
 from django.utils.http import url_has_allowed_host_and_scheme
 from urllib.parse import urlencode
+from _product_management.rsp import build_rsp_expression, calculate_rsp_from_cost
 
 try:
     from django.contrib.postgres.search import TrigramSimilarity
@@ -352,7 +353,7 @@ def favorite_remove_all(request):
 def _ensure_rsp(product):
     """Ensure RSP is set for display.
 
-    If DB did not provide an RSP (None or 0), compute as price * 1.3.
+    If DB did not provide an RSP (None or 0), compute as cost price * the configured global multiplier.
     Mutates only the in-memory instance for rendering.
     """
     try:
@@ -362,7 +363,7 @@ def _ensure_rsp(product):
         if cur is None or Decimal(str(cur)) == Decimal('0'):
             price = getattr(product, 'price', None)
             if price is not None:
-                product.rsp = (Decimal(str(price)) * Decimal('1.30')).quantize(Decimal('0.01'))
+                product.rsp = calculate_rsp_from_cost(price)
     except Exception:
         pass
     return product
@@ -812,7 +813,7 @@ def product_list(request):
                     )
 
     # Hide items with display RSP over £50 (use rsp or price*1.3 fallback)
-    display_expr = ExpressionWrapper(F('price') * Value(Decimal('1.30')), output_field=DecimalField(max_digits=10, decimal_places=2))
+    display_expr = build_rsp_expression()
     products = (
         products
         .annotate(
@@ -847,7 +848,8 @@ def product_list(request):
                         except Exception:
                             pack = 1
                         price_val = Decimal(str(getattr(p, 'price', '0') or '0'))
-                        display_val = (price_val * Decimal('1.30')) / Decimal(pack)
+                        raw_rsp = calculate_rsp_from_cost(price_val)
+                        display_val = (raw_rsp / Decimal(pack)) if raw_rsp is not None else Decimal('0.00')
                     if display_val <= Decimal('50.00'):
                         recovered.append(p)
                 except Exception:
@@ -981,6 +983,9 @@ def cart_view(request):
     cart_items = []
     total_price = Decimal('0.00')
     products_by_id = {}
+    favorite_product_ids = set(
+        ProductFavorite.objects.filter(user=request.user).values_list('product_id', flat=True)
+    )
     if restored_from_order:
         for item in order.items.select_related('product').all():
             try:
@@ -992,6 +997,7 @@ def cart_view(request):
             unit_price = Decimal(str(item.price))
             item_total = unit_price * qty
             total_price += item_total
+            item.product.is_favourite = item.product_id in favorite_product_ids
             cart_items.append({
                 'product': item.product,
                 'quantity': qty,
@@ -1005,8 +1011,10 @@ def cart_view(request):
         for pid, quantity in cart.items():
             product = products_by_id.get(str(pid))
             if product:
-                # Base unit is RSP when available; otherwise fallback to cost price
-                base_unit = product.rsp if (product.rsp is not None and product.rsp > 0) else product.price
+                # Customer pricing uses the configured global RSP formula.
+                base_unit = calculate_rsp_from_cost(product.price)
+                if base_unit is None:
+                    base_unit = product.rsp if (product.rsp is not None and product.rsp > 0) else product.price
                 price_dec = Decimal(str(base_unit))
                 # For bulk items, charge for the whole pack (multiply by pack size)
                 try:
@@ -1018,6 +1026,7 @@ def cart_view(request):
                 qty = int(quantity)
                 item_total = price_dec * qty
                 total_price += item_total
+                product.is_favourite = product.id in favorite_product_ids
                 cart_items.append({
                     'product': product,
                     'quantity': qty,
@@ -1036,7 +1045,9 @@ def cart_view(request):
             product = products_by_id.get(str(pid))
             if not product:
                 continue
-            base_unit = product.rsp if (product.rsp is not None and product.rsp > 0) else product.price
+            base_unit = calculate_rsp_from_cost(product.price)
+            if base_unit is None:
+                base_unit = product.rsp if (product.rsp is not None and product.rsp > 0) else product.price
             price_dec = Decimal(str(base_unit))
             try:
                 pack = int(product.pack_amount()) if callable(product.pack_amount) else int(getattr(product, 'pack_amount', 1) or 1)
@@ -1387,7 +1398,7 @@ def load_more_products(request):
         )
     
     # Hide items with display RSP over £50 (use rsp>0 else price*1.3)
-    display_expr = ExpressionWrapper(F('price') * Value(Decimal('1.30')), output_field=DecimalField(max_digits=10, decimal_places=2))
+    display_expr = build_rsp_expression()
     products_qs = products_qs.annotate(
         display_rsp=Case(
             When(rsp__gt=0, then=F('rsp')),

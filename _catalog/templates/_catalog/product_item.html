@@ -1,4 +1,4 @@
-{% load static %}
+{% load static price_tags %}
 <div class="col-xxl-3 col-lg-4 col-md-4 col-sm-6 col-6 d-flex align-items-stretch catalog-product-col" data-bulk-item="{{ product.is_bulk|yesno:'true,false' }}">
   <article class="card product-cosmos-card h-100 position-relative {% if user.is_superuser and not product.is_visible_to_customers %}product-cosmos-card-hidden{% endif %}">
     {% if product.is_bulk %}
@@ -57,7 +57,7 @@
       data-product-id="{{ product.id }}"
       aria-label="Toggle favorite"
     >
-      <span class="favorite-emoji">{% if product.is_favourite %}❤️{% else %}♡{% endif %}</span>
+      <span class="favorite-emoji">{% if product.is_favourite %}&#9829;{% else %}&#9825;{% endif %}</span>
     </button>
 
     <a href="{% url 'product_detail' product.pk %}" class="product-media-link">
@@ -83,19 +83,12 @@
         <p class="card-text product-cost-line">Cost &pound;{{ product.price|floatformat:2 }}</p>
       {% endif %}
 
-      {% if user.is_superuser %}
+      {% if product|display_rsp > 0 %}
         {% if product.is_bulk %}
-          <p class="card-text product-price-main">&pound;{{ product.rsp|floatformat:2 }}<span>/item</span></p>
-          <p class="card-text product-pack-note">Pack of {{ product.pack_amount }} | Total &pound;{{ product.bulk_total_price|floatformat:2 }}</p>
+          <p class="card-text product-price-main">&pound;{{ product|display_rsp|floatformat:2 }}<span>/item</span></p>
+          <p class="card-text product-pack-note">Pack of {{ product.pack_amount }} | Total &pound;{{ product|display_bulk_total|floatformat:2 }}</p>
         {% else %}
-          <p class="card-text product-price-main">&pound;{{ product.rsp|floatformat:2 }}</p>
-        {% endif %}
-      {% elif product.rsp and product.rsp > 0 %}
-        {% if product.is_bulk %}
-          <p class="card-text product-price-main">&pound;{{ product.rsp|floatformat:2 }}<span>/item</span></p>
-          <p class="card-text product-pack-note">Pack of {{ product.pack_amount }} | Total &pound;{{ product.bulk_total_price|floatformat:2 }}</p>
-        {% else %}
-          <p class="card-text product-price-main">&pound;{{ product.rsp|floatformat:2 }}</p>
+          <p class="card-text product-price-main">&pound;{{ product|display_rsp|floatformat:2 }}</p>
         {% endif %}
       {% else %}
         <p class="card-text product-price-unavailable">Price unavailable</p>

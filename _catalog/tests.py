@@ -124,3 +124,17 @@ class HomeCategoryFavoritesTests(TestCase):
         self.assertEqual(remove_all_resp.status_code, 302)
         self.assertFalse(ProductFavorite.objects.filter(user=self.user).exists())
 
+    def test_cart_context_marks_favorite_products(self):
+        product = All_Products.objects.first()
+        ProductFavorite.objects.create(user=self.user, product=product)
+
+        self.client.login(username='testuser', password='testpass')
+        session = self.client.session
+        session['cart'] = {str(product.id): 1}
+        session.save()
+
+        resp = self.client.get(reverse('cart_view'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('cart_items', resp.context)
+        self.assertTrue(resp.context['cart_items'][0]['product'].is_favourite)
+

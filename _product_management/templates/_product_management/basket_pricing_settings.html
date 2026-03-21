@@ -9,7 +9,7 @@
     <div>
       <p class="pm-eyebrow">Product Management</p>
       <h1 class="pm-title">Basket Pricing Settings</h1>
-      <p class="pm-subtitle">Adjust checkout minimums, delivery charge, and the basket discount offer used across cart, checkout, and invoices.</p>
+      <p class="pm-subtitle">Adjust checkout minimums, delivery charge, the basket discount offer, and the global RSP multiplier used across product pricing fallbacks.</p>
     </div>
     <div class="pm-hero-actions">
       <a href="{% url '_product_management:commands' %}" class="btn btn-outline-light btn-sm">Back to Commands</a>
@@ -113,6 +113,32 @@
           </div>
         </div>
 
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Global RSP</h5>
+            <p class="text-muted mb-3">Set the multiplier <strong>n</strong> used when the system derives an RSP from cost price. Formula: <strong>RSP = cost price x n</strong>.</p>
+
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="rsp_multiplier" class="form-label">RSP multiplier (n)</label>
+                <input
+                  id="rsp_multiplier"
+                  name="rsp_multiplier"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  class="form-control"
+                  value="{{ rsp_multiplier|floatformat:2 }}"
+                  required>
+              </div>
+            </div>
+
+            <div id="rspPreview" class="alert alert-light mt-3 mb-0 small pm-inline-alert">
+              Global RSP preview will appear here.
+            </div>
+          </div>
+        </div>
+
         <div class="d-flex gap-2 flex-wrap">
           <button type="submit" class="btn btn-primary">Save Basket Pricing Settings</button>
           <a href="{% url '_product_management:commands' %}" class="btn btn-outline-secondary">Back to Commands</a>
@@ -130,9 +156,11 @@
     const deliveryChargeEl = document.getElementById('delivery_charge');
     const discountThresholdEl = document.getElementById('discount_threshold');
     const discountAmountEl = document.getElementById('discount_amount');
+    const rspMultiplierEl = document.getElementById('rsp_multiplier');
     const previewEl = document.getElementById('pricingPreview');
+    const rspPreviewEl = document.getElementById('rspPreview');
 
-    if (!minimumOrderEl || !deliveryChargeEl || !discountThresholdEl || !discountAmountEl || !previewEl) return;
+    if (!minimumOrderEl || !deliveryChargeEl || !discountThresholdEl || !discountAmountEl || !rspMultiplierEl || !previewEl || !rspPreviewEl) return;
 
     function money(value) {
       const n = Number(value || 0);
@@ -145,7 +173,10 @@
       const deliveryCharge = Number(deliveryChargeEl.value || 0);
       const discountThreshold = Number(discountThresholdEl.value || 0);
       const discountAmount = Number(discountAmountEl.value || 0);
+      const rspMultiplier = Number(rspMultiplierEl.value || 0);
       const payableAtThreshold = Math.max(0, discountThreshold - discountAmount + deliveryCharge);
+      const sampleCostPrice = 10;
+      const sampleRsp = Math.max(0, sampleCostPrice * rspMultiplier);
 
       previewEl.textContent =
         'Checkout unlocks at £' + money(minimumOrder) +
@@ -153,9 +184,15 @@
         '. Basket discount unlocks at £' + money(discountThreshold) +
         ' and gives £' + money(discountAmount) +
         '. If a basket lands exactly on the discount threshold, the payable total becomes £' + money(payableAtThreshold) + '.';
+
+      rspPreviewEl.textContent =
+        'Global RSP uses the rule RSP = cost price x n. ' +
+        'With n = ' + money(rspMultiplier) +
+        ', a cost price of £' + money(sampleCostPrice) +
+        ' becomes an RSP of £' + money(sampleRsp) + '.';
     }
 
-    [minimumOrderEl, deliveryChargeEl, discountThresholdEl, discountAmountEl].forEach((el) => {
+    [minimumOrderEl, deliveryChargeEl, discountThresholdEl, discountAmountEl, rspMultiplierEl].forEach((el) => {
       el.addEventListener('input', renderPreview);
       el.addEventListener('change', renderPreview);
     });

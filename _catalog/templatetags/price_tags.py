@@ -1,5 +1,6 @@
 from django import template
 from decimal import Decimal, InvalidOperation
+from _product_management.rsp import calculate_rsp_from_cost
 
 register = template.Library()
 
@@ -15,39 +16,26 @@ def _to_decimal(val):
 
 @register.filter
 def display_rsp(product):
-    """Return display unit RSP for a product with sensible fallbacks.
-
-    Priority:
-    1) Explicit annotated `display_rsp` when provided and non-zero
-    2) If not bulk AND rsp == 0, compute rsp = price * 1.3
-    3) Else use model `rsp` when present
-    Fallback to Decimal('0.00')
-    """
+    """Return the global display unit price for a product."""
     if not product:
         return Decimal('0.00')
 
-    # 1) annotated display_rsp when present/non-zero
-    val = getattr(product, 'display_rsp', None)
-    if _to_decimal(val) not in (None, Decimal('0')):
-        return _to_decimal(val)
+    base_price = _to_decimal(getattr(product, 'price', None))
+    if base_price is not None:
+        try:
+            derived_rsp = calculate_rsp_from_cost(base_price)
+            if derived_rsp is not None:
+                return derived_rsp
+        except Exception:
+            pass
 
-    # 2) for non-bulk items with rsp == 0, derive from cost price
-    try:
-        is_bulk = bool(getattr(product, 'is_bulk'))
-    except Exception:
-        is_bulk = False
     rsp_val = getattr(product, 'rsp', None)
-    rsp_dec = _to_decimal(rsp_val)
-    if not is_bulk and rsp_dec == Decimal('0'):
-        base_price = _to_decimal(getattr(product, 'price', None))
-        if base_price is not None:
-            try:
-                return (base_price * Decimal('1.30')).quantize(Decimal('0.01'))
-            except Exception:
-                pass
-
-    # 3) fallback to model rsp
     d = _to_decimal(rsp_val)
+    if d is not None:
+        return d
+
+    val = getattr(product, 'display_rsp', None)
+    d = _to_decimal(val)
     return d if d is not None else Decimal('0.00')
 
 

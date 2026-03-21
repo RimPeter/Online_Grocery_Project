@@ -159,6 +159,7 @@ class BasketPricingSettings(models.Model):
     delivery_charge = models.DecimalField(max_digits=10, decimal_places=2, default=1.50)
     discount_threshold = models.DecimalField(max_digits=10, decimal_places=2, default=95)
     discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=15)
+    rsp_multiplier = models.DecimalField(max_digits=10, decimal_places=2, default=1.30)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

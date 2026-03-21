@@ -20,6 +20,7 @@ from _analytics.tracking import track_event
 from _catalog.models import All_Products, HomeCategoryTile, HomeValuePillar, CategoryNodeSetting
 from .models import LeafletCopy, SubcategoryPipelineRun, DeliverySlotSettings, BasketPricingSettings
 from .constants import LEAFLET_TEXT_DEFAULTS
+from .rsp import build_rsp_expression, calculate_rsp_from_cost
 from _orders.models import Order, OrderItem
 from _orders.notifications import send_paid_order_notification
 from django.contrib import messages
@@ -1020,14 +1021,13 @@ def items_to_order(request):
         products_map = {p.id: p for p in All_Products.objects.filter(id__in=prod_ids)}
         # Ensure each product has an RSP when DB did not provide it (None or 0)
         try:
-            from decimal import Decimal as _D
             for _p in products_map.values():
                 try:
                     cur = getattr(_p, 'rsp', None)
-                    if cur is None or _D(str(cur)) == _D('0'):
+                    if cur is None or Decimal(str(cur)) == Decimal('0'):
                         price = getattr(_p, 'price', None)
                         if price is not None:
-                            _p.rsp = (_D(str(price)) * _D('1.30')).quantize(_D('0.01'))
+                            _p.rsp = calculate_rsp_from_cost(price)
                 except Exception:
                     continue
         except Exception:
@@ -1431,6 +1431,7 @@ def basket_pricing_settings(request):
         'delivery_charge': pricing_settings.delivery_charge,
         'discount_threshold': pricing_settings.discount_threshold,
         'discount_amount': pricing_settings.discount_amount,
+        'rsp_multiplier': pricing_settings.rsp_multiplier,
     }
 
     if request.method == 'POST':
@@ -1439,18 +1440,21 @@ def basket_pricing_settings(request):
             'delivery_charge': _parse_money(request.POST.get('delivery_charge'), current['delivery_charge'], Decimal('0.00'), Decimal('250.00')),
             'discount_threshold': _parse_money(request.POST.get('discount_threshold'), current['discount_threshold'], Decimal('0.00'), Decimal('1000.00')),
             'discount_amount': _parse_money(request.POST.get('discount_amount'), current['discount_amount'], Decimal('0.00'), Decimal('500.00')),
+            'rsp_multiplier': _parse_money(request.POST.get('rsp_multiplier'), current['rsp_multiplier'], Decimal('0.01'), Decimal('100.00')),
         }
 
         pricing_settings.minimum_order_total = parsed['minimum_order_total']
         pricing_settings.delivery_charge = parsed['delivery_charge']
         pricing_settings.discount_threshold = parsed['discount_threshold']
         pricing_settings.discount_amount = parsed['discount_amount']
+        pricing_settings.rsp_multiplier = parsed['rsp_multiplier']
         pricing_settings.save(
             update_fields=[
                 'minimum_order_total',
                 'delivery_charge',
                 'discount_threshold',
                 'discount_amount',
+                'rsp_multiplier',
                 'updated_at',
             ]
         )
@@ -1960,9 +1964,8 @@ def missing_rsp(request):
                 price__isnull=False,
             )
             for product in qs:
-                try:
-                    recommended = (product.price * Decimal('1.30')).quantize(Decimal('0.01'))
-                except Exception:
+                recommended = calculate_rsp_from_cost(product.price)
+                if recommended is None:
                     continue
                 if product.rsp != recommended:
                     product.rsp = recommended
@@ -2011,13 +2014,12 @@ def missing_rsp(request):
             return redirect('_product_management:missing_rsp')
 
         if apply_recommended:
-            # Set RSP to recommended: cost price * 1.3
+            # Set RSP to recommended: cost price * configured global multiplier
             if product.price is None:
                 messages.error(request, 'This product does not have a cost price set.')
             else:
-                try:
-                    recommended = (product.price * Decimal('1.30')).quantize(Decimal('0.01'))
-                except Exception:
+                recommended = calculate_rsp_from_cost(product.price)
+                if recommended is None:
                     messages.error(request, 'Could not calculate a recommended RSP for this product.')
                 else:
                     product.rsp = recommended
@@ -2051,11 +2053,8 @@ def missing_rsp(request):
         # Redirect to avoid double-post if user refreshes
         return redirect('_product_management:missing_rsp')
 
-    # Recommended RSP is cost price * 1.3
-    display_expr = ExpressionWrapper(
-        F('price') * Value(Decimal('1.30')),
-        output_field=DecimalField(max_digits=10, decimal_places=2),
-    )
+    # Recommended RSP is cost price * configured global multiplier
+    display_expr = build_rsp_expression()
     products = (
         All_Products.objects
         .filter(Q(rsp__isnull=True) | Q(rsp__lte=0))
@@ -2091,7 +2090,7 @@ def missing_retail_ean(request):
 def over_50_products(request):
     """List products whose displayed unit price exceeds £50.
 
-    Display price logic: use rsp when rsp > 0; else use price * 1.3.
+    Display price logic: use rsp when rsp > 0; else use cost price * the configured global multiplier.
     This mirrors the catalog view’s hiding logic.
     """
     from decimal import Decimal, InvalidOperation
@@ -2139,10 +2138,7 @@ def over_50_products(request):
             target = f"{target}?page={current_page}"
         return redirect(target)
 
-    display_expr = ExpressionWrapper(
-        F('price') * Value(Decimal('1.30')),
-        output_field=DecimalField(max_digits=10, decimal_places=2),
-    )
+    display_expr = build_rsp_expression()
     qs = (
         All_Products.objects
         .annotate(

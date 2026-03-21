@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static catalog_extras %}
+{% load static catalog_extras price_tags %}
 
 {% block title %}{{ product.name }}{% endblock %}
 
@@ -46,16 +46,16 @@
     <h1 class="pd-title">{{ product.name }}</h1>
     <div class="pd-price-row">
       {% if user.is_superuser %}
-      <span class="pd-price">£{{ product.price|floatformat:2 }}</span>
+      <span class="pd-price">&pound;{{ product.price|floatformat:2 }}</span>
       {% endif %}
-      {% if product.rsp %}
-      <span class="pd-rsp">£{{ product.rsp|floatformat:2 }}</span>
+      {% if product|display_rsp > 0 %}
+      <span class="pd-rsp">&pound;{{ product|display_rsp|floatformat:2 }}</span>
       {% endif %}
     </div>
 
-    {% if product.is_bulk and product.bulk_total_price %}
+    {% if product.is_bulk and product|display_bulk_total %}
     <div class="pd-pack-info">
-      Pack total &pound;{{ product.bulk_total_price|floatformat:2 }} for {{ product.pack_amount }} units
+      Pack total &pound;{{ product|display_bulk_total|floatformat:2 }} for {{ product.pack_amount }} units
     </div>
     {% endif %}
 

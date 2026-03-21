@@ -7,6 +7,31 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  .cart-favorite-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.92);
+    color: #e53935;
+    border: 1px solid #ddd;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    z-index: 3;
+  }
+  .cart-favorite-btn:hover {
+    background: #fff;
+  }
+  .cart-favorite-btn .favorite-emoji {
+    font-size: 1rem;
+    line-height: 1;
+  }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -45,6 +70,14 @@
                 {% if item.product.is_bulk %}
                   <span class="cart-bulk-badge">Bulk item</span>
                 {% endif %}
+                <button
+                  type="button"
+                  class="btn btn-sm cart-favorite-btn"
+                  data-product-id="{{ item.product.id }}"
+                  aria-label="Toggle favorite for {{ item.product.name }}"
+                >
+                  <span class="favorite-emoji">{% if item.product.is_favourite %}&#9829;{% else %}&#9825;{% endif %}</span>
+                </button>
                 {% if item.product.image_url %}
                   <a href="{% url 'product_detail' item.product.pk %}"
                      class="d-inline-block hover-tip"
@@ -148,4 +181,70 @@
     </section>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i += 1) {
+        const cookie = cookies[i].trim();
+        if (cookie.startsWith(name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const buttons = document.querySelectorAll('.cart-favorite-btn');
+    if (!buttons.length) return;
+
+    buttons.forEach((button) => {
+      button.addEventListener('click', function () {
+        const productId = this.dataset.productId;
+        if (!productId) return;
+
+        fetch('{% url "product_favorite_toggle" %}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+          body: new URLSearchParams({ product_id: productId }),
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (!data.success) {
+            console.error('Product favorite toggle failed', data.error || data);
+            return;
+          }
+
+          const emoji = this.querySelector('.favorite-emoji');
+          if (emoji) {
+            emoji.innerHTML = data.is_favourite ? '&#9829;' : '&#9825;';
+          }
+
+          const status = data.is_favourite ? 'added to' : 'removed from';
+          const toast = document.createElement('div');
+          toast.className = 'alert alert-primary alert-dismissible fade show position-fixed bottom-0 end-0 m-3';
+          toast.style.zIndex = '1100';
+          toast.setAttribute('role', 'alert');
+          toast.innerHTML = `Product ${status} favorites. <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+          document.body.appendChild(toast);
+          setTimeout(() => toast.classList.remove('show'), 2500);
+          setTimeout(() => toast.remove(), 3000);
+        })
+        .catch((err) => {
+          console.error('Error toggling product favorite', err);
+        });
+      });
+    });
+  });
+</script>
 {% endblock %}
