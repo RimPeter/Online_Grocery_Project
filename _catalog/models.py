@@ -92,11 +92,11 @@ class All_Products(models.Model):
 
     @property
     def bulk_total_price(self):
-        """Total price for the full pack at RSP (rsp * pack_amount)."""
+        """Total price for the bulk item at RSP."""
         if self.rsp is None:
             return None
         try:
-            return self.rsp * self.pack_amount()
+            return self.rsp
         except Exception:
             return None
 

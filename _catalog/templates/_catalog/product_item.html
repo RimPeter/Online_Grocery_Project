@@ -85,8 +85,8 @@
 
       {% if product|display_rsp > 0 %}
         {% if product.is_bulk %}
-          <p class="card-text product-price-main">&pound;{{ product|display_rsp|floatformat:2 }}<span>/item</span></p>
-          <p class="card-text product-pack-note">Pack of {{ product.pack_amount }} | Total &pound;{{ product|display_bulk_total|floatformat:2 }}</p>
+          <p class="card-text product-price-main">&pound;{{ product|display_rsp|floatformat:2 }}</p>
+          <p class="card-text product-pack-note">Pack of {{ product.pack_amount }}</p>
         {% else %}
           <p class="card-text product-price-main">&pound;{{ product|display_rsp|floatformat:2 }}</p>
         {% endif %}

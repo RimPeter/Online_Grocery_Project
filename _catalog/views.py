@@ -827,8 +827,8 @@ def product_list(request):
     )
 
     # If a category is selected but this strict DB filter yields no results,
-    # retry with a Python-side unit price calculation that divides by pack size
-    # inferred from the variant text. This avoids hiding valid multipacks.
+    # retry with a Python-side display price calculation using the same
+    # derived-RSP fallback as the rest of the storefront.
     if (l1n or l2n):
         try:
             has_results = products.exists()
@@ -843,13 +843,9 @@ def product_list(request):
                     if p.rsp is not None and Decimal(str(p.rsp)) > Decimal('0'):
                         display_val = Decimal(str(p.rsp))
                     else:
-                        try:
-                            pack = max(1, int(p.pack_amount()))
-                        except Exception:
-                            pack = 1
                         price_val = Decimal(str(getattr(p, 'price', '0') or '0'))
                         raw_rsp = calculate_rsp_from_cost(price_val)
-                        display_val = (raw_rsp / Decimal(pack)) if raw_rsp is not None else Decimal('0.00')
+                        display_val = raw_rsp if raw_rsp is not None else Decimal('0.00')
                     if display_val <= Decimal('50.00'):
                         recovered.append(p)
                 except Exception:
@@ -1016,13 +1012,6 @@ def cart_view(request):
                 if base_unit is None:
                     base_unit = product.rsp if (product.rsp is not None and product.rsp > 0) else product.price
                 price_dec = Decimal(str(base_unit))
-                # For bulk items, charge for the whole pack (multiply by pack size)
-                try:
-                    pack = int(product.pack_amount()) if callable(product.pack_amount) else int(getattr(product, 'pack_amount', 1) or 1)
-                except Exception:
-                    pack = 1
-                if pack > 1:
-                    price_dec *= Decimal(pack)
                 qty = int(quantity)
                 item_total = price_dec * qty
                 total_price += item_total
@@ -1049,12 +1038,6 @@ def cart_view(request):
             if base_unit is None:
                 base_unit = product.rsp if (product.rsp is not None and product.rsp > 0) else product.price
             price_dec = Decimal(str(base_unit))
-            try:
-                pack = int(product.pack_amount()) if callable(product.pack_amount) else int(getattr(product, 'pack_amount', 1) or 1)
-            except Exception:
-                pack = 1
-            if pack > 1:
-                price_dec *= Decimal(pack)
             OrderItem.objects.create(
                 order=order,
                 product=product,

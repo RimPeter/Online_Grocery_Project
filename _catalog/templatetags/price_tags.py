@@ -41,16 +41,11 @@ def display_rsp(product):
 
 @register.filter
 def display_bulk_total(product):
-    """Compute bulk total using display_rsp fallback times pack_amount."""
+    """Return the bulk item's displayed total price."""
     if not product:
         return Decimal('0.00')
-    unit = display_rsp(product)
     try:
-        pack = int(product.pack_amount()) if callable(product.pack_amount) else int(getattr(product, 'pack_amount', 1) or 1)
-    except Exception:
-        pack = 1
-    try:
-        return (unit * Decimal(pack)).quantize(Decimal('0.01'))
+        return display_rsp(product).quantize(Decimal('0.01'))
     except Exception:
         return Decimal('0.00')
 

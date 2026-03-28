@@ -53,9 +53,9 @@
       {% endif %}
     </div>
 
-    {% if product.is_bulk and product|display_bulk_total %}
+    {% if product.is_bulk %}
     <div class="pd-pack-info">
-      Pack total &pound;{{ product|display_bulk_total|floatformat:2 }} for {{ product.pack_amount }} units
+      Bulk pack of {{ product.pack_amount }} units
     </div>
     {% endif %}
 

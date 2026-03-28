@@ -2,6 +2,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from .models import All_Products, HomeCategoryTileFavorite, ProductFavorite
+from .templatetags.price_tags import display_bulk_total, display_rsp
 
 
 class HomeCategoryFavoritesTests(TestCase):
@@ -137,4 +138,33 @@ class HomeCategoryFavoritesTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn('cart_items', resp.context)
         self.assertTrue(resp.context['cart_items'][0]['product'].is_favourite)
+
+    def test_bulk_items_use_rsp_without_pack_multiplier(self):
+        bulk_product = All_Products.objects.create(
+            ga_product_id='bulk-test-1',
+            name='Bulk Test Item',
+            price='2.00',
+            main_category='Groceries',
+            sub_category='Produce',
+            sub_subcategory='Fruit',
+            variant='1L x 6 x 1',
+            list_position=2,
+            url='http://example.com/bulk-test',
+            image_url='http://example.com/bulk-image.png',
+            sku='BULK123',
+            is_visible_to_customers=True,
+        )
+
+        self.client.login(username='testuser', password='testpass')
+        session = self.client.session
+        session['cart'] = {str(bulk_product.id): 2}
+        session.save()
+
+        resp = self.client.get(reverse('cart_view'))
+        self.assertEqual(resp.status_code, 200)
+
+        expected_unit_price = display_rsp(bulk_product)
+        self.assertEqual(display_bulk_total(bulk_product), expected_unit_price)
+        self.assertEqual(resp.context['cart_items'][0]['unit_price'], expected_unit_price)
+        self.assertEqual(resp.context['total_price'], expected_unit_price * 2)
 

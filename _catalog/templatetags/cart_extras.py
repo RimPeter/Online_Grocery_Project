@@ -57,14 +57,6 @@ def cart_total_value(context):
         except Exception:
             continue
 
-        try:
-            pack = int(product.pack_amount()) if callable(product.pack_amount) else int(getattr(product, 'pack_amount', 1) or 1)
-        except Exception:
-            pack = 1
-
-        if pack > 1:
-            unit_price *= Decimal(pack)
-
         total += unit_price * quantity
 
     pricing = calculate_checkout_totals(total, has_items=total > 0)

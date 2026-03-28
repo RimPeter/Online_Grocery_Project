@@ -1014,7 +1014,7 @@ def items_to_order(request):
         )
         .order_by('product__name')
     )
-    # Enrich items to adjust RSP for bulk items (use bulk pack price instead of per-item RSP)
+    # Enrich items to expose the displayed RSP used across reporting.
     items = list(items_qs)
     if items:
         prod_ids = [it['product_id'] for it in items]
@@ -1080,7 +1080,7 @@ def items_to_order(request):
             except Exception:
                 it['net_profit'] = None
 
-            # Accumulate totals using pack-aware logic
+            # Accumulate totals using the stored per-product pricing.
             try:
                 qty = int(it.get('total_qty') or 0)
             except Exception:
@@ -1094,16 +1094,9 @@ def items_to_order(request):
                     it['net_profit_total'] = it.get('net_profit')
             except Exception:
                 it['net_profit_total'] = it.get('net_profit')
-            pack_mult = 1
-            try:
-                if p and p.is_bulk:
-                    pack_mult = int(p.pack_amount()) or 1
-            except Exception:
-                pack_mult = 1
-
-            # Cost (net) per ordered unit/pack
+            # Cost (net) per ordered product line
             price_net = p.price if (p and p.price is not None) else Decimal('0')
-            cost_net_line = price_net * Decimal(pack_mult) * Decimal(qty)
+            cost_net_line = price_net * Decimal(qty)
 
             # Cost (gross) adds VAT for 'standard' only
             if p and getattr(p, 'vat_rate', None) == 'standard':
@@ -1111,7 +1104,7 @@ def items_to_order(request):
             else:
                 cost_gross_line = cost_net_line
 
-            # RSP gross per displayed logic (pack total if bulk)
+            # RSP gross per displayed logic
             rsp_gross_unit = None
             if display_rsp is not None:
                 rsp_gross_unit = Decimal(display_rsp)
@@ -1137,7 +1130,7 @@ def items_to_order(request):
             'sum_rsp_net': sum_rsp_net,
             'sum_net_profit': sum_net_profit,
         }
-    # Compute aggregate totals using the pack-aware sums above
+    # Compute aggregate totals using the sums above
     VAT_RATE = Decimal('0.20')
     totals_map = getattr(request, '_ito_totals', None) or {}
     total_purchase = totals_map.get('sum_cost_net') or Decimal('0')

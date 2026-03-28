@@ -70,26 +70,20 @@ def delivery_slots_view(request):
     pricing_settings = get_basket_pricing_settings()
     MIN_ORDER_TOTAL = pricing_settings['minimum_order_total']
 
-    # Compute current cart total from session (pack-aware)
+    # Compute current cart total from session.
     cart = request.session.get('cart', {})
     total_price = Decimal('0.00')
     if cart:
         product_ids = list(cart.keys())
         products = All_Products.objects.filter(pk__in=product_ids)
-        # Use RSP when available; fallback to product cost price; multiply by pack size for bulk
-        pack_price_by_id = {}
+        # Use RSP when available; fallback to product cost price.
+        price_by_id = {}
         for p in products:
             base = p.rsp if (getattr(p, 'rsp', None) is not None and p.rsp > 0) else p.price
             price_dec = Decimal(str(base))
-            try:
-                pack = int(p.pack_amount()) if callable(p.pack_amount) else int(getattr(p, 'pack_amount', 1) or 1)
-            except Exception:
-                pack = 1
-            if pack > 1:
-                price_dec *= Decimal(pack)
-            pack_price_by_id[str(p.pk)] = price_dec
+            price_by_id[str(p.pk)] = price_dec
         for pid, qty in cart.items():
-            price = pack_price_by_id.get(str(pid))
+            price = price_by_id.get(str(pid))
             if price is not None:
                 try:
                     q = int(qty)
@@ -132,12 +126,6 @@ def delivery_slots_view(request):
             quantity = int(cart.get(str(product.pk), 0) or 0)
             base = product.rsp if (getattr(product, 'rsp', None) is not None and product.rsp > 0) else product.price
             price_dec = Decimal(str(base))
-            try:
-                pack = int(product.pack_amount()) if callable(product.pack_amount) else int(getattr(product, 'pack_amount', 1) or 1)
-            except Exception:
-                pack = 1
-            if pack > 1:
-                price_dec *= Decimal(pack)
             total_price += price_dec * quantity
 
         order = Order.objects.create(
@@ -150,12 +138,6 @@ def delivery_slots_view(request):
             quantity = int(cart.get(str(product.pk), 0) or 0)
             base = product.rsp if (getattr(product, 'rsp', None) is not None and product.rsp > 0) else product.price
             price_dec = Decimal(str(base))
-            try:
-                pack = int(product.pack_amount()) if callable(product.pack_amount) else int(getattr(product, 'pack_amount', 1) or 1)
-            except Exception:
-                pack = 1
-            if pack > 1:
-                price_dec *= Decimal(pack)
             OrderItem.objects.create(
                 order=order,
                 product=product,
