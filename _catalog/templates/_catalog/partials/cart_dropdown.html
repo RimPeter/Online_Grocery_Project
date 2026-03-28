@@ -1,26 +1,37 @@
 {% load static %}
 {% if items %}
-  <div style='min-width: 240px; max-width: 360px;'>
-    <div class='cart-body p-2 d-flex flex-wrap gap-2'>
+  <div class='cart-preview'>
+    <div class='cart-preview-head'>
+      <div>
+        <p class='cart-preview-kicker'>Basket preview</p>
+        <p class='cart-preview-title'>{{ items|length }} item{{ items|length|pluralize }} ready</p>
+      </div>
+    </div>
+    <div class='cart-preview-grid'>
       {% for it in items %}
-        <a href="{% url 'product_detail' it.product.pk %}" class='d-inline-block'>
+        <a href="{% url 'product_detail' it.product.pk %}" class='cart-preview-item'>
           {% if it.product.image_url %}
-            <img src='{{ it.product.image_url }}' alt='' class='rounded' style='width: 56px; height: 56px; object-fit: cover;'>
+            <img src='{{ it.product.image_url }}' alt='{{ it.product.name }}' class='cart-preview-thumb'>
           {% else %}
-            <img src="{% static 'images/default_product.jpg' %}" alt='' class='rounded' style='width: 56px; height: 56px; object-fit: cover;'>
+            <img src="{% static 'images/default_product.jpg' %}" alt='{{ it.product.name }}' class='cart-preview-thumb'>
           {% endif %}
+          <span class='cart-preview-qty'>{{ it.qty }}</span>
         </a>
       {% endfor %}
     </div>
-    <div class='cart-footer p-2 border-top text-center bg-white'>
-      <a href="{% url 'cart_view' %}" class='btn btn-sm btn-primary w-100'>View cart</a>
+    <div class='cart-preview-foot'>
+      <a href="{% url 'cart_view' %}" class='btn btn-sm btn-primary w-100 cart-preview-action'>View cart</a>
     </div>
   </div>
 {% else %}
-  <div style='min-width: 220px; max-width: 280px;'>
-    <div class='p-2 text-center text-muted small'>No items yet</div>
-    <div class='cart-footer p-2 border-top text-center bg-white'>
-      <a href="{% url 'cart_view' %}" class='btn btn-sm btn-outline-primary w-100'>Go to cart</a>
+  <div class='cart-preview cart-preview-empty'>
+    <div class='cart-preview-empty-copy'>
+      <p class='cart-preview-kicker'>Basket preview</p>
+      <p class='cart-preview-title'>No items yet</p>
+      <p class='cart-preview-empty-note'>Start shopping and your saved picks will show up here.</p>
+    </div>
+    <div class='cart-preview-foot'>
+      <a href="{% url 'cart_view' %}" class='btn btn-sm btn-outline-primary w-100 cart-preview-action cart-preview-action-alt'>Go to cart</a>
     </div>
   </div>
 {% endif %}

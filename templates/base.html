@@ -78,7 +78,7 @@
             <a class="nav-link navbar-button {% if url_name == 'product_list' %}active{% endif %}" {% if url_name == 'product_list' %}aria-current="page"{% endif %} href="{% url 'product_list' %}">Products</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link navbar-button {% if url_name == 'favorite_products' %}active{% endif %}" {% if url_name == 'favorite_products' %}aria-current="page"{% endif %} href="{% url 'favorite_products' %}" aria-label="View favorite products">Favorites ♥</a>
+            <a class="nav-link navbar-button {% if url_name == 'favorite_products' %}active{% endif %}" {% if url_name == 'favorite_products' %}aria-current="page"{% endif %} href="{% url 'favorite_products' %}" aria-label="View favorite products">Favorites &#9829;</a>
           </li>
           {% if user.is_superuser %}
           <li class="nav-item dropdown">
@@ -229,16 +229,19 @@
     </nav>
 
     <!-- Main Content -->
-    <div class="container mt-4">
-      {% block content %}
-      <!-- Page-specific content goes here -->
-      {% endblock %}
-    </div>
+    <main class="site-shell">
+      <div class="container mt-4 site-main">
+        {% block content %}
+        <!-- Page-specific content goes here -->
+        {% endblock %}
+      </div>
+    </main>
 
     <!-- Footer -->
-    <footer class="footer bg-light mt-auto py-3">
-      <div class="container text-center">
-        <span class="text-muted">© {% now "Y" %} Online Grocery Store</span>
+    <footer class="footer mt-auto py-3">
+      <div class="container text-center footer-inner">
+        <p class="footer-title mb-1">Online Grocery</p>
+        <span class="text-muted">&copy; {% now "Y" %} Weekly essentials with a fresh market feel.</span>
       </div>
     </footer>
 

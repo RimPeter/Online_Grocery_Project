@@ -7,7 +7,6 @@
 <link rel='preconnect' href='https://fonts.googleapis.com'>
 <link rel='preconnect' href='https://fonts.gstatic.com' crossorigin>
 <link href='https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap' rel='stylesheet'>
-<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css' integrity='sha512-M9uG/xXXNLf4uB9rMxQn4EWKs0qqP9ZUP9yxax3tBjEsU6YV4qzLBGL+DJgPtFLiTeUvG5L9uazv7D0R8xWGjkQ==' crossorigin='anonymous' referrerpolicy='no-referrer' />
 {% endblock %}
 
 {% block content %}
@@ -19,40 +18,59 @@
         <div class='mini-intro'>New shoppers get faster checkout</div>
         {% endif %}
 
-        <h1 class='hero-title'>Fresh groceries, chosen well and delivered on time.</h1>
-        <p class='hero-copy'>Build your basket in minutes from everyday essentials to family favorites, with pricing you can trust and delivery windows that fit your week.</p>
+        <p class='hero-kicker'>Produce-market inspired grocery shopping</p>
+        <h1 class='hero-title'>A warmer, fresher home page for the weekly shop.</h1>
+        <p class='hero-copy'>From crisp veg and family staples to freezer fillers and household basics, build a full basket in one place with dependable delivery and an aisle-first browsing flow.</p>
 
         <div class='hero-actions'>
-          <a href="{% url 'product_list' %}" class='hero-btn-main'>Start shopping</a>
+          <a href="{% url 'product_list' %}" class='hero-btn-main'>Shop the catalog</a>
           {% if not user.is_authenticated %}
           <a href="{% url 'signup' %}" class='hero-btn-alt'>Create account</a>
           {% endif %}
         </div>
 
+        <div class='hero-badges'>
+          <span class='hero-badge'>Fresh produce feel</span>
+          <span class='hero-badge'>Pantry to freezer</span>
+          <span class='hero-badge'>Easy repeat baskets</span>
+        </div>
+
         <ul class='hero-metrics'>
           <li>
-            <span class='metric-value'>Flexible slots</span>
-            <span class='metric-label'>Delivery windows across the week</span>
+            <span class='metric-value'>Flexible delivery</span>
+            <span class='metric-label'>Pick a slot that fits around your routine</span>
           </li>
           <li>
-            <span class='metric-value'>Easy repeat orders</span>
-            <span class='metric-label'>Reorder your staples in seconds</span>
+            <span class='metric-value'>Favorite your aisles</span>
+            <span class='metric-label'>Keep the sections you shop most close by</span>
           </li>
           <li>
-            <span class='metric-value'>Curated range</span>
-            <span class='metric-label'>Produce, pantry, frozen and more</span>
+            <span class='metric-value'>Full-basket range</span>
+            <span class='metric-label'>Produce, pantry, frozen and household essentials</span>
           </li>
         </ul>
       </div>
 
       <div class='col-lg-5'>
-        <figure class='hero-media mb-0'>
-          <img src="{% static 'images/fresh_products.jpg' %}" alt='Colorful grocery produce'>
-          <figcaption class='delivery-chip'>
-            <strong>Today&apos;s drop windows</strong>
-            <span>Book at checkout while slots last</span>
-          </figcaption>
-        </figure>
+        <div class='hero-visual-stack'>
+          <figure class='hero-media mb-0'>
+            <img src="{% static 'images/fresh_products.jpg' %}" alt='Colorful grocery produce'>
+            <figcaption class='delivery-chip'>
+              <strong>Today&apos;s drop windows</strong>
+              <span>Reserve your slot during checkout</span>
+            </figcaption>
+          </figure>
+
+          <div class='hero-panel hero-panel-top'>
+            <span class='hero-panel-label'>Basket mood</span>
+            <strong>Bright produce, dependable staples, one smooth checkout.</strong>
+          </div>
+
+          <div class='hero-panel hero-panel-bottom'>
+            <span class='hero-panel-label'>Built for regular shops</span>
+            <p>Browse by aisle, save favorites, and come back to the categories your household orders every week.</p>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -61,7 +79,7 @@
     <div class='section-top'>
       <div>
         <p class='section-kicker'>Why Customers Return</p>
-        <h2 class='section-title'>Service built around real weekly shopping.</h2>
+        <h2 class='section-title'>A layout shaped around real grocery habits.</h2>
       </div>
       <a class='section-link' href="{% url 'product_list' %}">Explore full catalog</a>
     </div>
@@ -103,14 +121,25 @@
     </div>
   </section>
 
-  <section>
+  <section class='browse-shell'>
     <div class='section-top'>
       <div>
         <p class='section-kicker'>Browse By Aisle</p>
-        <h2 class='section-title'>Pick a section and jump straight in.</h2>
+        <h2 class='section-title'>Jump into the parts of the shop that matter most.</h2>
       </div>
       <a class='section-link' href="{% url 'product_list' %}">All products</a>
     </div>
+
+    <div class='browse-lead'>
+      <p class='browse-copy'>The homepage now leans into a warmer market-stall feel, with aisle groups front and center so regular shoppers can get from inspiration to basket faster.</p>
+      <div class='browse-tags'>
+        <span class='browse-tag'>Fruit &amp; veg</span>
+        <span class='browse-tag'>Dinner staples</span>
+        <span class='browse-tag'>Snacks &amp; drinks</span>
+        <span class='browse-tag'>Household basics</span>
+      </div>
+    </div>
+
     {% if favorite_tiles %}
       <div class='favorites-section'>
         <div class='section-top'>
@@ -131,8 +160,8 @@
                   <img src="{% static 'images/default_product.jpg' %}" alt='{{ sc.name }}'>
                 {% endif %}
                 {% if user.is_authenticated %}
-                  <button type='button' class='favorite-btn' data-l1='{{ sc.l1 }}' data-l2='{{ sc.l2 }}' aria-label='Toggle favorite'>
-                    <span class='favorite-emoji'>{% if sc.is_favourite %}❤️{% else %}♡{% endif %}</span>
+                  <button type='button' class='favorite-btn' data-l1='{{ sc.l1 }}' data-l2='{{ sc.l2 }}' aria-label='Toggle favorite' aria-pressed='{{ sc.is_favourite|yesno:"true,false" }}'>
+                    <span class='favorite-emoji'>{% if sc.is_favourite %}&#9829;{% else %}&#9825;{% endif %}</span>
                   </button>
                 {% endif %}
                 <span class='tile-chip'>{{ sc.l1 }}</span>
@@ -147,11 +176,15 @@
         </div>
       </div>
     {% endif %}
+
     {% if category_groups %}
       {% for group in category_groups %}
       <div class='group-block'>
         <div class='group-header'>
-          <h3 class='group-name'>{{ group.label }}</h3>
+          <div>
+            <p class='group-eyebrow'>{{ group.items|length }} aisles ready</p>
+            <h3 class='group-name'>{{ group.label }}</h3>
+          </div>
           <a class='group-link' href="{% url 'product_list' %}?l1={{ group.l1|urlencode }}">View all</a>
         </div>
 
@@ -166,8 +199,8 @@
                   <img src="{% static 'images/default_product.jpg' %}" alt='{{ sc.name }}'>
                 {% endif %}
                 {% if user.is_authenticated %}
-                  <button type='button' class='favorite-btn' data-l1='{{ sc.l1 }}' data-l2='{{ sc.l2 }}' aria-label='Toggle favorite'>
-                    <span class='favorite-emoji'>{% if sc.is_favourite %}❤️{% else %}♡{% endif %}</span>
+                  <button type='button' class='favorite-btn' data-l1='{{ sc.l1 }}' data-l2='{{ sc.l2 }}' aria-label='Toggle favorite' aria-pressed='{{ sc.is_favourite|yesno:"true,false" }}'>
+                    <span class='favorite-emoji'>{% if sc.is_favourite %}&#9829;{% else %}&#9825;{% endif %}</span>
                   </button>
                 {% endif %}
                 <span class='tile-chip'>{{ sc.l1 }}</span>
@@ -184,6 +217,13 @@
       {% endfor %}
     {% elif subcats %}
       <div class='group-block'>
+        <div class='group-header'>
+          <div>
+            <p class='group-eyebrow'>All aisles</p>
+            <h3 class='group-name'>Shop every category</h3>
+          </div>
+        </div>
+
         <div class='row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3'>
           {% for sc in subcats %}
           <div class='col'>
@@ -195,8 +235,8 @@
                   <img src="{% static 'images/default_product.jpg' %}" alt='{{ sc.name }}'>
                 {% endif %}
                 {% if user.is_authenticated %}
-                  <button type='button' class='favorite-btn' data-l1='{{ sc.l1 }}' data-l2='{{ sc.l2 }}' aria-label='Toggle favorite'>
-                    <span class='favorite-emoji'>{% if sc.is_favourite %}❤️{% else %}♡{% endif %}</span>
+                  <button type='button' class='favorite-btn' data-l1='{{ sc.l1 }}' data-l2='{{ sc.l2 }}' aria-label='Toggle favorite' aria-pressed='{{ sc.is_favourite|yesno:"true,false" }}'>
+                    <span class='favorite-emoji'>{% if sc.is_favourite %}&#9829;{% else %}&#9825;{% endif %}</span>
                   </button>
                 {% endif %}
                 <span class='tile-chip'>{{ sc.l1 }}</span>
@@ -217,14 +257,17 @@
 
   {% if not user.is_authenticated %}
   <section class='signup-band'>
-    <p>New here? Create your account now for quicker checkout and easier order tracking.</p>
-    <a href="{% url 'signup' %}" class='btn btn-success'>Sign up</a>
+    <div>
+      <p class='signup-band-kicker'>Create your account</p>
+      <p class='signup-band-copy'>Save favorite aisles, check out faster, and keep your regular weekly basket easy to rebuild.</p>
+    </div>
+    <a href="{% url 'signup' %}" class='signup-band-btn'>Sign up</a>
   </section>
   {% endif %}
 
   <div id='favorite-toast' class='favorite-toast' aria-live='polite' aria-atomic='true' hidden>
     <span id='favorite-toast-message'>Favorited.</span>
-    <button id='favorite-toast-undo' class='btn btn-link btn-sm'>Undo</button>
+    <button id='favorite-toast-undo' class='favorite-toast-undo' type='button'>Undo</button>
   </div>
 </div>
 {% endblock %}
@@ -249,7 +292,8 @@ function getCookie(name) {
 function updateHeartIcon(button, isFavourite) {
     const emoji = button.querySelector('.favorite-emoji');
     if (!emoji) return;
-    emoji.textContent = isFavourite ? '❤️' : '♡';
+    emoji.textContent = isFavourite ? '\u2665' : '\u2661';
+    button.setAttribute('aria-pressed', isFavourite ? 'true' : 'false');
 }
 
 function showToast(message, undoCallback) {
@@ -321,7 +365,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         }).catch(err => console.error('Undo request failed', err));
                     });
 
-                    // Refresh the page to make UI state consistent and move modified tile to favorites section.
                     setTimeout(() => {
                         window.location.reload();
                     }, 400);
@@ -335,41 +378,4 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-
-<style>
-.category-tile .favorite-btn {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    z-index: 5;
-    background: rgba(255, 255, 255, 0.85);
-    border: 1px solid #ddd;
-    border-radius: 50%;
-    width: 34px;
-    height: 34px;
-    display: grid;
-    place-items: center;
-    cursor: pointer;
-    color: #ff4d4f;
-}
-..category-tile .favorite-btn i {
-    font-size: 0.85rem;
-}
-.category-tile .favorite-btn .favorite-emoji {
-    font-size: 1rem;
-    line-height: 1;
-}
-.category-tile .favorite-btn:hover {
-    background: rgba(255, 255, 255, 1);
-}
-
-.favorites-section {
-    margin-bottom: 1.25rem;
-}
-
-.favorites-section .section-top {
-    margin-bottom: 0.75rem;
-}
-</style>
 {% endblock %}
-

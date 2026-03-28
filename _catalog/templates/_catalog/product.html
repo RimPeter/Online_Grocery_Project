@@ -12,9 +12,9 @@
 <style>
   .product-favorite-btn {
     border-radius: 999px;
-    background: rgba(255,255,255,0.9);
-    color: #e53935;
-    border: 1px solid #ddd;
+    background: rgba(255, 250, 245, 0.95);
+    color: #c85a27;
+    border: 1px solid rgba(224, 201, 180, 0.95);
     width: 36px;
     height: 36px;
     display: flex;
@@ -24,7 +24,8 @@
     z-index: 5;
   }
   .product-favorite-btn:hover {
-    background: rgba(255,255,255,1);
+    background: #ffffff;
+    color: #a9471c;
   }
   .product-favorite-btn .favorite-emoji {
     font-size: 1rem;
@@ -874,7 +875,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
           const emoji = this.querySelector('.favorite-emoji');
           if (emoji) {
-            emoji.textContent = data.is_favourite ? '❤️' : '♡';
+            emoji.textContent = data.is_favourite ? '\u2665' : '\u2661';
           }
 
           const status = data.is_favourite ? 'added to' : 'removed from';
