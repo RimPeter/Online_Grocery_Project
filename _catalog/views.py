@@ -12,7 +12,7 @@ from django.db.utils import DatabaseError
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse, Http404, HttpResponseForbidden
 from django.views.decorators.http import require_GET, require_POST
-from _analytics.tracking import track_event
+from _analytics.tracking import record_google_ads_landing_arrival, track_event
 from _orders.models import Order, OrderItem
 from _orders.pricing import calculate_checkout_totals
 from django.contrib.auth.decorators import login_required
@@ -192,7 +192,7 @@ def _manual_home_groups(auto_tiles):
     return manual_groups
 
 
-def home(request):
+def _build_home_context(request):
     auto_tiles = _auto_home_tiles()
     manual_groups = _manual_home_groups(auto_tiles)
     value_pillars = _home_value_pillars()
@@ -225,13 +225,22 @@ def home(request):
 
     favorite_tiles = [sc for sc in subcats if sc.get('is_favourite')]
 
-    return render(request, '_catalog/home_new.html', {
+    return {
         'subcats': subcats,
         'category_groups': category_groups,
         'home_tiles_are_manual': using_manual,
         'value_pillars': value_pillars,
         'favorite_tiles': favorite_tiles,
-    })
+    }
+
+
+def home(request):
+    return render(request, '_catalog/home_new.html', _build_home_context(request))
+
+
+def home_google(request):
+    record_google_ads_landing_arrival(request, path=request.path)
+    return render(request, '_catalog/home-google.html', _build_home_context(request))
 
 @require_POST
 @login_required

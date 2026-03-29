@@ -89,6 +89,20 @@
     backdrop-filter: blur(8px);
   }
 
+  .analytics-chip-link {
+    color: #fff;
+    text-decoration: none;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  }
+
+  .analytics-chip-link:hover,
+  .analytics-chip-link:focus-visible {
+    color: #fff;
+    background: rgba(255,255,255,0.18);
+    border-color: rgba(255,255,255,0.26);
+    transform: translateY(-1px);
+  }
+
   .analytics-control-grid {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -472,6 +486,7 @@
         <span class="analytics-chip">Previous-period comparison</span>
         <span class="analytics-chip">Device, browser, source, user filters</span>
         <span class="analytics-chip">Journey and conversion signals</span>
+        <a class="analytics-chip analytics-chip-link" href="{% url 'home_google' %}" target="_blank" rel="noopener">Open Google Ads landing page</a>
       </div>
 
       <div class="analytics-control-grid">
@@ -547,6 +562,24 @@
       <div class="card analytics-panel analytics-kpi"><div class="card-body"><div class="analytics-kpi-label">Active now</div><div id="kpiActiveUsers" class="analytics-kpi-value">-</div><div class="analytics-kpi-note">Visits seen in the last five minutes.</div></div></div>
       <div class="card analytics-panel analytics-kpi"><div class="card-body"><div class="analytics-kpi-label">Avg session</div><div id="kpiAvgSession" class="analytics-kpi-value">-</div><div class="analytics-kpi-note">Average seconds from session start to latest activity.</div></div></div>
       <div class="card analytics-panel analytics-kpi"><div class="card-body"><div class="analytics-kpi-label">Bounce rate</div><div id="kpiBounceRate" class="analytics-kpi-value">-</div><div id="kpiBounceNote" class="analytics-kpi-note">Single-page sessions across the selected window.</div></div></div>
+    </div>
+
+    <div class="card analytics-panel mt-3">
+      <div class="card-body">
+        <div class="analytics-panel-head">
+          <div>
+            <h2 class="analytics-panel-title">Google Ads landing arrivals</h2>
+            <p class="analytics-panel-copy">Daily arrivals to the `/home-google/` clone page. Superusers are excluded from this dataset.</p>
+          </div>
+          <div class="d-flex flex-column align-items-end gap-2">
+            <div id="googleAdsStatus" class="analytics-status"></div>
+            <div id="googleAdsArrivalsTotal" class="analytics-pill">0 arrivals</div>
+          </div>
+        </div>
+        <div class="analytics-chart-shell">
+          <canvas id="googleAdsArrivalsChart"></canvas>
+        </div>
+      </div>
     </div>
 
     <div class="row g-3 mt-1">
@@ -807,6 +840,7 @@
     const dashboardError = document.getElementById("dashboardError");
     const savedViewsRow = document.getElementById("savedViewsRow");
     const trendStatus = document.getElementById("trendStatus");
+    const googleAdsStatus = document.getElementById("googleAdsStatus");
     const pagesStatus = document.getElementById("pagesStatus");
     const detailStatus = document.getElementById("detailStatus");
 
@@ -998,6 +1032,90 @@
       ctx.fillText("Pageviews", padding.left + 110, h - 8);
     }
 
+    function drawSingleLineChart(canvas, rows, valueKey, emptyLabel, legendLabel) {
+      const ctx = canvas.getContext("2d");
+      const size = resizeCanvas(canvas, ctx);
+      const w = size.width;
+      const h = size.height;
+      ctx.clearRect(0, 0, w, h);
+
+      if (!rows || !rows.length) {
+        ctx.fillStyle = "#627181";
+        ctx.font = "14px sans-serif";
+        ctx.fillText(emptyLabel || "No data", 14, 28);
+        return;
+      }
+
+      const padding = { left: 48, right: 18, top: 16, bottom: 34 };
+      const chartW = Math.max(10, w - padding.left - padding.right);
+      const chartH = Math.max(10, h - padding.top - padding.bottom);
+      const maxVal = Math.max(1, ...rows.map((row) => Number(row[valueKey] || 0)));
+      const ticks = 4;
+      const yMax = Math.ceil(maxVal / ticks) * ticks || 4;
+
+      function xFor(index) {
+        if (rows.length === 1) return padding.left + chartW / 2;
+        return padding.left + (index / (rows.length - 1)) * chartW;
+      }
+
+      function yFor(value) {
+        return padding.top + (1 - Number(value || 0) / yMax) * chartH;
+      }
+
+      ctx.strokeStyle = "rgba(28,39,48,0.09)";
+      ctx.fillStyle = "#627181";
+      ctx.lineWidth = 1;
+      ctx.font = "12px sans-serif";
+      for (let index = 0; index <= ticks; index += 1) {
+        const yValue = (yMax / ticks) * index;
+        const y = yFor(yValue);
+        ctx.beginPath();
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(padding.left + chartW, y);
+        ctx.stroke();
+        ctx.fillText(String(Math.round(yValue)), 8, y + 4);
+      }
+
+      ctx.beginPath();
+      rows.forEach((row, index) => {
+        const x = xFor(index);
+        const y = yFor(row[valueKey]);
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = "rgba(216,122,47,0.98)";
+      ctx.lineWidth = 2.8;
+      ctx.stroke();
+
+      ctx.lineTo(xFor(rows.length - 1), padding.top + chartH);
+      ctx.lineTo(xFor(0), padding.top + chartH);
+      ctx.closePath();
+      ctx.fillStyle = "rgba(216,122,47,0.14)";
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(216,122,47,0.98)";
+      rows.forEach((row, index) => {
+        const x = xFor(index);
+        const y = yFor(row[valueKey]);
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      const labelEvery = Math.max(1, Math.ceil(rows.length / 7));
+      ctx.fillStyle = "#627181";
+      ctx.textAlign = "center";
+      for (let index = 0; index < rows.length; index += labelEvery) {
+        ctx.fillText(String(rows[index].day || "").slice(5), xFor(index), padding.top + chartH + 18);
+      }
+      ctx.textAlign = "start";
+
+      ctx.fillStyle = "rgba(216,122,47,0.98)";
+      ctx.fillRect(padding.left, h - 12, 12, 3);
+      ctx.fillStyle = "#1c2730";
+      ctx.fillText(legendLabel || "Arrivals", padding.left + 18, h - 8);
+    }
+
     function renderBars(containerId, rows, emptyText) {
       const el = document.getElementById(containerId);
       if (!rows || !rows.length) {
@@ -1044,6 +1162,7 @@
       document.getElementById("kpiAvgSession").textContent = formatSeconds(totals.avg_session_seconds);
       document.getElementById("kpiBounceRate").textContent = Number(totals.bounce_rate || 0).toFixed(1) + "%";
       document.getElementById("kpiBounceNote").textContent = "Avg dwell: " + formatSeconds(totals.avg_page_dwell_seconds);
+      document.getElementById("googleAdsArrivalsTotal").textContent = formatNumber(totals.google_ads_arrivals || 0) + " arrivals";
       renderDelta("kpiSessionsDelta", summary.comparison && summary.comparison.sessions);
       renderDelta("kpiVisitorsDelta", summary.comparison && summary.comparison.unique_visitors);
       renderDelta("kpiPageviewsDelta", summary.comparison && summary.comparison.pageviews);
@@ -1195,12 +1314,15 @@
         renderConversions(summary.conversion_totals || {});
         renderAnnotations(summary.annotations || []);
         drawDualLineChart(document.getElementById("trendChart"), summary.per_day || [], "sessions", "pageviews", "No trend data for the selected window.");
+        drawSingleLineChart(document.getElementById("googleAdsArrivalsChart"), summary.google_ads_arrivals_per_day || [], "arrivals", "No Google Ads landing arrivals for the selected window.", "Clone arrivals");
         trendStatus.textContent = summary.window.start + " to " + summary.window.end;
+        googleAdsStatus.textContent = summary.window.start + " to " + summary.window.end;
         await loadPages();
         await loadPageDetail(pageState.selectedPath || "/");
       } catch (error) {
         setError(error && error.message ? error.message : String(error));
         trendStatus.textContent = "Failed";
+        googleAdsStatus.textContent = "";
         pagesStatus.textContent = "";
         detailStatus.textContent = "";
       }
@@ -1282,6 +1404,7 @@
     window.addEventListener("resize", function () {
       if (lastSummary) {
         drawDualLineChart(document.getElementById("trendChart"), lastSummary.per_day || [], "sessions", "pageviews", "No trend data");
+        drawSingleLineChart(document.getElementById("googleAdsArrivalsChart"), lastSummary.google_ads_arrivals_per_day || [], "arrivals", "No Google Ads landing arrivals.", "Clone arrivals");
       }
       if (lastDetail) {
         drawDualLineChart(document.getElementById("pageDetailChart"), lastDetail.per_day || [], "sessions", "pageviews", "No drilldown data");

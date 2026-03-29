@@ -126,6 +126,42 @@ class AnalyticsEvent(models.Model):
         return f'{self.event_type} #{self.pk}'
 
 
+class GoogleAdsLandingArrival(models.Model):
+    visit = models.OneToOneField(
+        Visit,
+        on_delete=models.CASCADE,
+        related_name='google_ads_arrival',
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='google_ads_landing_arrivals',
+    )
+    session_key = models.CharField(max_length=40, blank=True, db_index=True)
+    path = models.CharField(max_length=2048, blank=True, db_index=True)
+    arrived_at = models.DateTimeField(db_index=True)
+    traffic_source = models.CharField(max_length=20, blank=True, choices=Visit.SOURCE_CHOICES, db_index=True)
+    device_type = models.CharField(max_length=20, blank=True, choices=Visit.DEVICE_CHOICES, db_index=True)
+    browser_family = models.CharField(max_length=50, blank=True, db_index=True)
+    is_authenticated = models.BooleanField(default=False, db_index=True)
+    utm_source = models.CharField(max_length=255, blank=True, db_index=True)
+    utm_medium = models.CharField(max_length=255, blank=True)
+    utm_campaign = models.CharField(max_length=255, blank=True, db_index=True)
+    referrer_host = models.CharField(max_length=255, blank=True, db_index=True)
+
+    class Meta:
+        ordering = ('-arrived_at',)
+        indexes = [
+            models.Index(fields=['path', 'arrived_at']),
+            models.Index(fields=['session_key', 'arrived_at']),
+        ]
+
+    def __str__(self):
+        return f'Google Ads arrival #{self.pk} ({self.path})'
+
+
 class AnalyticsAnnotation(models.Model):
     event_date = models.DateField(db_index=True)
     title = models.CharField(max_length=120)

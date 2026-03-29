@@ -9,7 +9,7 @@ from django.conf import settings
 from django.db import DatabaseError
 from django.utils import timezone
 
-from .models import AnalyticsEvent, Visit, VisitPageview
+from .models import AnalyticsEvent, GoogleAdsLandingArrival, Visit, VisitPageview
 
 
 TRACKED_UTM_KEYS = ('utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content')
@@ -355,5 +355,45 @@ def track_event(request, event_type: str, *, label: str = '', value=None, proper
             properties=properties or {},
         )
         return event
+    except DatabaseError:
+        return None
+
+
+def record_google_ads_landing_arrival(request, *, path: str | None = None):
+    try:
+        if not hasattr(request, 'session'):
+            return None
+
+        user = getattr(request, 'user', None)
+        if user and getattr(user, 'is_authenticated', False) and getattr(user, 'is_superuser', False):
+            return None
+
+        arrival_path = (path or getattr(request, 'path', '') or '').strip()
+        if not arrival_path:
+            return None
+
+        now = timezone.now()
+        visit, _ = get_or_create_active_visit(request, now=now, create=True)
+        if visit is None or (visit.landing_path or '').strip() != arrival_path:
+            return None
+
+        arrival, _ = GoogleAdsLandingArrival.objects.get_or_create(
+            visit=visit,
+            defaults={
+                'user': _get_user(request),
+                'session_key': request.session.session_key or '',
+                'path': arrival_path,
+                'arrived_at': now,
+                'traffic_source': (visit.traffic_source or '').strip(),
+                'device_type': (visit.device_type or '').strip(),
+                'browser_family': (visit.browser_family or '').strip(),
+                'is_authenticated': bool(_get_user(request)),
+                'utm_source': (visit.utm_source or '').strip(),
+                'utm_medium': (visit.utm_medium or '').strip(),
+                'utm_campaign': (visit.utm_campaign or '').strip(),
+                'referrer_host': (visit.referrer_host or '').strip(),
+            },
+        )
+        return arrival
     except DatabaseError:
         return None

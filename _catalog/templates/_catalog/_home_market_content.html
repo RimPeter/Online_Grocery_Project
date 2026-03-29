@@ -1,0 +1,261 @@
+{% load static %}
+<div class='market-home'>
+  <section class='hero-shell'>
+    <div class='row g-4 align-items-center'>
+      <div class='col-lg-7'>
+        {% if not user.is_authenticated %}
+        <div class='mini-intro'>New shoppers get faster checkout</div>
+        {% endif %}
+
+        <p class='hero-kicker'>Produce-market inspired grocery shopping</p>
+        <h1 class='hero-title'>A warmer, fresher home page for the weekly shop.</h1>
+        <p class='hero-copy'>From crisp veg and family staples to freezer fillers and household basics, build a full basket in one place with dependable delivery and an aisle-first browsing flow.</p>
+
+        <div class='hero-actions'>
+          <a href="{% url 'product_list' %}" class='hero-btn-main'>Shop the catalog</a>
+          {% if not user.is_authenticated %}
+          <a href="{% url 'signup' %}" class='hero-btn-alt'>Create account</a>
+          {% endif %}
+        </div>
+
+        <div class='hero-badges'>
+          <span class='hero-badge'>Fresh produce feel</span>
+          <span class='hero-badge'>Pantry to freezer</span>
+          <span class='hero-badge'>Easy repeat baskets</span>
+        </div>
+
+        <ul class='hero-metrics'>
+          <li>
+            <span class='metric-value'>Flexible delivery</span>
+            <span class='metric-label'>Pick a slot that fits around your routine</span>
+          </li>
+          <li>
+            <span class='metric-value'>Favorite your aisles</span>
+            <span class='metric-label'>Keep the sections you shop most close by</span>
+          </li>
+          <li>
+            <span class='metric-value'>Full-basket range</span>
+            <span class='metric-label'>Produce, pantry, frozen and household essentials</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class='col-lg-5'>
+        <div class='hero-visual-stack'>
+          <figure class='hero-media mb-0'>
+            <img src="{% static 'images/fresh_products.jpg' %}" alt='Colorful grocery produce'>
+            <figcaption class='delivery-chip'>
+              <strong>Today&apos;s drop windows</strong>
+              <span>Reserve your slot during checkout</span>
+            </figcaption>
+          </figure>
+
+          <div class='hero-panel hero-panel-top'>
+            <span class='hero-panel-label'>Basket mood</span>
+            <strong>Bright produce, dependable staples, one smooth checkout.</strong>
+          </div>
+
+          <div class='hero-panel hero-panel-bottom'>
+            <span class='hero-panel-label'>Built for regular shops</span>
+            <p>Browse by aisle, save favorites, and come back to the categories your household orders every week.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class='pillars-grid'>
+    <div class='section-top'>
+      <div>
+        <p class='section-kicker'>Why Customers Return</p>
+        <h2 class='section-title'>A layout shaped around real grocery habits.</h2>
+      </div>
+      <a class='section-link' href="{% url 'product_list' %}">Explore full catalog</a>
+    </div>
+
+    <div class='row g-3'>
+      {% if value_pillars %}
+        {% for pillar in value_pillars %}
+        <div class='col-12 col-md-6 col-lg-4'>
+          <article class='pillar-card' style='--seq: {{ forloop.counter0 }};'>
+            <span class='pillar-index'>{{ forloop.counter|stringformat:'02d' }}</span>
+            <h3 class='pillar-title'>{{ pillar.title }}</h3>
+            <p class='pillar-subtitle'>{{ pillar.subtitle }}</p>
+          </article>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class='col-12 col-md-6 col-lg-4'>
+          <article class='pillar-card' style='--seq: 0;'>
+            <span class='pillar-index'>01</span>
+            <h3 class='pillar-title'>Dependable local delivery</h3>
+            <p class='pillar-subtitle'>Choose a slot that suits your day and receive your order with clear updates.</p>
+          </article>
+        </div>
+        <div class='col-12 col-md-6 col-lg-4'>
+          <article class='pillar-card' style='--seq: 1;'>
+            <span class='pillar-index'>02</span>
+            <h3 class='pillar-title'>Everything in one basket</h3>
+            <p class='pillar-subtitle'>From produce to frozen meals, fill your shop in one smooth checkout flow.</p>
+          </article>
+        </div>
+        <div class='col-12 col-md-6 col-lg-4'>
+          <article class='pillar-card' style='--seq: 2;'>
+            <span class='pillar-index'>03</span>
+            <h3 class='pillar-title'>Fair pricing every day</h3>
+            <p class='pillar-subtitle'>Consistent value on essential products your household buys every week.</p>
+          </article>
+        </div>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class='browse-shell'>
+    <div class='section-top'>
+      <div>
+        <p class='section-kicker'>Browse By Aisle</p>
+        <h2 class='section-title'>Jump into the parts of the shop that matter most.</h2>
+      </div>
+      <a class='section-link' href="{% url 'product_list' %}">All products</a>
+    </div>
+
+    <div class='browse-lead'>
+      <p class='browse-copy'>The homepage now leans into a warmer market-stall feel, with aisle groups front and center so regular shoppers can get from inspiration to basket faster.</p>
+      <div class='browse-tags'>
+        <span class='browse-tag'>Fruit &amp; veg</span>
+        <span class='browse-tag'>Dinner staples</span>
+        <span class='browse-tag'>Snacks &amp; drinks</span>
+        <span class='browse-tag'>Household basics</span>
+      </div>
+    </div>
+
+    {% if favorite_tiles %}
+      <div class='favorites-section'>
+        <div class='section-top'>
+          <div>
+            <p class='section-kicker'>My Favorites</p>
+            <h2 class='section-title'>Your saved aisles</h2>
+          </div>
+        </div>
+
+        <div class='row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3'>
+          {% for sc in favorite_tiles %}
+          <div class='col'>
+            <a href="{% url 'product_list' %}?l1={{ sc.l1|urlencode }}&l2={{ sc.l2|urlencode }}" class='category-tile' style='--seq: {{ forloop.counter0 }};'>
+              <div class='tile-image-wrap'>
+                {% if sc.image_url %}
+                  <img src='{{ sc.image_url }}' alt='{{ sc.name }}'>
+                {% else %}
+                  <img src="{% static 'images/default_product.jpg' %}" alt='{{ sc.name }}'>
+                {% endif %}
+                {% if user.is_authenticated %}
+                  <button type='button' class='favorite-btn' data-l1='{{ sc.l1 }}' data-l2='{{ sc.l2 }}' aria-label='Toggle favorite' aria-pressed='{{ sc.is_favourite|yesno:"true,false" }}'>
+                    <span class='favorite-emoji'>{% if sc.is_favourite %}&#9829;{% else %}&#9825;{% endif %}</span>
+                  </button>
+                {% endif %}
+                <span class='tile-chip'>{{ sc.l1 }}</span>
+              </div>
+              <div class='tile-body'>
+                <h4 class='tile-name'>{{ sc.name }}</h4>
+                <p class='tile-sub'>Open category</p>
+              </div>
+            </a>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    {% if category_groups %}
+      {% for group in category_groups %}
+      <div class='group-block'>
+        <div class='group-header'>
+          <div>
+            <p class='group-eyebrow'>{{ group.items|length }} aisles ready</p>
+            <h3 class='group-name'>{{ group.label }}</h3>
+          </div>
+          <a class='group-link' href="{% url 'product_list' %}?l1={{ group.l1|urlencode }}">View all</a>
+        </div>
+
+        <div class='row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3'>
+          {% for sc in group.items %}
+          <div class='col'>
+            <a href="{% url 'product_list' %}?l1={{ sc.l1|urlencode }}&l2={{ sc.l2|urlencode }}" class='category-tile' style='--seq: {{ forloop.counter0 }};'>
+              <div class='tile-image-wrap'>
+                {% if sc.image_url %}
+                  <img src='{{ sc.image_url }}' alt='{{ sc.name }}'>
+                {% else %}
+                  <img src="{% static 'images/default_product.jpg' %}" alt='{{ sc.name }}'>
+                {% endif %}
+                {% if user.is_authenticated %}
+                  <button type='button' class='favorite-btn' data-l1='{{ sc.l1 }}' data-l2='{{ sc.l2 }}' aria-label='Toggle favorite' aria-pressed='{{ sc.is_favourite|yesno:"true,false" }}'>
+                    <span class='favorite-emoji'>{% if sc.is_favourite %}&#9829;{% else %}&#9825;{% endif %}</span>
+                  </button>
+                {% endif %}
+                <span class='tile-chip'>{{ sc.l1 }}</span>
+              </div>
+              <div class='tile-body'>
+                <h4 class='tile-name'>{{ sc.name }}</h4>
+                <p class='tile-sub'>Open category</p>
+              </div>
+            </a>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    {% elif subcats %}
+      <div class='group-block'>
+        <div class='group-header'>
+          <div>
+            <p class='group-eyebrow'>All aisles</p>
+            <h3 class='group-name'>Shop every category</h3>
+          </div>
+        </div>
+
+        <div class='row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3'>
+          {% for sc in subcats %}
+          <div class='col'>
+            <a href="{% url 'product_list' %}?l1={{ sc.l1|urlencode }}&l2={{ sc.l2|urlencode }}" class='category-tile' style='--seq: {{ forloop.counter0 }};'>
+              <div class='tile-image-wrap'>
+                {% if sc.image_url %}
+                  <img src='{{ sc.image_url }}' alt='{{ sc.name }}'>
+                {% else %}
+                  <img src="{% static 'images/default_product.jpg' %}" alt='{{ sc.name }}'>
+                {% endif %}
+                {% if user.is_authenticated %}
+                  <button type='button' class='favorite-btn' data-l1='{{ sc.l1 }}' data-l2='{{ sc.l2 }}' aria-label='Toggle favorite' aria-pressed='{{ sc.is_favourite|yesno:"true,false" }}'>
+                    <span class='favorite-emoji'>{% if sc.is_favourite %}&#9829;{% else %}&#9825;{% endif %}</span>
+                  </button>
+                {% endif %}
+                <span class='tile-chip'>{{ sc.l1 }}</span>
+              </div>
+              <div class='tile-body'>
+                <h4 class='tile-name'>{{ sc.name }}</h4>
+                <p class='tile-sub'>Open category</p>
+              </div>
+            </a>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% else %}
+      <div class='empty-state'>Categories are being refreshed. Use the search bar or open the full catalog to continue shopping.</div>
+    {% endif %}
+  </section>
+
+  {% if not user.is_authenticated %}
+  <section class='signup-band'>
+    <div>
+      <p class='signup-band-kicker'>Create your account</p>
+      <p class='signup-band-copy'>Save favorite aisles, check out faster, and keep your regular weekly basket easy to rebuild.</p>
+    </div>
+    <a href="{% url 'signup' %}" class='signup-band-btn'>Sign up</a>
+  </section>
+  {% endif %}
+
+  <div id='favorite-toast' class='favorite-toast' aria-live='polite' aria-atomic='true' hidden>
+    <span id='favorite-toast-message'>Favorited.</span>
+    <button id='favorite-toast-undo' class='favorite-toast-undo' type='button'>Undo</button>
+  </div>
+</div>

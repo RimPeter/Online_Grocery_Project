@@ -1,6 +1,7 @@
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
+from _analytics.models import GoogleAdsLandingArrival, Visit
 from .models import All_Products, HomeCategoryTileFavorite, ProductFavorite
 from .templatetags.price_tags import display_bulk_total, display_rsp
 
@@ -63,6 +64,62 @@ class HomeCategoryFavoritesTests(TestCase):
 
         fav = resp.context['favorite_tiles']
         self.assertTrue(any(item.get('l1').lower() == 'produce' and item.get('l2').lower() == 'fruit' and item.get('is_favourite') for item in fav))
+
+    def test_home_google_uses_clone_template_and_tracks_landing_path(self):
+        response = self.client.get(
+            reverse('home_google'),
+            {
+                'utm_source': 'google',
+                'utm_medium': 'cpc',
+                'utm_campaign': 'spring-shop',
+            },
+            HTTP_REFERER='https://www.google.com/',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, '_catalog/home-google.html')
+        self.assertTrue(
+            Visit.objects.filter(
+                landing_path=reverse('home_google'),
+                utm_source='google',
+                utm_medium='cpc',
+                utm_campaign='spring-shop',
+            ).exists()
+        )
+        self.assertTrue(
+            GoogleAdsLandingArrival.objects.filter(
+                path=reverse('home_google'),
+                utm_source='google',
+                utm_medium='cpc',
+                utm_campaign='spring-shop',
+            ).exists()
+        )
+
+    def test_home_google_excludes_superuser_arrivals(self):
+        user_model = get_user_model()
+        admin_user = user_model.objects.create_superuser(
+            username='adminuser',
+            email='admin@example.com',
+            password='adminpass123',
+        )
+        self.client.force_login(admin_user)
+
+        response = self.client.get(
+            reverse('home_google'),
+            {
+                'utm_source': 'google',
+                'utm_medium': 'cpc',
+                'utm_campaign': 'admin-campaign',
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(
+            GoogleAdsLandingArrival.objects.filter(
+                path=reverse('home_google'),
+                utm_campaign='admin-campaign',
+            ).exists()
+        )
 
     def test_productfavorite_creation_and_toggle_endpoint(self):
         self.client.login(username='testuser', password='testpass')

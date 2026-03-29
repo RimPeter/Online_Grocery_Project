@@ -14,7 +14,7 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import AnalyticsAnnotation, AnalyticsEvent, AnalyticsSavedView, Visit, VisitPageview
+from .models import AnalyticsAnnotation, AnalyticsEvent, AnalyticsSavedView, GoogleAdsLandingArrival, Visit, VisitPageview
 
 
 ANALYTICS_SCHEMA_ERROR = 'Analytics database changes are not applied yet. Run manage.py migrate _analytics and reload this page.'
@@ -146,6 +146,23 @@ def _apply_event_filters(qs, filters):
     return qs
 
 
+def _apply_google_ads_arrival_filters(qs, filters):
+    qs = qs.filter(Q(user__isnull=True) | Q(user__is_superuser=False))
+    if filters['device']:
+        qs = qs.filter(device_type=filters['device'])
+    if filters['browser']:
+        qs = qs.filter(browser_family=filters['browser'])
+    if filters['source']:
+        qs = qs.filter(traffic_source=filters['source'])
+    if filters['campaign']:
+        qs = qs.filter(utm_campaign=filters['campaign'])
+    if filters['user_scope'] == 'authenticated':
+        qs = qs.filter(is_authenticated=True)
+    elif filters['user_scope'] == 'anonymous':
+        qs = qs.filter(is_authenticated=False)
+    return qs
+
+
 def _comparison_payload(current, previous):
     if previous in (None, 0):
         delta_pct = None if current == 0 else 100.0
@@ -242,6 +259,21 @@ def _build_time_series(visits_qs, pageviews_qs):
             'pageviews': pageviews_by_day.get(day, 0),
         }
         for day in days
+    ]
+
+
+def _build_google_ads_arrivals_series(arrivals_qs):
+    return [
+        {
+            'day': row['day'].isoformat(),
+            'arrivals': row['arrivals'],
+        }
+        for row in (
+            arrivals_qs.annotate(day=TruncDate('arrived_at'))
+            .values('day')
+            .annotate(arrivals=Count('id'))
+            .order_by('day')
+        )
     ]
 
 
@@ -353,13 +385,14 @@ def _build_product_performance(events_qs, *, limit=10):
     return product_payload, category_payload
 
 
-def _summary_payload(visits_qs, pageviews_qs, events_qs, window, filters):
+def _summary_payload(visits_qs, pageviews_qs, events_qs, google_ads_arrivals_qs, window, filters):
     sessions = visits_qs.count()
     unique_visitors = _unique_visitor_count(visits_qs)
     pageviews = pageviews_qs.count()
     avg_session_seconds = _average_session_seconds(visits_qs)
     avg_page_dwell_seconds = _average_page_dwell_seconds(pageviews_qs)
     bounce_rate = _bounce_rate(visits_qs, window['start_dt'], window['end_dt'])
+    google_ads_arrivals = google_ads_arrivals_qs.count()
     active_users = _apply_visit_filters(
         Visit.objects.filter(last_seen_at__gte=timezone.now() - timedelta(minutes=5)),
         filters,
@@ -379,6 +412,16 @@ def _summary_payload(visits_qs, pageviews_qs, events_qs, window, filters):
             'sessions': _comparison_payload(sessions, previous_visits.count()),
             'unique_visitors': _comparison_payload(unique_visitors, _unique_visitor_count(previous_visits)),
             'pageviews': _comparison_payload(pageviews, previous_pageviews.count()),
+            'google_ads_arrivals': _comparison_payload(
+                google_ads_arrivals,
+                _apply_google_ads_arrival_filters(
+                    GoogleAdsLandingArrival.objects.filter(
+                        arrived_at__gte=window['previous_start_dt'],
+                        arrived_at__lt=window['previous_end_dt'],
+                    ),
+                    filters,
+                ).count(),
+            ),
             'paid_orders': _comparison_payload(
                 events_qs.filter(event_type='paid_order').count(),
                 _apply_event_filters(
@@ -444,6 +487,7 @@ def _summary_payload(visits_qs, pageviews_qs, events_qs, window, filters):
             'today_sessions': visits_qs.filter(started_at__date=timezone.localdate()).count(),
             'unique_visitors': unique_visitors,
             'pageviews': pageviews,
+            'google_ads_arrivals': google_ads_arrivals,
             'avg_session_seconds': avg_session_seconds,
             'avg_page_dwell_seconds': avg_page_dwell_seconds,
             'bounce_rate': bounce_rate,
@@ -451,6 +495,7 @@ def _summary_payload(visits_qs, pageviews_qs, events_qs, window, filters):
         },
         'comparison': comparison,
         'per_day': _build_time_series(visits_qs, pageviews_qs),
+        'google_ads_arrivals_per_day': _build_google_ads_arrivals_series(google_ads_arrivals_qs),
         'source_breakdown': _serialize_breakdown(visits_qs, 'traffic_source'),
         'device_breakdown': _serialize_breakdown(visits_qs, 'device_type'),
         'browser_breakdown': _serialize_breakdown(visits_qs, 'browser_family'),
@@ -482,7 +527,14 @@ def visits_summary(request):
             AnalyticsEvent.objects.filter(created_at__gte=window['start_dt'], created_at__lt=window['end_dt']),
             filters,
         )
-        return JsonResponse(_summary_payload(visits_qs, pageviews_qs, events_qs, window, filters))
+        google_ads_arrivals_qs = _apply_google_ads_arrival_filters(
+            GoogleAdsLandingArrival.objects.filter(
+                arrived_at__gte=window['start_dt'],
+                arrived_at__lt=window['end_dt'],
+            ),
+            filters,
+        )
+        return JsonResponse(_summary_payload(visits_qs, pageviews_qs, events_qs, google_ads_arrivals_qs, window, filters))
     except DatabaseError:
         return JsonResponse({'error': ANALYTICS_SCHEMA_ERROR}, status=503)
 
