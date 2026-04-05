@@ -2,8 +2,12 @@ from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from django.test import SimpleTestCase, override_settings
+from django.contrib.auth import get_user_model
+from django.test import SimpleTestCase, TestCase, override_settings
+from django.urls import reverse
 
+from _catalog.models import All_Products
+from _orders.models import Order
 from _orders.pricing import calculate_checkout_totals
 from _orders.notifications import send_paid_order_notification
 from _product_management.templatetags.sum_tags import add_delivery_if_paid, checkout_grand_total
@@ -89,3 +93,34 @@ class PaidOrderNotificationTests(SimpleTestCase):
 
         self.assertFalse(send_paid_order_notification(order))
         send_mail_mock.assert_not_called()
+
+
+class DeliverySlotsPricingTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='delivery-user',
+            password='test-pass-123',
+        )
+        self.client.force_login(self.user)
+        self.product = All_Products.objects.create(
+            ga_product_id='ga-delivery-1',
+            name='Threshold Product',
+            price=Decimal('15.48'),
+            list_position=1,
+            url='https://example.com/products/threshold-product',
+        )
+
+    def test_delivery_slots_uses_customer_pricing_for_minimum_order_gate(self):
+        session = self.client.session
+        session['cart'] = {str(self.product.id): 2}
+        session.save()
+
+        response = self.client.get(reverse('delivery_slots'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, '_orders/delivery_slots.html')
+
+        order = Order.objects.get(user=self.user, status='pending')
+        self.assertEqual(order.total, Decimal('40.24'))
+        self.assertEqual(order.items.count(), 1)
+        self.assertEqual(order.items.first().price, Decimal('20.12'))

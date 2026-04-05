@@ -34,6 +34,51 @@ def get_basket_pricing_settings():
         }
 
 
+def resolve_customer_unit_price(product):
+    from _product_management.rsp import calculate_rsp_from_cost
+
+    derived_rsp = calculate_rsp_from_cost(getattr(product, 'price', None))
+    if derived_rsp is not None:
+        return derived_rsp
+
+    fallback_rsp = _to_money(getattr(product, 'rsp', None))
+    if fallback_rsp > Decimal('0.00'):
+        return fallback_rsp
+
+    return _to_money(getattr(product, 'price', None))
+
+
+def calculate_session_cart_subtotal(cart):
+    if not isinstance(cart, dict) or not cart:
+        return Decimal('0.00')
+
+    from _catalog.models import All_Products
+
+    product_ids = [int(pid) for pid in cart.keys() if str(pid).isdigit()]
+    if not product_ids:
+        return Decimal('0.00')
+
+    products_by_id = {
+        str(product.pk): product
+        for product in All_Products.objects.filter(pk__in=product_ids)
+    }
+
+    subtotal = Decimal('0.00')
+    for pid, qty in cart.items():
+        product = products_by_id.get(str(pid))
+        if not product:
+            continue
+        try:
+            quantity = int(qty)
+        except (TypeError, ValueError):
+            continue
+        if quantity <= 0:
+            continue
+        subtotal += resolve_customer_unit_price(product) * quantity
+
+    return subtotal.quantize(Decimal('0.01'))
+
+
 def calculate_checkout_totals(subtotal, *, has_items=True, pricing_settings=None):
     subtotal = _to_money(subtotal)
     has_items = bool(has_items)

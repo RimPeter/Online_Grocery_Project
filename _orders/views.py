@@ -18,7 +18,12 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from django.urls import reverse
 from django.db.models import Sum, F, DecimalField, ExpressionWrapper
-from .pricing import calculate_checkout_totals, get_basket_pricing_settings
+from .pricing import (
+    calculate_checkout_totals,
+    calculate_session_cart_subtotal,
+    get_basket_pricing_settings,
+    resolve_customer_unit_price,
+)
 
 # Statuses that permit invoice access/download/email
 ALLOWED_INVOICE_STATUSES = ('paid', 'processed', 'delivered')
@@ -72,24 +77,7 @@ def delivery_slots_view(request):
 
     # Compute current cart total from session.
     cart = request.session.get('cart', {})
-    total_price = Decimal('0.00')
-    if cart:
-        product_ids = list(cart.keys())
-        products = All_Products.objects.filter(pk__in=product_ids)
-        # Use RSP when available; fallback to product cost price.
-        price_by_id = {}
-        for p in products:
-            base = p.rsp if (getattr(p, 'rsp', None) is not None and p.rsp > 0) else p.price
-            price_dec = Decimal(str(base))
-            price_by_id[str(p.pk)] = price_dec
-        for pid, qty in cart.items():
-            price = price_by_id.get(str(pid))
-            if price is not None:
-                try:
-                    q = int(qty)
-                except (TypeError, ValueError):
-                    q = 0
-                total_price += price * q
+    total_price = calculate_session_cart_subtotal(cart)
 
     if total_price < MIN_ORDER_TOTAL:
         shortfall = (MIN_ORDER_TOTAL - total_price).quantize(Decimal('0.01'))
@@ -119,14 +107,23 @@ def delivery_slots_view(request):
             messages.error(request, "Your cart is empty. Please add items before checking out.")
             return redirect('cart_view')
 
-        total_price = Decimal('0.00')
         product_ids = list(cart.keys())
         products = All_Products.objects.filter(pk__in=product_ids)
+        line_items = []
         for product in products:
-            quantity = int(cart.get(str(product.pk), 0) or 0)
-            base = product.rsp if (getattr(product, 'rsp', None) is not None and product.rsp > 0) else product.price
-            price_dec = Decimal(str(base))
-            total_price += price_dec * quantity
+            try:
+                quantity = int(cart.get(str(product.pk), 0) or 0)
+            except (TypeError, ValueError):
+                quantity = 0
+            if quantity <= 0:
+                continue
+            price_dec = resolve_customer_unit_price(product)
+            line_items.append((product, quantity, price_dec))
+
+        total_price = sum(
+            (price * quantity for _, quantity, price in line_items),
+            Decimal('0.00'),
+        )
 
         order = Order.objects.create(
             user=request.user,
@@ -134,10 +131,7 @@ def delivery_slots_view(request):
             status='pending'
         )
 
-        for product in products:
-            quantity = int(cart.get(str(product.pk), 0) or 0)
-            base = product.rsp if (getattr(product, 'rsp', None) is not None and product.rsp > 0) else product.price
-            price_dec = Decimal(str(base))
+        for product, quantity, price_dec in line_items:
             OrderItem.objects.create(
                 order=order,
                 product=product,

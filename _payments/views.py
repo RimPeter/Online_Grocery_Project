@@ -12,7 +12,11 @@ from _analytics.tracking import track_event
 from _catalog.models import All_Products
 from _orders.models import Order, OrderItem
 from _orders.notifications import send_paid_order_notification
-from _orders.pricing import calculate_checkout_totals
+from _orders.pricing import (
+    calculate_checkout_totals,
+    calculate_session_cart_subtotal,
+    resolve_customer_unit_price,
+)
 from .models import Payment
 
 logger = logging.getLogger(__name__)
@@ -64,12 +68,9 @@ def checkout_view(request, order_id):
             messages.error(request, "Your cart is empty. Please add items before checking out.")
             return redirect('cart_view')
 
-        total_price = 0
+        total_price = calculate_session_cart_subtotal(cart)
         product_ids = list(cart.keys())
         products = All_Products.objects.filter(pk__in=product_ids)
-        for product in products:
-            quantity = cart[str(product.pk)]
-            total_price += product.price * quantity
 
         order = Order.objects.create(
             user=request.user,
@@ -78,12 +79,17 @@ def checkout_view(request, order_id):
         )
 
         for product in products:
-            quantity = cart[str(product.pk)]
+            try:
+                quantity = int(cart.get(str(product.pk), 0) or 0)
+            except (TypeError, ValueError):
+                quantity = 0
+            if quantity <= 0:
+                continue
             OrderItem.objects.create(
                 order=order,
                 product=product,
                 quantity=quantity,
-                price=product.price
+                price=resolve_customer_unit_price(product)
             )
 
     order_items = list(order.items.all())

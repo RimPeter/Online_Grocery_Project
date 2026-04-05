@@ -14,7 +14,7 @@ from django.http import JsonResponse, Http404, HttpResponseForbidden
 from django.views.decorators.http import require_GET, require_POST
 from _analytics.tracking import record_google_ads_landing_arrival, track_event
 from _orders.models import Order, OrderItem
-from _orders.pricing import calculate_checkout_totals
+from _orders.pricing import calculate_checkout_totals, resolve_customer_unit_price
 from django.contrib.auth.decorators import login_required
 from pathlib import Path
 from django.urls import reverse
@@ -1017,10 +1017,7 @@ def cart_view(request):
             product = products_by_id.get(str(pid))
             if product:
                 # Customer pricing uses the configured global RSP formula.
-                base_unit = calculate_rsp_from_cost(product.price)
-                if base_unit is None:
-                    base_unit = product.rsp if (product.rsp is not None and product.rsp > 0) else product.price
-                price_dec = Decimal(str(base_unit))
+                price_dec = resolve_customer_unit_price(product)
                 qty = int(quantity)
                 item_total = price_dec * qty
                 total_price += item_total
@@ -1043,10 +1040,7 @@ def cart_view(request):
             product = products_by_id.get(str(pid))
             if not product:
                 continue
-            base_unit = calculate_rsp_from_cost(product.price)
-            if base_unit is None:
-                base_unit = product.rsp if (product.rsp is not None and product.rsp > 0) else product.price
-            price_dec = Decimal(str(base_unit))
+            price_dec = resolve_customer_unit_price(product)
             OrderItem.objects.create(
                 order=order,
                 product=product,

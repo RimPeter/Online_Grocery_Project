@@ -1,8 +1,7 @@
 from django import template
 from decimal import Decimal
 from _catalog.models import All_Products
-from _orders.pricing import calculate_checkout_totals
-from _product_management.rsp import calculate_rsp_from_cost
+from _orders.pricing import calculate_checkout_totals, resolve_customer_unit_price
 
 register = template.Library()
 
@@ -49,11 +48,8 @@ def cart_total_value(context):
         if not product:
             continue
 
-        base_unit = calculate_rsp_from_cost(product.price)
-        if base_unit is None:
-            base_unit = product.rsp if (product.rsp is not None and product.rsp > 0) else product.price
         try:
-            unit_price = Decimal(str(base_unit))
+            unit_price = Decimal(str(resolve_customer_unit_price(product)))
         except Exception:
             continue
 
