@@ -211,7 +211,7 @@ class HomeValuePillar(models.Model):
         help_text="Short heading shown above the description.",
     )
     subtitle = models.CharField(
-        max_length=255,
+        max_length=310,
         help_text="Supporting sentence shown under the heading.",
     )
     sort_order = models.PositiveIntegerField(default=0, db_index=True)
