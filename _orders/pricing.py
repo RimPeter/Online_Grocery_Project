@@ -79,7 +79,14 @@ def calculate_session_cart_subtotal(cart):
     return subtotal.quantize(Decimal('0.01'))
 
 
-def calculate_checkout_totals(subtotal, *, has_items=True, pricing_settings=None):
+def calculate_checkout_totals(
+    subtotal,
+    *,
+    has_items=True,
+    pricing_settings=None,
+    newcomer_referral_discount=Decimal('0.00'),
+    referral_credit_discount=Decimal('0.00'),
+):
     subtotal = _to_money(subtotal)
     has_items = bool(has_items)
     pricing_settings = pricing_settings or get_basket_pricing_settings()
@@ -93,8 +100,12 @@ def calculate_checkout_totals(subtotal, *, has_items=True, pricing_settings=None
     basket_reward_discount = discount_amount if qualifies_for_basket_reward else Decimal('0.00')
     basket_reward_shortfall = max(Decimal('0.00'), discount_threshold - subtotal)
     minimum_order_shortfall = max(Decimal('0.00'), minimum_order_total - subtotal)
+    pre_referral_total = (subtotal - basket_reward_discount + delivery_charge).quantize(Decimal('0.01'))
 
-    grand_total = (subtotal - basket_reward_discount + delivery_charge).quantize(Decimal('0.01'))
+    newcomer_referral_discount = min(_to_money(newcomer_referral_discount), pre_referral_total)
+    after_newcomer_total = pre_referral_total - newcomer_referral_discount
+    referral_credit_discount = min(_to_money(referral_credit_discount), after_newcomer_total)
+    grand_total = (after_newcomer_total - referral_credit_discount).quantize(Decimal('0.01'))
     if grand_total < Decimal('0.00'):
         grand_total = Decimal('0.00')
 
@@ -102,8 +113,11 @@ def calculate_checkout_totals(subtotal, *, has_items=True, pricing_settings=None
         'minimum_order_total': minimum_order_total,
         'minimum_order_shortfall': minimum_order_shortfall.quantize(Decimal('0.01')),
         'delivery_charge': delivery_charge,
+        'pre_referral_total': pre_referral_total,
         'grand_total': grand_total,
         'basket_reward_discount': basket_reward_discount,
+        'newcomer_referral_discount': newcomer_referral_discount,
+        'referral_credit_discount': referral_credit_discount,
         'basket_reward_shortfall': basket_reward_shortfall.quantize(Decimal('0.01')),
         'basket_reward_threshold': discount_threshold,
         'basket_reward_amount': discount_amount,

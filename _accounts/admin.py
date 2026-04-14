@@ -10,11 +10,25 @@ from .models import (
     ContactMessage,
     ContactMessageActive,
     ContactMessageArchived,
+    ReferralCreditLedger,
 )
 
 
-admin.site.register(User)
+@admin.register(User)
+class UserAdmin(admin.ModelAdmin):
+    list_display = ('username', 'email', 'referral_code', 'referred_by', 'is_staff', 'is_active')
+    search_fields = ('username', 'email', 'referral_code', 'referred_by__username', 'referred_by__email')
+    list_filter = ('is_staff', 'is_active')
+
+
 admin.site.register(Address)
+
+
+@admin.register(ReferralCreditLedger)
+class ReferralCreditLedgerAdmin(admin.ModelAdmin):
+    list_display = ('user', 'entry_type', 'amount', 'order', 'created_at')
+    list_filter = ('entry_type', 'created_at')
+    search_fields = ('user__username', 'user__email', 'order__id')
 
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):

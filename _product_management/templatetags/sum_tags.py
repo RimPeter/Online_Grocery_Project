@@ -116,3 +116,24 @@ def checkout_grand_total(total):
     except (InvalidOperation, ValueError, TypeError):
         amt = Decimal('0.00')
     return calculate_checkout_totals(amt, has_items=amt > 0)['grand_total']
+
+
+@register.filter
+def paid_order_grand_total(order):
+    if not order:
+        return Decimal('0.00')
+
+    total = getattr(order, 'computed_total', None)
+    if total in (None, ''):
+        total = getattr(order, 'total', 0)
+    try:
+        amt = Decimal(str(total or 0))
+    except (InvalidOperation, ValueError, TypeError):
+        amt = Decimal('0.00')
+
+    return calculate_checkout_totals(
+        amt,
+        has_items=amt > 0,
+        newcomer_referral_discount=getattr(order, 'newcomer_referral_discount', Decimal('0.00')),
+        referral_credit_discount=getattr(order, 'referral_credit_discount', Decimal('0.00')),
+    )['grand_total']

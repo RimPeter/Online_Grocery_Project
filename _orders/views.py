@@ -50,7 +50,12 @@ def order_summery_view(request, order_id):
     for item in order_items:
         item.subtotal = item.price * item.quantity
     total = sum(item.subtotal for item in order_items)
-    pricing = calculate_checkout_totals(total, has_items=bool(order_items))
+    pricing = calculate_checkout_totals(
+        total,
+        has_items=bool(order_items),
+        newcomer_referral_discount=order.newcomer_referral_discount,
+        referral_credit_discount=order.referral_credit_discount,
+    )
 
     # Get the user's default address (fallback to first if none marked default)
     addresses = Address.objects.filter(user=request.user)
@@ -277,7 +282,12 @@ def invoice_page_view(request, order_id):
 
     total = sum(i.subtotal for i in order_items)
     vat_included = vat_included.quantize(Decimal('0.01'))
-    pricing = calculate_checkout_totals(total, has_items=bool(order_items))
+    pricing = calculate_checkout_totals(
+        total,
+        has_items=bool(order_items),
+        newcomer_referral_discount=order.newcomer_referral_discount,
+        referral_credit_discount=order.referral_credit_discount,
+    )
 
     # If you show addresses on the invoice, pick default/fallback:
     default_address = Address.objects.filter(user=request.user).order_by('-is_default').first()
@@ -466,13 +476,22 @@ def _build_invoice_pdf_bytes(request, order):
     except Exception:
         vat_included = Decimal('0.00')
 
-    pricing = calculate_checkout_totals(total_val, has_items=bool(order_items))
+    pricing = calculate_checkout_totals(
+        total_val,
+        has_items=bool(order_items),
+        newcomer_referral_discount=order.newcomer_referral_discount,
+        referral_credit_discount=order.referral_credit_discount,
+    )
 
     # Summary block
     elements.append(Paragraph(f"Subtotal: \u00A3{total_val:.2f}", styles['Normal']))
     elements.append(Paragraph(f"VAT (included): \u00A3{vat_included:.2f}", styles['Normal']))
     if pricing['basket_reward_discount'] > 0:
         elements.append(Paragraph(f"Basket reward: -\u00A3{pricing['basket_reward_discount']:.2f}", styles['Normal']))
+    if pricing['newcomer_referral_discount'] > 0:
+        elements.append(Paragraph(f"Newcomer referral: -\u00A3{pricing['newcomer_referral_discount']:.2f}", styles['Normal']))
+    if pricing['referral_credit_discount'] > 0:
+        elements.append(Paragraph(f"Referral credit: -\u00A3{pricing['referral_credit_discount']:.2f}", styles['Normal']))
     elements.append(Paragraph(f"Delivery: \u00A3{pricing['delivery_charge']:.2f}", styles['Normal']))
     elements.append(Spacer(1, 4))
     elements.append(Paragraph(f"<b>Total:</b> \u00A3{pricing['grand_total']:.2f}", styles['Heading3']))

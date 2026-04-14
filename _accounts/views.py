@@ -5,11 +5,20 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
-from .forms import ConfirmPasswordForm, AddressForm, ContactForm, ProfileForm, DeleteAccountForm, CompanyForm
+from .forms import (
+    ConfirmPasswordForm,
+    AddressForm,
+    ContactForm,
+    ProfileForm,
+    DeleteAccountForm,
+    CompanyForm,
+    ReferralCodeForm,
+)
 from django.core.mail import send_mail, EmailMessage
 from django.conf import settings
 from .utils import create_verification_code_for_user, send_verification_email
 from .models import VerificationCode, Address, ContactMessage, Company
+from .referrals import ReferralError, attach_referral_code, can_attach_referral_code, resolve_referrer
 from django.utils.crypto import get_random_string
 import logging
 from smtplib import SMTPException, SMTPAuthenticationError
@@ -204,6 +213,7 @@ def signup_view(request):
         username = (request.POST.get('username') or "").strip()
         email = (request.POST.get('email') or "").strip().lower()
         phone = (request.POST.get('phone') or "").strip()
+        referral_code = (request.POST.get('referral_code') or "").strip().upper()
         password1 = request.POST.get('password1')
         password2 = request.POST.get('password2')
 
@@ -239,6 +249,10 @@ def signup_view(request):
             context['email_error'] = 'A verification is already pending for this email. Check your inbox.'
             return render(request, 'accounts/signup.html', context)
 
+        if referral_code and resolve_referrer(referral_code) is None:
+            context['referral_error'] = 'Referral code not found'
+            return render(request, 'accounts/signup.html', context)
+
         code = get_random_string(length=8).lower()  # e.g., c5532027 style
         pending_payload = {
             'username': username,
@@ -248,6 +262,7 @@ def signup_view(request):
             'code': code,
             'expires_at': timezone.now() + timedelta(minutes=30),
             'requester_ip': request.META.get('REMOTE_ADDR'),
+            'referral_code': referral_code,
         }
         try:
             pending = PendingSignup.objects.create(**pending_payload)
@@ -350,6 +365,11 @@ def verify_account(request):
                     password=pending.password_hash,
                     is_active=True
                 )
+                if pending.referral_code:
+                    referrer = resolve_referrer(pending.referral_code)
+                    if referrer and referrer.pk != user.pk:
+                        user.referred_by = referrer
+                        user.save(update_fields=['referred_by'])
                 pending.delete()
         except IntegrityError:
             return render(request, 'accounts/verify_account.html', {'error': 'That username or email was just taken. Please try again.'})
@@ -615,6 +635,7 @@ def contact_submitted(request):
 def profile_view(request):
     profile_form = ProfileForm(request.user, instance=request.user)
     address_form = AddressForm()
+    referral_form = ReferralCodeForm()
 
     if request.method == 'POST':
         # Distinguish which form was submitted
@@ -634,12 +655,24 @@ def profile_view(request):
                     Address.objects.filter(user=request.user).exclude(pk=addr.pk).update(is_default=False)
                 messages.success(request, 'Address added.')
                 return redirect('profile')
+        elif request.POST.get('referral_submit') is not None:
+            referral_form = ReferralCodeForm(request.POST)
+            if referral_form.is_valid():
+                try:
+                    referrer = attach_referral_code(request.user, referral_form.cleaned_data['referral_code'])
+                except ReferralError as exc:
+                    messages.error(request, str(exc))
+                else:
+                    messages.success(request, f'Referral code applied. {referrer.username} will now be credited for your first paid order.')
+                    return redirect('profile')
 
     addresses = request.user.addresses.all().order_by('-is_default', 'city', 'street_address')
     return render(request, 'accounts/profile.html', {
         'form': profile_form,
         'address_form': address_form,
+        'referral_form': referral_form,
         'addresses': addresses,
+        'can_add_referral_code': can_attach_referral_code(request.user),
     })
 
 

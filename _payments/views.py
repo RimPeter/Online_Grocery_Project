@@ -9,6 +9,13 @@ from django.http import HttpResponse
 from django.urls import reverse
 from decimal import Decimal, ROUND_HALF_UP
 from _analytics.tracking import track_event
+from _accounts.referrals import (
+    ReferralError,
+    attach_referral_code,
+    build_referral_discounts,
+    can_attach_referral_code,
+    finalize_referral_rewards,
+)
 from _catalog.models import All_Products
 from _orders.models import Order, OrderItem
 from _orders.notifications import send_paid_order_notification
@@ -48,6 +55,16 @@ def checkout_view(request, order_id):
             f"Please complete and save your My Profile details before checkout. Missing: {missing_csv}.",
         )
         return redirect('profile')
+
+    if request.method == 'POST' and request.POST.get('apply_referral_code') is not None:
+        referral_code = (request.POST.get('referral_code') or '').strip().upper()
+        try:
+            attach_referral_code(request.user, referral_code)
+        except ReferralError as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(request, 'Referral code applied.')
+        return redirect('checkout', order_id=order_id)
 
     # Use the order_id provided by the URL to retrieve the order.
     try:
@@ -98,7 +115,25 @@ def checkout_view(request, order_id):
         order.total = subtotal
         order.save(update_fields=['total'])
 
-    pricing = calculate_checkout_totals(subtotal, has_items=bool(order_items))
+    base_pricing = calculate_checkout_totals(subtotal, has_items=bool(order_items))
+    referral_discounts = build_referral_discounts(
+        request.user,
+        order=order,
+        pre_credit_total=base_pricing['pre_referral_total'],
+    )
+    pricing = calculate_checkout_totals(
+        subtotal,
+        has_items=bool(order_items),
+        newcomer_referral_discount=referral_discounts['newcomer_referral_discount'],
+        referral_credit_discount=referral_discounts['referral_credit_discount'],
+    )
+    if (
+        order.newcomer_referral_discount != pricing['newcomer_referral_discount']
+        or order.referral_credit_discount != pricing['referral_credit_discount']
+    ):
+        order.newcomer_referral_discount = pricing['newcomer_referral_discount']
+        order.referral_credit_discount = pricing['referral_credit_discount']
+        order.save(update_fields=['newcomer_referral_discount', 'referral_credit_discount'])
     payable_total = pricing['grand_total']
 
     stripe_currency = (getattr(settings, "STRIPE_CURRENCY", "gbp") or "gbp").strip().lower()
@@ -178,13 +213,23 @@ def checkout_view(request, order_id):
             'items_count': len(order_items),
             'subtotal': str(subtotal),
             'delivery_charge': str(pricing['delivery_charge']),
-            'discount_amount': str(pricing['basket_reward_discount']),
+            'discount_amount': str(
+                pricing['basket_reward_discount']
+                + pricing['newcomer_referral_discount']
+                + pricing['referral_credit_discount']
+            ),
+            'basket_reward_discount': str(pricing['basket_reward_discount']),
+            'newcomer_referral_discount': str(pricing['newcomer_referral_discount']),
+            'referral_credit_discount': str(pricing['referral_credit_discount']),
             'grand_total': str(payable_total),
         },
         path=reverse('checkout', args=[order.id]),
     )
+    context['can_add_referral_code'] = can_attach_referral_code(request.user)
+    context['available_referral_credit'] = referral_discounts['available_referral_credit']
     return render(request, '_payments/checkout.html', context)
 
+@login_required
 def payment_success_view(request):
     payment_id = request.GET.get('payment_id')
     if not payment_id:
@@ -201,6 +246,7 @@ def payment_success_view(request):
     if order and order.status == 'pending':
         order.status = 'paid'
         order.save()
+        finalize_referral_rewards(order)
         track_event(
             request,
             'paid_order',
@@ -210,6 +256,8 @@ def payment_success_view(request):
                 'payment_id': payment.id,
                 'currency': payment.currency,
                 'subtotal': str(order.total),
+                'newcomer_referral_discount': str(order.newcomer_referral_discount),
+                'referral_credit_discount': str(order.referral_credit_discount),
             },
             path=reverse('payment_success'),
         )
@@ -269,6 +317,7 @@ def stripe_webhook_view(request):
                 if order and order.status == 'pending':
                     order.status = 'paid'
                     order.save()
+                    finalize_referral_rewards(order)
                 if order and order.status == 'paid':
                     send_paid_order_notification(order)
 

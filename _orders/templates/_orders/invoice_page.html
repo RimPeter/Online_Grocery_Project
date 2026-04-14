@@ -193,6 +193,12 @@
       {% if basket_reward_discount > 0 %}
         <div class="row"><div>Basket reward</div><div>-&pound;{{ basket_reward_discount|floatformat:2 }}</div></div>
       {% endif %}
+      {% if newcomer_referral_discount > 0 %}
+        <div class="row"><div>Newcomer referral</div><div>-&pound;{{ newcomer_referral_discount|floatformat:2 }}</div></div>
+      {% endif %}
+      {% if referral_credit_discount > 0 %}
+        <div class="row"><div>Referral credit</div><div>-&pound;{{ referral_credit_discount|floatformat:2 }}</div></div>
+      {% endif %}
       <div class="row"><div>Delivery</div><div>&pound;{{ delivery_charge|floatformat:2 }}</div></div>
       <div class="row total"><div>Total</div><div>&pound;{{ grand_total|floatformat:2 }}</div></div>
     </div>

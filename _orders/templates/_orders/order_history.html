@@ -41,7 +41,7 @@
               </div>
               <div class="text-end">
                 <span class="order-status-chip {% if order.status == 'paid' %}status-paid{% elif order.status == 'processed' %}status-processed{% elif order.status == 'delivered' %}status-delivered{% else %}status-pending{% endif %} me-2">{{ order.get_status_display }}</span>
-                <span class="order-history-order-total">&pound;{{ order.computed_total|default:order.total|add_delivery_if_paid:order.status|floatformat:2 }}</span>
+                <span class="order-history-order-total">&pound;{{ order|paid_order_grand_total|floatformat:2 }}</span>
               </div>
             </div>
           </button>

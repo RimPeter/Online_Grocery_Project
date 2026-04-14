@@ -32,7 +32,12 @@ def send_paid_order_notification(order):
         subtotal = sum((item.price * item.quantity) for item in items)
         if not items:
             subtotal = Decimal(str(getattr(order, 'total', 0) or 0))
-        pricing = calculate_checkout_totals(subtotal, has_items=bool(items or subtotal > 0))
+        pricing = calculate_checkout_totals(
+            subtotal,
+            has_items=bool(items or subtotal > 0),
+            newcomer_referral_discount=getattr(order, 'newcomer_referral_discount', Decimal('0.00')),
+            referral_credit_discount=getattr(order, 'referral_credit_discount', Decimal('0.00')),
+        )
 
         user = getattr(order, 'user', None) or SimpleNamespace(
             get_full_name=lambda: '',
@@ -49,25 +54,27 @@ def send_paid_order_notification(order):
 
         lines = [
             f"New paid order: #{order.id}",
-            "",
+            '',
             f"Customer: {customer_name}",
             f"Email: {getattr(user, 'email', '') or '-'}",
             f"Phone: {getattr(user, 'phone', '') or '-'}",
-            f"Subtotal: £{subtotal:.2f}",
-            f"Delivery: £{pricing['delivery_charge']:.2f}",
-            f"Basket reward: -£{pricing['basket_reward_discount']:.2f}",
-            f"Grand total: £{pricing['grand_total']:.2f}",
+            f"Subtotal: GBP {subtotal:.2f}",
+            f"Delivery: GBP {pricing['delivery_charge']:.2f}",
+            f"Basket reward: -GBP {pricing['basket_reward_discount']:.2f}",
+            f"Newcomer referral: -GBP {pricing['newcomer_referral_discount']:.2f}",
+            f"Referral credit: -GBP {pricing['referral_credit_discount']:.2f}",
+            f"Grand total: GBP {pricing['grand_total']:.2f}",
             f"Delivery slot: {' '.join(delivery_bits) if delivery_bits else '-'}",
-            "",
-            "Items:",
+            '',
+            'Items:',
         ]
 
         if items:
             for item in items:
                 product_name = getattr(getattr(item, 'product', None), 'name', 'Unknown product')
-                lines.append(f"- {product_name} x {item.quantity} @ £{item.price:.2f}")
+                lines.append(f"- {product_name} x {item.quantity} @ GBP {item.price:.2f}")
         else:
-            lines.append("- No order items found.")
+            lines.append('- No order items found.')
 
         from_email = (
             getattr(settings, 'DEFAULT_FROM_EMAIL', None)
@@ -84,5 +91,5 @@ def send_paid_order_notification(order):
         )
         return True
     except Exception:
-        logger.exception("Failed to send paid order notification for order_id=%s", getattr(order, 'pk', None))
+        logger.exception('Failed to send paid order notification for order_id=%s', getattr(order, 'pk', None))
         return False

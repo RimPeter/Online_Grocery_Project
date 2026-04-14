@@ -10,7 +10,7 @@ from _catalog.models import All_Products
 from _orders.models import Order
 from _orders.pricing import calculate_checkout_totals
 from _orders.notifications import send_paid_order_notification
-from _product_management.templatetags.sum_tags import add_delivery_if_paid, checkout_grand_total
+from _product_management.templatetags.sum_tags import add_delivery_if_paid, checkout_grand_total, paid_order_grand_total
 
 
 class BasketPricingTests(SimpleTestCase):
@@ -56,6 +56,33 @@ class BasketPricingTests(SimpleTestCase):
     def test_checkout_grand_total_filter_applies_pending_discount(self):
         self.assertEqual(checkout_grand_total(Decimal('95.00')), Decimal('81.50'))
         self.assertEqual(checkout_grand_total(Decimal('94.99')), Decimal('96.49'))
+
+    def test_checkout_totals_apply_referral_discounts_after_delivery(self):
+        pricing = calculate_checkout_totals(
+            Decimal('20.00'),
+            has_items=True,
+            pricing_settings={
+                'minimum_order_total': Decimal('40.00'),
+                'delivery_charge': Decimal('1.50'),
+                'discount_threshold': Decimal('95.00'),
+                'discount_amount': Decimal('15.00'),
+            },
+            newcomer_referral_discount=Decimal('5.00'),
+            referral_credit_discount=Decimal('3.00'),
+        )
+
+        self.assertEqual(pricing['newcomer_referral_discount'], Decimal('5.00'))
+        self.assertEqual(pricing['referral_credit_discount'], Decimal('3.00'))
+        self.assertEqual(pricing['grand_total'], Decimal('13.50'))
+
+    def test_paid_order_grand_total_filter_uses_order_referral_discounts(self):
+        order = SimpleNamespace(
+            computed_total=Decimal('20.00'),
+            newcomer_referral_discount=Decimal('5.00'),
+            referral_credit_discount=Decimal('3.00'),
+        )
+
+        self.assertEqual(paid_order_grand_total(order), Decimal('13.50'))
 
 
 @override_settings(

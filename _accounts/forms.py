@@ -142,6 +142,23 @@ class ProfileForm(forms.ModelForm):
         return email
 
 
+class ReferralCodeForm(forms.Form):
+    referral_code = forms.CharField(
+        max_length=10,
+        required=True,
+        widget=forms.TextInput(
+            attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter referral code',
+                'style': 'text-transform: uppercase;',
+            }
+        ),
+    )
+
+    def clean_referral_code(self):
+        return (self.cleaned_data.get('referral_code') or '').strip().upper()
+
+
 class CompanyForm(forms.ModelForm):
     class Meta:
         model = Company

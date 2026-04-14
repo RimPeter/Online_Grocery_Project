@@ -179,6 +179,10 @@
             </a>
             <ul class="dropdown-menu dropdown-menu-end nav-dropdown" aria-labelledby="navbarAccountDropdown">
               <li>
+                <span class="dropdown-item-text nav-referral-code">Referral code: <strong>{{ user.referral_code }}</strong></span>
+              </li>
+              <li><hr class="dropdown-divider" /></li>
+              <li>
                 <a class="dropdown-item" href="{% url 'manage_addresses' %}"
                   >Addresses</a
                 >
@@ -188,6 +192,9 @@
               </li>
               <li>
                 <a class='dropdown-item' href="{% url 'profile' %}">Profile</a>
+              </li>
+              <li>
+                <a class='dropdown-item' href="{% url 'profile' %}#referral-card">Referral</a>
               </li>
 
               <li>

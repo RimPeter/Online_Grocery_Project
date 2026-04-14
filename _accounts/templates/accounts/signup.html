@@ -20,6 +20,11 @@
         {{ error }}
       </div>
     {% endif %}
+    {% if referral_error %}
+      <div class="alert alert-danger">
+        {{ referral_error }}
+      </div>
+    {% endif %}
 
     <form method="POST" novalidate>
       {% csrf_token %}
@@ -87,6 +92,21 @@
           placeholder="Confirm your password"
           required
         >
+      </div>
+
+      <div class="mb-3">
+        <label for="referral_code" class="form-label">Referral Code</label>
+        <input
+          type="text"
+          name="referral_code"
+          id="referral_code"
+          class="form-control"
+          placeholder="Optional referral code"
+          maxlength="10"
+          style="text-transform: uppercase;"
+          value="{{ request.POST.referral_code|default:'' }}"
+        >
+        <div class="form-text">Optional. If you miss it here, you can still add it in your profile or at your first checkout.</div>
       </div>
 
       <button type="submit" class="btn btn-primary">Sign Up</button>

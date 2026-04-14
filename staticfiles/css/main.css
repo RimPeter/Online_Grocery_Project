@@ -148,6 +148,12 @@
   color: #153d29;
 }
 
+.nav-referral-code {
+  font-size: 0.92rem;
+  color: #4b5563;
+  white-space: nowrap;
+}
+
 .nav-toggle {
   border-color: rgba(255, 255, 255, 0.5) !important;
   border-radius: 11px;

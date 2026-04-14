@@ -20,6 +20,25 @@
   </section>
 
   <section class="checkout-shell">
+    {% if can_add_referral_code %}
+      <div class="checkout-shell-head border-bottom-0 pb-0">
+        <h2 class="h5 mb-1">Add referral code</h2>
+        <p class="mb-0">You can still attach a referral code before your first paid order.</p>
+      </div>
+      <form method="post" class="checkout-payment-form pt-0">
+        {% csrf_token %}
+        <div class="row g-2 align-items-end">
+          <div class="col-md-8">
+            <label for="referral_code" class="form-label">Referral code</label>
+            <input type="text" id="referral_code" name="referral_code" class="form-control" maxlength="10" style="text-transform: uppercase;">
+          </div>
+          <div class="col-md-4">
+            <button type="submit" name="apply_referral_code" value="1" class="btn checkout-pay-btn w-100">Apply code</button>
+          </div>
+        </div>
+      </form>
+    {% endif %}
+
     <div class="checkout-shell-head">
       <h2 class="h5 mb-1">Payment details</h2>
       <p class="mb-0">Use card or wallet options shown below. Amount due: <strong>&pound;{{ payment.amount|floatformat:2 }}</strong></p>
@@ -39,7 +58,16 @@
       <div class="d-flex justify-content-between"><span>Basket reward</span><span>-&pound;{{ basket_reward_discount|floatformat:2 }}</span></div>
     {% endif %}
     <div class="d-flex justify-content-between"><span>Delivery</span><span>&pound;{{ delivery_charge|floatformat:2 }}</span></div>
+    {% if newcomer_referral_discount > 0 %}
+      <div class="d-flex justify-content-between"><span>Newcomer referral</span><span>-&pound;{{ newcomer_referral_discount|floatformat:2 }}</span></div>
+    {% endif %}
+    {% if referral_credit_discount > 0 %}
+      <div class="d-flex justify-content-between"><span>Referral credit</span><span>-&pound;{{ referral_credit_discount|floatformat:2 }}</span></div>
+    {% endif %}
     <div class="d-flex justify-content-between fw-bold"><span>Total</span><span>&pound;{{ grand_total|floatformat:2 }}</span></div>
+    {% if available_referral_credit > 0 %}
+      <div class="mt-2 small text-muted">Available referral credit before this checkout: &pound;{{ available_referral_credit|floatformat:2 }}</div>
+    {% endif %}
   </section>
 
   <section class="checkout-note-card mt-4">

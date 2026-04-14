@@ -2,12 +2,15 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, Group, Permission
 import uuid
 from django.conf import settings
-from django.db import models
 from django.db.models import Q
 from django.db.models.functions import Lower # For case-insensitive constraints
 from django.utils import timezone
 
 MULTI_USE_TEST_EMAIL = "primaszecsi@gmail.com"
+
+
+def generate_referral_code():
+    return uuid.uuid4().hex[:10].upper()
 
 
 class Company(models.Model):
@@ -82,6 +85,14 @@ class User(AbstractUser):
     email = models.EmailField()
     phone = models.CharField(max_length=15)
     is_active = models.BooleanField(default=True)
+    referral_code = models.CharField(max_length=10, unique=True, default=generate_referral_code, editable=False)
+    referred_by = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='referrals',
+    )
 
     groups = models.ManyToManyField(
         Group,
@@ -161,6 +172,7 @@ class PendingSignup(models.Model):
     expires_at = models.DateTimeField()
     attempts = models.PositiveIntegerField(default=0)
     requester_ip = models.GenericIPAddressField(null=True, blank=True)
+    referral_code = models.CharField(max_length=10, blank=True)
 
     class Meta:
         constraints = [
@@ -203,3 +215,38 @@ class ContactMessageArchived(ContactMessage):
         proxy = True
         verbose_name = 'Contact message (archive)'
         verbose_name_plural = 'Contact messages (archive)'
+
+
+class ReferralCreditLedger(models.Model):
+    ENTRY_TYPE_CHOICES = [
+        ('referrer_reward', 'Referrer reward'),
+        ('credit_spent', 'Credit spent'),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='referral_credit_entries',
+    )
+    order = models.ForeignKey(
+        '_orders.Order',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='referral_credit_entries',
+    )
+    entry_type = models.CharField(max_length=32, choices=ENTRY_TYPE_CHOICES)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at', 'id']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'order', 'entry_type'],
+                name='uniq_referral_credit_entry_per_order_type',
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.user} {self.entry_type} {self.amount}"

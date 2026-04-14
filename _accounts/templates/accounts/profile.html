@@ -67,6 +67,32 @@
     </div>
 
     <div class="col-lg-5">
+      <section class="profile-shell-card mb-3" id="referral-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h3 class="h6 m-0">Referral</h3>
+          <small class="profile-muted">Your code: {{ request.user.referral_code }}</small>
+        </div>
+
+        {% if request.user.referred_by %}
+          <p class="mb-1">Referred by <strong>{{ request.user.referred_by.username }}</strong>.</p>
+          <p class="profile-muted mb-0">Referral code is locked after it has been attached.</p>
+        {% elif can_add_referral_code %}
+          <form method="post" novalidate>
+            {% csrf_token %}
+            <label for="{{ referral_form.referral_code.id_for_label }}" class="form-label">Add a referral code before your first paid order</label>
+            {{ referral_form.referral_code }}
+            {% if referral_form.referral_code.errors %}
+              <div class="text-danger small mt-1">{{ referral_form.referral_code.errors|striptags }}</div>
+            {% endif %}
+            <div class="mt-3">
+              <button type="submit" name="referral_submit" value="1" class="btn profile-save-btn">Apply code</button>
+            </div>
+          </form>
+        {% else %}
+          <p class="mb-0">Referral code can only be attached before your first paid order.</p>
+        {% endif %}
+      </section>
+
       <section class="profile-shell-card mb-3">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h3 class="h6 m-0">Saved addresses</h3>
