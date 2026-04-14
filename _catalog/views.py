@@ -13,6 +13,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse, Http404, HttpResponseForbidden
 from django.views.decorators.http import require_GET, require_POST
 from _analytics.tracking import record_google_ads_landing_arrival, track_event
+from _accounts.referrals import build_referral_discounts
 from _orders.models import Order, OrderItem
 from _orders.pricing import calculate_checkout_totals, resolve_customer_unit_price
 from django.contrib.auth.decorators import login_required
@@ -1048,13 +1049,32 @@ def cart_view(request):
                 price=price_dec
             )
 
-    pricing = calculate_checkout_totals(total_price, has_items=bool(cart_items))
+    base_pricing = calculate_checkout_totals(total_price, has_items=bool(cart_items))
+    referral_discounts = build_referral_discounts(
+        request.user,
+        order=order,
+        pre_credit_total=base_pricing['pre_referral_total'],
+    )
+    pricing = calculate_checkout_totals(
+        total_price,
+        has_items=bool(cart_items),
+        newcomer_referral_discount=referral_discounts['newcomer_referral_discount'],
+        referral_credit_discount=referral_discounts['referral_credit_discount'],
+    )
+    if (
+        order.newcomer_referral_discount != pricing['newcomer_referral_discount']
+        or order.referral_credit_discount != pricing['referral_credit_discount']
+    ):
+        order.newcomer_referral_discount = pricing['newcomer_referral_discount']
+        order.referral_credit_discount = pricing['referral_credit_discount']
+        order.save(update_fields=['newcomer_referral_discount', 'referral_credit_discount'])
 
     context = {
         'cart_items': cart_items,
         'total_price': total_price.quantize(Decimal('0.01')),
         'order': order,  # This order now has updated OrderItems.
         'created_new': created_new,
+        'available_referral_credit': referral_discounts['available_referral_credit'],
         **pricing,
     }
     return render(request, '_catalog/cart.html', context)

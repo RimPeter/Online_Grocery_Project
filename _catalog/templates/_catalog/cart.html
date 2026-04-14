@@ -31,6 +31,18 @@
     font-size: 1rem;
     line-height: 1;
   }
+  .cart-referral-highlight {
+    margin-top: 1rem;
+    padding: 0.9rem 1rem;
+    border-radius: 16px;
+    border: 1px solid rgba(18, 92, 58, 0.18);
+    background: linear-gradient(135deg, #fff7dc 0%, #fff1bf 100%);
+    color: #3d3413;
+    box-shadow: 0 10px 22px rgba(71, 61, 14, 0.08);
+  }
+  .cart-referral-highlight strong {
+    color: #1f5c3f;
+  }
 </style>
 {% endblock %}
 
@@ -146,10 +158,21 @@
     </ul>
 
     <section class="cart-summary-shell mt-3">
+      {% if newcomer_referral_discount > 0 %}
+        <div class="cart-referral-highlight">
+          <strong>Newcomer referral £5 off</strong> is ready and will be applied to this first order.
+        </div>
+      {% endif %}
       <div class="cart-summary-values">
         <div class="cart-summary-line"><span>Subtotal</span><strong>&pound;{{ total_price|floatformat:2 }}</strong></div>
         {% if basket_reward_discount > 0 %}
           <div class="cart-summary-line"><span>Basket reward</span><strong>-&pound;{{ basket_reward_discount|floatformat:2 }}</strong></div>
+        {% endif %}
+        {% if newcomer_referral_discount > 0 %}
+          <div class="cart-summary-line"><span>Newcomer referral £5 off</span><strong>-&pound;{{ newcomer_referral_discount|floatformat:2 }}</strong></div>
+        {% endif %}
+        {% if referral_credit_discount > 0 %}
+          <div class="cart-summary-line"><span>Referral credit</span><strong>-&pound;{{ referral_credit_discount|floatformat:2 }}</strong></div>
         {% endif %}
         <div class="cart-summary-line"><span>Delivery charge</span><strong>&pound;{{ delivery_charge|floatformat:2 }}</strong></div>
         <div class="cart-summary-total"><span>Total</span><strong>&pound;{{ grand_total|floatformat:2 }}</strong></div>
@@ -170,6 +193,9 @@
           <p class="cart-min-note mb-1">&pound;{{ basket_reward_amount|floatformat:2 }} free to spend has been applied to this basket.</p>
         {% else %}
           <p class="cart-min-note mb-1">Spend &pound;{{ basket_reward_shortfall|floatformat:2 }} more to unlock &pound;{{ basket_reward_amount|floatformat:2 }} free to spend at &pound;{{ basket_reward_threshold|floatformat:2 }}.</p>
+        {% endif %}
+        {% if available_referral_credit > 0 %}
+          <p class="cart-min-note mb-1">Available referral credit: &pound;{{ available_referral_credit|floatformat:2 }}.</p>
         {% endif %}
         <p class="cart-min-note mb-0">(Minimum &pound;{{ minimum_order_total|floatformat:2 }} to spend to proceed to checkout)</p>
       </div>
