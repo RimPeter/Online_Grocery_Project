@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Referral Terms & Conditions{% endblock %}
+
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  .referral-terms-wrap {
+    max-width: 920px;
+    margin: 1.5rem auto 0;
+  }
+  .referral-terms-hero {
+    padding: 1.5rem 1.6rem;
+    border-radius: 24px;
+    background:
+      radial-gradient(circle at top right, rgba(255, 224, 138, 0.35), transparent 35%),
+      linear-gradient(135deg, #113325 0%, #1f5c3f 62%, #2e7c54 100%);
+    color: #f6fff7;
+    box-shadow: 0 18px 36px rgba(15, 37, 25, 0.22);
+  }
+  .referral-terms-kicker {
+    font-size: 0.78rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(246, 255, 247, 0.72);
+  }
+  .referral-terms-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2rem, 4vw, 3rem);
+    margin: 0.25rem 0 0.4rem;
+  }
+  .referral-terms-sub {
+    max-width: 54rem;
+    color: rgba(246, 255, 247, 0.84);
+    margin: 0;
+  }
+  .referral-terms-card {
+    margin-top: 1.25rem;
+    padding: 1.4rem 1.5rem;
+    border-radius: 22px;
+    background: #fffdf7;
+    border: 1px solid rgba(31, 92, 63, 0.12);
+    box-shadow: 0 16px 32px rgba(44, 62, 45, 0.08);
+  }
+  .referral-terms-card h2 {
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+    color: #143827;
+  }
+  .referral-terms-card p,
+  .referral-terms-card li {
+    color: #33413a;
+  }
+  .referral-terms-card ul {
+    padding-left: 1.25rem;
+    margin-bottom: 0;
+  }
+  .referral-terms-code {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 0.8rem;
+    border-radius: 999px;
+    background: #edf8ef;
+    color: #17462f;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container referral-terms-wrap">
+  <section class="referral-terms-hero">
+    <p class="referral-terms-kicker">Referral Program</p>
+    <h1 class="referral-terms-title">Referral Terms & Conditions</h1>
+    <p class="referral-terms-sub">Share your referral code with new customers. They receive £5 off their first paid order, and you receive £1 referral credit each time they place a paid order. Referral credit stacks automatically and is applied at checkout.</p>
+    {% if request.user.is_authenticated %}
+      <div class="mt-3">
+        <span class="referral-terms-code">Referral code: {{ request.user.referral_code }}</span>
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="referral-terms-card">
+    <h2>1. Eligibility</h2>
+    <p>The referral program is available to registered customers of Online Grocery. A referee must be a genuine new customer. A referral code can only be attached before the referee has any paid order on their account.</p>
+  </section>
+
+  <section class="referral-terms-card">
+    <h2>2. New Customer Discount</h2>
+    <ul>
+      <li>The referee receives £5 off their first paid order only.</li>
+      <li>The £5 discount is a one-off benefit and cannot be reused.</li>
+      <li>The discount is only available after a valid referral code has been attached to the referee account.</li>
+      <li>The referral code may be entered at sign-up, in the profile area, or at first checkout, provided no paid order exists yet.</li>
+    </ul>
+  </section>
+
+  <section class="referral-terms-card">
+    <h2>3. Referrer Reward</h2>
+    <ul>
+      <li>The referrer receives £1 referral credit for each paid order placed by that referee.</li>
+      <li>Referral credit stacks automatically on the referrer account.</li>
+      <li>Referral credit is automatically applied at checkout to future orders made by the referrer.</li>
+      <li>Referral credit has no cash value and cannot be transferred, exchanged, or withdrawn.</li>
+    </ul>
+  </section>
+
+  <section class="referral-terms-card">
+    <h2>4. Restrictions</h2>
+    <ul>
+      <li>Self-referrals are not allowed.</li>
+      <li>A referee can only be linked to one referrer.</li>
+      <li>Once a referral code has been attached to an account, it cannot be changed.</li>
+      <li>Online Grocery may refuse, cancel, or reverse referral benefits where fraud, abuse, duplicate accounts, or misuse is suspected.</li>
+    </ul>
+  </section>
+
+  <section class="referral-terms-card">
+    <h2>5. Order Status and Reversals</h2>
+    <ul>
+      <li>Referral rewards are created only after a successful paid order.</li>
+      <li>If an order is cancelled, invalidated, or not successfully paid, the referral reward will not be granted.</li>
+      <li>Online Grocery reserves the right to reverse referral credit that was granted in error.</li>
+    </ul>
+  </section>
+
+  <section class="referral-terms-card">
+    <h2>6. Program Changes</h2>
+    <p>Online Grocery may update, suspend, or withdraw the referral program or these terms at any time where reasonably necessary. Any misuse of the program may result in removal of referral benefits.</p>
+  </section>
+</div>
+{% endblock %}

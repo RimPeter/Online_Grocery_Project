@@ -469,6 +469,10 @@ def delete_account(request):
 def account_deleted(request):
     """Render a static confirmation page after account deletion."""
     return render(request, 'accounts/account_deleted.html')
+
+
+def referral_terms_view(request):
+    return render(request, 'accounts/referral_terms.html')
     
 def send_welcome_email(request):
     # Suppose you already have the user email
