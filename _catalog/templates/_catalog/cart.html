@@ -4,9 +4,6 @@
 {% block title %}Shopping Cart{% endblock %}
 
 {% block extra_css %}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@600;700&display=swap" rel="stylesheet">
 <style>
   .cart-favorite-btn {
     position: absolute;
@@ -82,14 +79,18 @@
                 {% if item.product.is_bulk %}
                   <span class="cart-bulk-badge">Bulk item</span>
                 {% endif %}
-                <button
-                  type="button"
-                  class="btn btn-sm cart-favorite-btn"
-                  data-product-id="{{ item.product.id }}"
-                  aria-label="Toggle favorite for {{ item.product.name }}"
-                >
-                  <span class="favorite-emoji">{% if item.product.is_favourite %}&#9829;{% else %}&#9825;{% endif %}</span>
-                </button>
+                {% if user.is_authenticated %}
+                  <button
+                    type="button"
+                    class="btn btn-sm cart-favorite-btn"
+                    data-product-id="{{ item.product.id }}"
+                    data-product-name="{{ item.product.name }}"
+                    aria-label="{% if item.product.is_favourite %}Remove from favourites{% else %}Add to favourites{% endif %}: {{ item.product.name }}"
+                    aria-pressed="{{ item.product.is_favourite|yesno:'true,false' }}"
+                  >
+                    <span class="favorite-emoji" aria-hidden="true">{% if item.product.is_favourite %}&#9829;{% else %}&#9825;{% endif %}</span>
+                  </button>
+                {% endif %}
                 {% if item.product.image_url %}
                   <a href="{% url 'product_detail' item.product.pk %}"
                      class="d-inline-block hover-tip"
@@ -134,8 +135,9 @@
                     class="form-control cart-qty-input"
                     value="{{ item.quantity }}"
                     min="1"
+                    aria-label="Quantity for {{ item.product.name }}"
                   >
-                  <button class="btn cart-update-btn" type="submit">Update</button>
+                  <button class="btn cart-update-btn" type="submit" aria-label="Update quantity for {{ item.product.name }}">Update</button>
                 </div>
               </form>
             </div>
@@ -149,7 +151,7 @@
                 {% csrf_token %}
                 <input type="hidden" name="product_id" value="{{ item.product.pk }}">
                 <input type="hidden" name="action" value="remove">
-                <button type="submit" class="btn btn-sm cart-remove-btn">Remove</button>
+                <button type="submit" class="btn btn-sm cart-remove-btn" aria-label="Remove {{ item.product.name }} from cart">Remove</button>
               </form>
             </div>
           </div>
@@ -210,67 +212,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-  function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      const cookies = document.cookie.split(';');
-      for (let i = 0; i < cookies.length; i += 1) {
-        const cookie = cookies[i].trim();
-        if (cookie.startsWith(name + '=')) {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
-        }
-      }
-    }
-    return cookieValue;
-  }
-
-  document.addEventListener('DOMContentLoaded', function () {
-    const buttons = document.querySelectorAll('.cart-favorite-btn');
-    if (!buttons.length) return;
-
-    buttons.forEach((button) => {
-      button.addEventListener('click', function () {
-        const productId = this.dataset.productId;
-        if (!productId) return;
-
-        fetch('{% url "product_favorite_toggle" %}', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRFToken': getCookie('csrftoken'),
-            'X-Requested-With': 'XMLHttpRequest',
-          },
-          body: new URLSearchParams({ product_id: productId }),
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (!data.success) {
-            console.error('Product favorite toggle failed', data.error || data);
-            return;
-          }
-
-          const emoji = this.querySelector('.favorite-emoji');
-          if (emoji) {
-            emoji.innerHTML = data.is_favourite ? '&#9829;' : '&#9825;';
-          }
-
-          const status = data.is_favourite ? 'added to' : 'removed from';
-          const toast = document.createElement('div');
-          toast.className = 'alert alert-primary alert-dismissible fade show position-fixed bottom-0 end-0 m-3';
-          toast.style.zIndex = '1100';
-          toast.setAttribute('role', 'alert');
-          toast.innerHTML = `Product ${status} favorites. <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
-          document.body.appendChild(toast);
-          setTimeout(() => toast.classList.remove('show'), 2500);
-          setTimeout(() => toast.remove(), 3000);
-        })
-        .catch((err) => {
-          console.error('Error toggling product favorite', err);
-        });
-      });
-    });
-  });
-</script>
+  {% include '_catalog/partials/product_favorites_js.html' %}
 {% endblock %}

@@ -1,4 +1,4 @@
-/* Product Detail — modern, clean layout */
+/* Product detail layout, themed by the Sunny Market tokens in main.css. */
 
 .pd-breadcrumb {
   display: flex;
@@ -6,7 +6,7 @@
   align-items: center;
   gap: .5rem 1rem;
   margin-bottom: 1rem;
-  color: #6c757d;
+  color: var(--sunny-muted, #547065);
 }
 .pd-breadcrumb ol {
   list-style: none;
@@ -15,12 +15,12 @@
   padding: 0;
   margin: 0;
 }
-.pd-breadcrumb a { color: #6c757d; text-decoration: none; }
+.pd-breadcrumb a { color: var(--sunny-green, #146c43); text-decoration: none; }
 .pd-breadcrumb a:hover { text-decoration: underline; }
 .pd-breadcrumb .pd-meta {
   font-size: .875rem;
-  color: #6c757d;
-  background: #f1f3f5;
+  color: var(--sunny-muted, #547065);
+  background: var(--sunny-blue, #dff4ff);
   border-radius: 999px;
   padding: .2rem .6rem;
 }
@@ -35,9 +35,9 @@
 }
 
 .pd-gallery {
-  background: #fff;
-  border: 1px solid #e9ecef;
-  border-radius: 12px;
+  background: var(--sunny-white, #fff);
+  border: 1.5px solid var(--sunny-ink, #17352b);
+  border-radius: 24px;
   padding: 1.25rem;
 }
 .pd-image { display: grid; place-items: center; }
@@ -46,8 +46,8 @@
   height: auto;
   object-fit: contain;
 }
-/* Zoom affordance */
-.pd-zoom img { cursor: zoom-in; }
+/* Image remains static unless an accessible lightbox is enabled. */
+.pd-zoom img { cursor: default; }
 
 /* Hover tooltip for image zoom */
 .pd-zoom[data-tooltip] { position: relative; }
@@ -85,35 +85,37 @@
 }
 
 .pd-info {
-  background: #fff;
-  border: 1px solid #e9ecef;
-  border-radius: 12px;
+  background: var(--sunny-cream, #fffdf6);
+  border: 1.5px solid var(--sunny-ink, #17352b);
+  border-radius: 24px;
   padding: 1.25rem;
 }
 .pd-title { margin: 0 0 .5rem 0; font-size: 1.75rem; }
 
 .pd-price-row { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1rem; }
-.pd-price { font-size: 1.75rem; font-weight: 700; color: #198754; }
-.pd-rsp { color: #6c757d; font-size: .95rem; }
+.pd-price { font-size: 1.75rem; font-weight: 700; color: var(--sunny-green-dark, #0d5232); }
+.pd-rsp { color: var(--sunny-muted, #547065); font-size: .95rem; }
 
 .pd-buy { display: flex; gap: .75rem; margin-bottom: 1rem; }
 .pd-buy input[type="number"] {
   width: 90px;
   padding: .5rem .75rem;
-  border: 1px solid #ced4da;
-  border-radius: .375rem;
+  border: 1.5px solid var(--sunny-ink, #17352b);
+  border-radius: 14px;
 }
 .pd-btn {
-  background: #0d6efd;
+  background: var(--sunny-green, #146c43);
   color: #fff;
-  border: none;
+  border: 2px solid var(--sunny-ink, #17352b);
   padding: .6rem 1rem;
-  border-radius: .375rem;
+  border-radius: 999px;
+  font-weight: 800;
+  box-shadow: 0 4px 0 var(--sunny-ink, #17352b);
 }
-.pd-btn:hover { background: #0b5ed7; }
+.pd-btn:hover { background: var(--sunny-green-dark, #0d5232); }
 
-.pd-login { color: #6c757d; margin-bottom: 1rem; }
-.pd-login a { color: #0d6efd; text-decoration: none; }
+.pd-login { color: var(--sunny-muted, #547065); margin-bottom: 1rem; }
+.pd-login a { color: var(--sunny-green, #146c43); text-decoration: none; }
 .pd-login a:hover { text-decoration: underline; }
 
 .pd-specs {
@@ -124,25 +126,25 @@
 }
 @media (max-width: 576px) { .pd-specs { grid-template-columns: 1fr; } }
 .pd-specs dt {
-  color: #6c757d;
-  background: #f8f9fa;
+  color: var(--sunny-green-dark, #0d5232);
+  background: #eaf8ed;
   padding: .5rem .75rem;
-  border: 1px solid #f1f3f5;
+  border: 1px solid var(--sunny-line, #dbe9df);
   border-radius: .5rem;
 }
 .pd-specs dd {
   margin: 0;
   padding: .5rem .75rem;
-  border: 1px solid #f1f3f5;
+  border: 1px solid var(--sunny-line, #dbe9df);
   border-radius: .5rem;
   background: #fff;
 }
 
-.pd-disclaimer { color: #6c757d; font-size: .9rem; margin-top: 1rem; }
+.pd-disclaimer { color: var(--sunny-muted, #547065); font-size: .9rem; margin-top: 1rem; }
 
 /* Pack info below prices */
 .pd-pack-info {
-  color: #495057;
+  color: var(--sunny-muted, #547065);
   font-size: .95rem;
   margin: -.5rem 0 1rem 0;
 }
@@ -156,23 +158,31 @@
 /* Details sections */
 .pd-details { margin-top: 1.25rem; }
 .pd-accordion {
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  background: #fff;
+  border: 1.5px solid var(--sunny-ink, #17352b);
+  border-radius: 22px;
+  background: var(--sunny-cream, #fffdf6);
   margin-bottom: .75rem;
 }
 .pd-accordion > summary {
   cursor: pointer;
-  padding: .6rem .9rem;
+  padding: .8rem 1rem;
   font-weight: 600;
   list-style: none;
+  border-radius: 20px;
+  background: var(--sunny-blue, #dff4ff);
+  color: var(--sunny-green-dark, #0d5232);
 }
-.pd-accordion[open] > summary { border-bottom: 1px solid #f1f3f5; }
+.pd-accordion[open] > summary { border-bottom: 1px solid var(--sunny-line, #dbe9df); }
 .pd-section-body { padding: .75rem .9rem; }
 .pd-multiline { white-space: pre-wrap; line-height: 1.5; }
+.pd-nutrition-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
 
 /* Allergen highlight */
-.allergen { font-weight: 700; background: #fff3cd; padding: 0 .15rem; border-radius: .15rem; }
+.allergen { font-weight: 700; background: var(--sunny-yellow-soft, #fff0a6); padding: 0 .15rem; border-radius: .15rem; }
 
 /* CSS-only lightbox */
 .pd-lightbox {
@@ -189,9 +199,15 @@
 
 /* Nutrition table */
 .pd-ingr { margin-bottom: .75rem; }
-.pd-nutrition-table { width: 100%; border-collapse: collapse; margin-top: .25rem; border: 1px solid #dee2e6; }
+.pd-nutrition-table { width: 100%; border-collapse: collapse; margin-top: .25rem; border: 1px solid var(--sunny-line, #dbe9df); }
 .pd-nutrition-table th,
-.pd-nutrition-table td { border: 1px solid #dee2e6; padding: .5rem .6rem; text-align: left; }
-.pd-nutrition-table thead th { background: #f8f9fa; border-bottom: 2px solid #dee2e6; }
-.pd-nutrition-table tr + tr td { border-top: 1px solid #dee2e6; }
+.pd-nutrition-table td { border: 1px solid var(--sunny-line, #dbe9df); padding: .5rem .6rem; text-align: left; }
+.pd-nutrition-table thead th { background: var(--sunny-yellow-soft, #fff0a6); border-bottom: 2px solid var(--sunny-line, #dbe9df); }
+.pd-nutrition-table tr + tr td { border-top: 1px solid var(--sunny-line, #dbe9df); }
 .pd-nutrition-table td.num, .pd-nutrition-table th:nth-child(n+2), .pd-nutrition-table td:nth-child(n+2) { text-align: right; white-space: nowrap; }
+
+@media (max-width: 575.98px) {
+  .pd-nutrition-table {
+    min-width: 620px;
+  }
+}

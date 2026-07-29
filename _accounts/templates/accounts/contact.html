@@ -1,12 +1,9 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static form_accessibility %}
 
 {% block title %}Contact Us{% endblock %}
 
 {% block extra_css %}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@600;700&display=swap" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
@@ -23,20 +20,20 @@
   <div class="row g-4">
     <div class="col-lg-8">
       <section class="contact-shell-card">
-        <form method="post" novalidate class="contact-form-shell">
+        <form method="post" novalidate class="contact-form-shell"{% if form.non_field_errors %} aria-describedby="id_contact_non_field_error"{% endif %}>
           {% csrf_token %}
           <div class="mb-3">
             <label for="id_subject" class="form-label">Subject</label>
-            {{ form.subject }}
+            {{ form.subject|with_error_attrs:"id_subject_error" }}
             {% if form.subject.errors %}
-              <div class="text-danger small">{{ form.subject.errors|striptags }}</div>
+              <div class="text-danger small" id="id_subject_error">{{ form.subject.errors|striptags }}</div>
             {% endif %}
           </div>
           <div class="mb-3">
             <label for="id_message" class="form-label">Message</label>
-            {{ form.message }}
+            {{ form.message|with_error_attrs:"id_message_error" }}
             {% if form.message.errors %}
-              <div class="text-danger small">{{ form.message.errors|striptags }}</div>
+              <div class="text-danger small" id="id_message_error">{{ form.message.errors|striptags }}</div>
             {% endif %}
           </div>
           <div class="d-flex gap-2 flex-wrap">
@@ -48,7 +45,7 @@
           </div>
 
           {% if form.non_field_errors %}
-            <div class="text-danger mt-2">{{ form.non_field_errors }}</div>
+            <div class="text-danger mt-2" id="id_contact_non_field_error" role="alert">{{ form.non_field_errors|striptags }}</div>
           {% endif %}
         </form>
       </section>

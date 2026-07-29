@@ -1,0 +1,136 @@
+<script>
+  (function () {
+    function getCookie(name) {
+      const prefix = name + '=';
+      const cookies = document.cookie ? document.cookie.split(';') : [];
+      for (let index = 0; index < cookies.length; index += 1) {
+        const cookie = cookies[index].trim();
+        if (cookie.startsWith(prefix)) {
+          return decodeURIComponent(cookie.substring(prefix.length));
+        }
+      }
+      return '';
+    }
+
+    function showFavoriteStatus(message) {
+      const toast = document.createElement('div');
+      const copy = document.createElement('span');
+      const close = document.createElement('button');
+
+      toast.className = 'alert alert-success alert-dismissible fade show position-fixed bottom-0 end-0 m-3';
+      toast.style.zIndex = '1100';
+      toast.setAttribute('role', 'status');
+      toast.setAttribute('aria-live', 'polite');
+
+      copy.textContent = message;
+      close.type = 'button';
+      close.className = 'btn-close';
+      close.setAttribute('data-bs-dismiss', 'alert');
+      close.setAttribute('aria-label', 'Close');
+
+      toast.append(copy, close);
+      document.body.appendChild(toast);
+      window.setTimeout(function () {
+        toast.classList.remove('show');
+      }, 2500);
+      window.setTimeout(function () {
+        toast.remove();
+      }, 3000);
+    }
+
+    document.addEventListener('click', function (event) {
+      const button = event.target.closest('.product-favorite-btn, .cart-favorite-btn');
+      if (!button || button.disabled) {
+        return;
+      }
+
+      const productId = button.dataset.productId;
+      if (!productId) {
+        return;
+      }
+
+      button.disabled = true;
+
+      fetch('{% url "product_favorite_toggle" %}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+          'X-CSRFToken': getCookie('csrftoken'),
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: new URLSearchParams({ product_id: productId })
+      })
+        .then(function (response) {
+          if (!response.ok) {
+            throw new Error('Favourite request failed with status ' + response.status);
+          }
+          return response.json();
+        })
+        .then(function (data) {
+          if (!data.success) {
+            throw new Error(data.error || 'Favourite request failed');
+          }
+
+          const emoji = button.querySelector('.favorite-emoji');
+          const productName = button.dataset.productName || 'Product';
+          const stateLabel = data.is_favourite ? 'Remove from favourites' : 'Add to favourites';
+
+          if (emoji) {
+            emoji.textContent = data.is_favourite ? '\u2665' : '\u2661';
+          }
+          button.setAttribute('aria-pressed', data.is_favourite ? 'true' : 'false');
+          button.setAttribute('aria-label', stateLabel + ': ' + productName);
+          showFavoriteStatus(
+            data.is_favourite
+              ? productName + ' added to favourites.'
+              : productName + ' removed from favourites.'
+          );
+
+          const favoritesGrid = button.closest('[data-favorites-page="true"]');
+          if (favoritesGrid && !data.is_favourite) {
+            const productCard = button.closest('.catalog-product-col');
+            if (productCard) {
+              productCard.remove();
+            }
+
+            const countElement = document.getElementById('favorite-count');
+            const currentCount = countElement ? Number.parseInt(countElement.textContent, 10) || 0 : 0;
+            const nextCount = Math.max(0, currentCount - 1);
+            if (countElement) {
+              countElement.textContent = String(nextCount);
+            }
+
+            if (!favoritesGrid.querySelector('.catalog-product-col')) {
+              if (nextCount > 0) {
+                window.setTimeout(function () {
+                  window.location.reload();
+                }, 500);
+              } else {
+                const emptyState = document.createElement('div');
+                const copy = document.createElement('p');
+                const link = document.createElement('a');
+                emptyState.className = 'col-12 catalog-empty-state';
+                copy.className = 'mb-1';
+                copy.textContent = 'You have no favourited products yet.';
+                link.href = '{% url "product_list" %}';
+                link.textContent = 'Browse products';
+                emptyState.append(copy, link);
+                favoritesGrid.appendChild(emptyState);
+                const pagination = document.querySelector('.catalog-pagination-wrap');
+                if (pagination) {
+                  pagination.hidden = true;
+                }
+              }
+            }
+          }
+        })
+        .catch(function (error) {
+          console.error('Error toggling product favourite', error);
+          showFavoriteStatus('We could not update that favourite. Please try again.');
+        })
+        .finally(function () {
+          button.disabled = false;
+        });
+    });
+  })();
+</script>

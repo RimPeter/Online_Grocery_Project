@@ -4,9 +4,6 @@
 {% block title %}Select Delivery Slot{% endblock %}
 
 {% block extra_css %}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@600;700&display=swap" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
@@ -19,14 +16,6 @@
     </div>
     <span class="delivery-window-badge">3-hour window</span>
   </section>
-
-  {% if messages %}
-    {% for message in messages %}
-      <div class="alert alert-{{ message.tags }} delivery-alert" role="alert">
-        {{ message }}
-      </div>
-    {% endfor %}
-  {% endif %}
 
   {% if form and form.non_field_errors %}
     <div class="alert alert-danger delivery-alert" role="alert">
@@ -161,7 +150,27 @@
         const isActive = el.dataset.value === value;
         el.classList.toggle('active', isActive);
         el.setAttribute('aria-checked', isActive ? 'true' : 'false');
+        el.tabIndex = isActive ? 0 : -1;
       });
+    }
+
+    function moveSelection(currentTile, direction) {
+      const tiles = Array.from(tilesWrap.querySelectorAll('.delivery-date-tile'));
+      const currentIndex = tiles.indexOf(currentTile);
+      if (currentIndex < 0 || !tiles.length) return;
+
+      let targetIndex;
+      if (direction === 'first') {
+        targetIndex = 0;
+      } else if (direction === 'last') {
+        targetIndex = tiles.length - 1;
+      } else {
+        targetIndex = (currentIndex + direction + tiles.length) % tiles.length;
+      }
+
+      const target = tiles[targetIndex];
+      selectTile(target.dataset.value);
+      target.focus();
     }
 
     const cursor = new Date(minDate);
@@ -173,6 +182,7 @@
       btn.dataset.value = iso;
       btn.setAttribute('role', 'radio');
       btn.setAttribute('aria-checked', 'false');
+      btn.tabIndex = -1;
       btn.innerHTML =
         '<span class="date-dow">' + fmtDow.format(cursor) + '</span>' +
         '<span class="date-day">' + String(cursor.getDate()) + '</span>' +
@@ -180,6 +190,22 @@
 
       btn.addEventListener('click', function () {
         selectTile(iso);
+      });
+
+      btn.addEventListener('keydown', function (event) {
+        if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+          event.preventDefault();
+          moveSelection(btn, 1);
+        } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+          event.preventDefault();
+          moveSelection(btn, -1);
+        } else if (event.key === 'Home') {
+          event.preventDefault();
+          moveSelection(btn, 'first');
+        } else if (event.key === 'End') {
+          event.preventDefault();
+          moveSelection(btn, 'last');
+        }
       });
 
       tilesWrap.appendChild(btn);
@@ -192,6 +218,13 @@
         selectTile(toISODate(selected));
       } else {
         hiddenInput.value = '';
+      }
+    }
+
+    if (!hiddenInput.value) {
+      const firstTile = tilesWrap.querySelector('.delivery-date-tile');
+      if (firstTile) {
+        firstTile.tabIndex = 0;
       }
     }
   })();

@@ -3,6 +3,8 @@ from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.urls import reverse
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.hashers import make_password
+from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from .forms import (
@@ -15,6 +17,8 @@ from .forms import (
     ReferralCodeForm,
 )
 from django.core.mail import send_mail, EmailMessage
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.conf import settings
 from .utils import create_verification_code_for_user, send_verification_email
 from .models import VerificationCode, Address, ContactMessage, Company
@@ -217,11 +221,54 @@ def signup_view(request):
         password1 = request.POST.get('password1')
         password2 = request.POST.get('password2')
 
-        if password1 != password2:
-            context['error'] = 'Passwords do not match'
+        User = get_user_model()
+
+        if not username:
+            context['username_error'] = 'Username is required'
+        elif len(username) > User._meta.get_field('username').max_length:
+            context['username_error'] = 'Username is too long'
+        else:
+            try:
+                UnicodeUsernameValidator()(username)
+            except ValidationError as exc:
+                context['username_error'] = ' '.join(exc.messages)
+
+        email_max_length = min(
+            User._meta.get_field('email').max_length,
+            PendingSignup._meta.get_field('email').max_length,
+        )
+        if not email:
+            context['email_error'] = 'Email is required'
+        elif len(email) > email_max_length:
+            context['email_error'] = 'Email address is too long'
+        else:
+            try:
+                validate_email(email)
+            except ValidationError:
+                context['email_error'] = 'Enter a valid email address'
+
+        phone_max_length = min(
+            User._meta.get_field('phone').max_length,
+            PendingSignup._meta.get_field('phone').max_length,
+        )
+        if not phone:
+            context['phone_error'] = 'Phone number is required'
+        elif len(phone) > phone_max_length:
+            context['phone_error'] = 'Phone number is too long'
+
+        if not password1:
+            context['password_error'] = 'Password is required'
+        elif password1 != password2:
+            context['password2_error'] = 'Passwords do not match'
+        else:
+            try:
+                validate_password(password1, user=User(username=username, email=email))
+            except ValidationError as exc:
+                context['password_error'] = ' '.join(exc.messages)
+
+        if context:
             return render(request, 'accounts/signup.html', context)
 
-        User = get_user_model()
         allow_duplicate_test_email = _is_multi_use_test_email(email)
 
         # Case-insensitive checks against existing Users

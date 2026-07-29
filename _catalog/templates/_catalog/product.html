@@ -6,9 +6,6 @@
 {% endblock %}
 
 {% block extra_css %}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@600;700&display=swap" rel="stylesheet">
 <style>
   .product-favorite-btn {
     border-radius: 999px;
@@ -206,7 +203,7 @@
           </div>
           
           <div class="col-md-3">
-            <label for="filter-l1" class="form-label">Category</label>
+            <label for="filter-l1-button" id="filter-l1-label" class="form-label">Category</label>
             <select class="form-select d-none" id="filter-l1" name="l1" aria-hidden="true" tabindex="-1">
               <option value="">All categories</option>
               {% if main_category_groups %}
@@ -230,6 +227,9 @@
                 id="filter-l1-button"
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
+                aria-haspopup="true"
+                aria-controls="filter-l1-menu"
+                aria-labelledby="filter-l1-label filter-l1-selected-label"
               >
                 <span id="filter-l1-selected-label" class="text-truncate d-inline-block w-100">All categories</span>
               </button>
@@ -237,7 +237,7 @@
             </div>
           </div>
           <div class="col-md-3">
-            <label for="filter-l2" class="form-label">Subcategory</label>
+            <label for="filter-l2-button" id="filter-l2-label" class="form-label">Subcategory</label>
             <select class="form-select d-none" id="filter-l2" name="l2" {% if not request.GET.l1 %}disabled{% endif %} aria-hidden="true" tabindex="-1">
               <option value="">All subcategories</option>
               {% for level2 in initial_level2_options %}
@@ -251,6 +251,9 @@
                 id="filter-l2-button"
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
+                aria-haspopup="true"
+                aria-controls="filter-l2-menu"
+                aria-labelledby="filter-l2-label filter-l2-selected-label"
                 {% if not request.GET.l1 %}disabled{% endif %}
               >
                 <span id="filter-l2-selected-label" class="text-truncate d-inline-block w-100">All subcategories</span>
@@ -832,69 +835,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
-<script>
-  function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      const cookies = document.cookie.split(';');
-      for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i].trim();
-        if (cookie.startsWith(name + '=')) {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
-        }
-      }
-    }
-    return cookieValue;
-  }
-
-  document.addEventListener('DOMContentLoaded', function () {
-    const buttons = document.querySelectorAll('.product-favorite-btn');
-    if (!buttons.length) return;
-
-    buttons.forEach((button) => {
-      button.addEventListener('click', function () {
-        const productId = this.dataset.productId;
-        if (!productId) return;
-
-        fetch('{% url "product_favorite_toggle" %}', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRFToken': getCookie('csrftoken'),
-            'X-Requested-With': 'XMLHttpRequest',
-          },
-          body: new URLSearchParams({ product_id: productId }),
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (!data.success) {
-            console.error('Product favorite toggle failed', data.error || data);
-            return;
-          }
-
-          const emoji = this.querySelector('.favorite-emoji');
-          if (emoji) {
-            emoji.textContent = data.is_favourite ? '\u2665' : '\u2661';
-          }
-
-          const status = data.is_favourite ? 'added to' : 'removed from';
-          const toast = document.createElement('div');
-          toast.className = 'alert alert-primary alert-dismissible fade show position-fixed bottom-0 end-0 m-3';
-          toast.style.zIndex = '1100';
-          toast.setAttribute('role', 'alert');
-          toast.innerHTML = `Product ${status} favorites. <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
-          document.body.appendChild(toast);
-          setTimeout(() => toast.classList.remove('show'), 2500);
-          setTimeout(() => toast.remove(), 3000);
-        })
-        .catch((err) => {
-          console.error('Error toggling product favorite', err);
-        });
-      });
-    });
-  });
-</script>
+{% include '_catalog/partials/product_favorites_js.html' %}
 
 {% endblock %}
 

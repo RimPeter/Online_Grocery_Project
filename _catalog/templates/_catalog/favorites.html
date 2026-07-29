@@ -12,7 +12,7 @@
         <p class="catalog-hero-sub mb-0">Quick access to products you marked as favorite.</p>
       </div>
       <div class="catalog-hero-stat">
-        <strong>{{ favorite_count }}</strong>
+        <strong id="favorite-count">{{ favorite_count }}</strong>
         <span>favorites</span>
       </div>
       <div class="mt-3 d-flex gap-2">
@@ -28,7 +28,7 @@
     </section>
 
     {% if products %}
-      <div class="row g-3 catalog-product-grid" id="product-container">
+      <div class="row g-3 catalog-product-grid" id="product-container" data-favorites-page="true">
         {% for product in products %}
           {% include '_catalog/product_item.html' with product=product show_remove_fav=True %}
         {% endfor %}
@@ -62,4 +62,8 @@
       </div>
     {% endif %}
   </div>
+{% endblock %}
+
+{% block extra_js %}
+  {% include '_catalog/partials/product_favorites_js.html' %}
 {% endblock %}

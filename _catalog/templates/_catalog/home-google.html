@@ -2,11 +2,9 @@
 {% load static %}
 
 {% block title %}Fresh Groceries Delivered{% endblock %}
+{% block body_class %}sunny-home-page{% endblock %}
 
 {% block extra_css %}
-<link rel='preconnect' href='https://fonts.googleapis.com'>
-<link rel='preconnect' href='https://fonts.gstatic.com' crossorigin>
-<link href='https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap' rel='stylesheet'>
 {% endblock %}
 
 {% block content %}
@@ -14,109 +12,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
-
-function updateHeartIcon(button, isFavourite) {
-    const emoji = button.querySelector('.favorite-emoji');
-    if (!emoji) return;
-    emoji.textContent = isFavourite ? '\u2665' : '\u2661';
-    button.setAttribute('aria-pressed', isFavourite ? 'true' : 'false');
-}
-
-function showToast(message, undoCallback) {
-    const toast = document.getElementById('favorite-toast');
-    const toastMessage = document.getElementById('favorite-toast-message');
-    const undoBtn = document.getElementById('favorite-toast-undo');
-
-    if (!toast || !toastMessage || !undoBtn) {
-        return;
-    }
-
-    toastMessage.textContent = message;
-    toast.hidden = false;
-
-    const clearTimer = setTimeout(() => {
-        toast.hidden = true;
-    }, 3200);
-
-    undoBtn.onclick = function(event) {
-        event.preventDefault();
-        event.stopPropagation();
-        clearTimeout(clearTimer);
-        toast.hidden = true;
-        if (typeof undoCallback === 'function') {
-            undoCallback();
-        }
-    };
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    const buttons = document.querySelectorAll('.favorite-btn');
-    const csrfToken = getCookie('csrftoken');
-
-    buttons.forEach(btn => {
-        btn.addEventListener('click', function(event) {
-            event.preventDefault();
-            event.stopPropagation();
-
-            const l1 = this.dataset.l1 || '';
-            const l2 = this.dataset.l2 || '';
-
-            if (!l1) {
-                return;
-            }
-
-            const currentBtn = this;
-
-            const postToggle = () => {
-                return fetch('{% url "home_tile_favorite_toggle" %}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-                        'X-CSRFToken': csrfToken,
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: new URLSearchParams({ l1: l1, l2: l2 })
-                }).then(response => response.json());
-            };
-
-            postToggle().then(data => {
-                if (data.success) {
-                    updateHeartIcon(currentBtn, data.is_favourite);
-                    const message = data.is_favourite ? 'Aisle added to favorites.' : 'Aisle removed from favorites.';
-                    showToast(message, () => {
-                        postToggle().then(result => {
-                            if (result.success) {
-                                updateHeartIcon(currentBtn, result.is_favourite);
-                            }
-                        }).catch(err => console.error('Undo request failed', err));
-                    });
-
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 400);
-                } else {
-                    console.error('Favorite toggle failed', data.error || data);
-                }
-            }).catch(err => {
-                console.error('Favorite toggle request failed', err);
-            });
-        });
-    });
-});
-</script>
+{% include '_catalog/partials/home_favorites_js.html' %}
 {% endblock %}

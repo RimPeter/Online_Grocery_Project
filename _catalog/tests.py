@@ -3,6 +3,7 @@ from django.urls import reverse
 from django.contrib.auth import get_user_model
 from _analytics.models import GoogleAdsLandingArrival, Visit
 from .models import All_Products, HomeCategoryTileFavorite, ProductFavorite
+from .views import _featured_home_tiles
 from .templatetags.price_tags import display_bulk_total, display_rsp
 
 
@@ -64,6 +65,42 @@ class HomeCategoryFavoritesTests(TestCase):
 
         fav = resp.context['favorite_tiles']
         self.assertTrue(any(item.get('l1').lower() == 'produce' and item.get('l2').lower() == 'fruit' and item.get('is_favourite') for item in fav))
+
+    def test_featured_home_tiles_keep_one_aisle_per_group_in_group_order(self):
+        groups = [
+            {
+                'l1': 'Soft Drinks',
+                'items': [
+                    {'l1': 'Soft Drinks', 'l2': 'Adult Drinks', 'name': 'Adult Drinks'},
+                    {'l1': 'Soft Drinks', 'l2': 'Bottled Fruit Juice', 'name': 'Bottled Fruit Juice'},
+                ],
+            },
+            {
+                'l1': 'Custom Department',
+                'items': [
+                    {'l1': 'Custom Department', 'l2': 'First Aisle', 'name': 'First Aisle'},
+                    {'l1': 'Custom Department', 'l2': 'Second Aisle', 'name': 'Second Aisle'},
+                ],
+            },
+            {
+                'l1': 'Fruit and Vegetables',
+                'items': [
+                    {'l1': 'Fruit and Vegetables', 'l2': 'Fresh Salads', 'name': 'Fresh Salads'},
+                    {'l1': 'Fruit and Vegetables', 'l2': 'Fruit', 'name': 'Fruit'},
+                ],
+            },
+        ]
+
+        featured = _featured_home_tiles(groups)
+
+        self.assertEqual(
+            [(tile['l1'], tile['l2']) for tile in featured],
+            [
+                ('Soft Drinks', 'Bottled Fruit Juice'),
+                ('Custom Department', 'First Aisle'),
+                ('Fruit and Vegetables', 'Fruit'),
+            ],
+        )
 
     def test_home_google_uses_clone_template_and_tracks_landing_path(self):
         response = self.client.get(

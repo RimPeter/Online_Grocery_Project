@@ -3,9 +3,6 @@
 {% block title %}Checkout{% endblock %}
 
 {% block extra_css %}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@600;700&display=swap" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
@@ -46,8 +43,10 @@
 
     <form id="payment-form" class="checkout-payment-form">
       <div id="payment-element" class="checkout-payment-element"><!--Stripe.js injects the Payment Element here--></div>
-      <button id="submit" class="btn checkout-pay-btn mt-3">Pay Now</button>
-      <div id="error-message" class="checkout-error mt-2"></div>
+      <button id="submit" class="btn checkout-pay-btn mt-3">
+        <span id="submit-label">Pay Now</span>
+      </button>
+      <div id="error-message" class="checkout-error mt-2" role="alert" aria-live="assertive"></div>
     </form>
   </section>
 
@@ -91,11 +90,15 @@
 
   const form = document.getElementById("payment-form");
   const submitButton = document.getElementById("submit");
+  const submitLabel = document.getElementById("submit-label");
   const errorMessage = document.getElementById("error-message");
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     submitButton.disabled = true;
+    submitButton.setAttribute("aria-busy", "true");
+    submitLabel.textContent = "Processing payment...";
+    errorMessage.textContent = "";
 
     const { error } = await stripe.confirmPayment({
       elements,
@@ -107,6 +110,8 @@
     if (error) {
       errorMessage.textContent = error.message;
       submitButton.disabled = false;
+      submitButton.removeAttribute("aria-busy");
+      submitLabel.textContent = "Pay Now";
     }
   });
 </script>

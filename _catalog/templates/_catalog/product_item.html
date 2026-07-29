@@ -51,20 +51,24 @@
       </div>
     {% endif %}
 
-    <button
-      type="button"
-      class="btn btn-sm product-favorite-btn position-absolute top-0 end-0 m-2"
-      data-product-id="{{ product.id }}"
-      aria-label="Toggle favorite"
-    >
-      <span class="favorite-emoji">{% if product.is_favourite %}&#9829;{% else %}&#9825;{% endif %}</span>
-    </button>
+    {% if user.is_authenticated %}
+      <button
+        type="button"
+        class="btn btn-sm product-favorite-btn position-absolute top-0 end-0 m-2"
+        data-product-id="{{ product.id }}"
+        data-product-name="{{ product.name }}"
+        aria-label="{% if product.is_favourite %}Remove from favourites{% else %}Add to favourites{% endif %}: {{ product.name }}"
+        aria-pressed="{{ product.is_favourite|yesno:'true,false' }}"
+      >
+        <span class="favorite-emoji" aria-hidden="true">{% if product.is_favourite %}&#9829;{% else %}&#9825;{% endif %}</span>
+      </button>
+    {% endif %}
 
     <a href="{% url 'product_detail' product.pk %}" class="product-media-link">
       {% if product.image_url and product.image_url != '/img/products/no-image.png' %}
         <img src="{{ product.image_url }}" class="card-img-top product-cosmos-image" alt="{{ product.name }}" loading="lazy">
       {% else %}
-        <img src="{% static 'images/default_product.jpg' %}" class="card-img-top product-cosmos-image" alt="No Image" loading="lazy">
+        <img src="{% static 'images/default_product.jpg' %}" class="card-img-top product-cosmos-image" alt="{{ product.name }} placeholder image" loading="lazy">
       {% endif %}
     </a>
 
@@ -109,7 +113,7 @@
         {% if show_remove_fav %}
           <form method="POST" action="{% url 'favorite_remove' product.id %}" class="d-inline">
             {% csrf_token %}
-            <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+            <button type="submit" class="btn btn-sm btn-outline-danger" aria-label="Remove {{ product.name }} from favourites">Remove</button>
           </form>
         {% endif %}
       </div>

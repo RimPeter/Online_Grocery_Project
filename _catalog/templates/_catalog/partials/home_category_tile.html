@@ -1,0 +1,60 @@
+{% load static %}
+<article
+  class="sunny-category-card"
+  data-l1="{{ sc.l1 }}"
+  data-l2="{{ sc.l2 }}"
+  style="--seq: {{ seq|default:0 }};"
+>
+  <a
+    class="sunny-category-link"
+    href="{% url 'product_list' %}?l1={{ sc.l1|urlencode }}&amp;l2={{ sc.l2|urlencode }}"
+  >
+    <div class="sunny-category-image">
+      {% if sc.image_url %}
+        <img
+          src="{{ sc.image_url }}"
+          alt=""
+          width="360"
+          height="360"
+          loading="lazy"
+          decoding="async"
+          data-fallback-src="{% static 'images/fresh_products.jpg' %}"
+        >
+      {% else %}
+        <img
+          src="{% static 'images/fresh_products.jpg' %}"
+          alt=""
+          width="360"
+          height="360"
+          loading="lazy"
+          decoding="async"
+          data-fallback-src="{% static 'images/fresh_products.jpg' %}"
+        >
+      {% endif %}
+      <span class="sunny-category-parent">{{ sc.l1 }}</span>
+    </div>
+    <span class="sunny-category-body">
+      <strong class="sunny-category-name">{{ sc.name }}</strong>
+      <span class="sunny-category-action">
+        Shop aisle
+        <svg aria-hidden="true" viewBox="0 0 20 20">
+          <path d="M4 10h11M11 5.5 15.5 10 11 14.5"></path>
+        </svg>
+      </span>
+    </span>
+  </a>
+
+  {% if user.is_authenticated %}
+    <button
+      type="button"
+      class="favorite-btn sunny-favorite-btn"
+      data-l1="{{ sc.l1 }}"
+      data-l2="{{ sc.l2 }}"
+      data-name="{{ sc.name }}"
+      aria-label="Favourite {{ sc.name }} in {{ sc.l1 }}"
+      aria-pressed="{{ sc.is_favourite|yesno:'true,false' }}"
+    >
+      <span class="favorite-emoji" aria-hidden="true">{% if sc.is_favourite %}&#9829;{% else %}&#9825;{% endif %}</span>
+    </button>
+  {% endif %}
+</article>

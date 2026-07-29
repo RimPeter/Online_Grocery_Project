@@ -7,23 +7,21 @@
 <style>
   /* Screen + print styles */
   :root {
-    --fg: #111827;
-    --muted: #6b7280;
-    --border: #e5e7eb;
-  }
-  @media print {
-    .no-print { display: none !important; }
-    @page { size: A4; margin: 12mm; }
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    --fg: #17352b;
+    --muted: #547065;
+    --border: #c8ddce;
   }
   .invoice-wrap {
     max-width: 900px;
     margin: 2rem auto;
-    background: #fff;
-    border: 1px solid var(--border);
-    border-radius: 12px;
+    background:
+      radial-gradient(circle at 96% 2%, rgba(255, 213, 74, .24), transparent 14rem),
+      #fffef9;
+    border: 2px solid var(--fg);
+    border-radius: 28px;
     padding: 2rem;
     color: var(--fg);
+    box-shadow: 0 8px 0 rgba(23, 53, 43, .17), 0 22px 40px rgba(23, 53, 43, .1);
   }
   .topbar {
     display: flex;
@@ -52,22 +50,103 @@
   .meta { text-align: right; }
   .meta h2 { font-size: 1.25rem; margin: 0 0 .25rem 0; }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: .75rem; }
-  .card { border: 1px solid var(--border); border-radius: 10px; padding: 1rem; }
+  .card { border: 1.5px solid var(--fg); border-radius: 18px; padding: 1rem; background: #fff; }
   .card h3 { margin: 0 0 .5rem 0; font-size: 1rem; }
   .addr p { margin: .15rem 0; }
+  .invoice-table-wrap { width: 100%; overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: .95rem; }
-  thead th { text-align: left; border-bottom: 2px solid var(--border); padding: .625rem .5rem; }
+  thead th { text-align: left; border-bottom: 2px solid var(--border); padding: .625rem .5rem; background: #fff0a6; }
   tbody td { border-bottom: 1px solid var(--border); padding: .625rem .5rem; vertical-align: top; }
   tfoot td { padding: .625rem .5rem; }
   .text-right { text-align: right; }
   .totals { margin-top: .5rem; display: grid; grid-template-columns: 1fr 300px; gap: 1rem; align-items: start; }
-  .summary { border: 1px solid var(--border); border-radius: 10px; padding: 1rem; }
+  .summary { border: 1.5px solid var(--fg); border-radius: 18px; padding: 1rem; background: #eaf8ed; }
   .summary .row { display: flex; justify-content: space-between; padding: .35rem 0; }
   .summary .row.total { font-weight: 700; border-top: 2px solid var(--border); margin-top: .35rem; padding-top: .6rem; }
   .footer-note { margin-top: 1.25rem; color: var(--muted); font-size: .9rem; }
   .actions { display: flex; gap: .5rem; margin-bottom: 1rem; justify-content: flex-end; }
-  .btn { display: inline-block; background: #111827; color: #fff; padding: .6rem .9rem; border-radius: 8px; text-decoration: none; border: 1px solid #111827; }
-  .btn.secondary { background: #fff; color: #111827; }
+  .btn { display: inline-block; background: #146c43; color: #fff; padding: .6rem .9rem; border-radius: 999px; text-decoration: none; border: 2px solid var(--fg); font-weight: 800; }
+  .btn.secondary { background: #fff; color: var(--fg); }
+  @media (max-width: 767.98px) {
+    .invoice-wrap {
+      margin: .5rem auto;
+      padding: 1rem;
+      border-radius: 22px;
+    }
+    .actions {
+      flex-wrap: wrap;
+      justify-content: flex-start;
+    }
+    .topbar {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+    .meta { text-align: left; }
+    .grid { grid-template-columns: 1fr; }
+    .invoice-table-wrap table { min-width: 650px; }
+    .totals { grid-template-columns: 1fr; }
+    .totals > div:first-child { display: none; }
+  }
+  @media print {
+    @page { size: A4; margin: 12mm; }
+
+    html,
+    body,
+    body.sunny-site-page.pagecolor {
+      margin: 0 !important;
+      padding: 0 !important;
+      background: #fff !important;
+      color: var(--fg) !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .grocery-nav,
+    .footer,
+    .toast-container,
+    .skip-to-content,
+    .no-print {
+      display: none !important;
+    }
+
+    .sunny-site-page .site-shell {
+      min-height: 0 !important;
+      padding: 0 !important;
+      overflow: visible !important;
+      background: #fff !important;
+    }
+
+    .sunny-site-page .site-shell::before,
+    .sunny-site-page .site-shell::after {
+      display: none !important;
+      content: none !important;
+    }
+
+    .sunny-site-page .site-main {
+      width: 100% !important;
+      max-width: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    .invoice-wrap {
+      max-width: none;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: #fff;
+      box-shadow: none;
+    }
+
+    .invoice-table-wrap {
+      overflow: visible;
+    }
+
+    .invoice-table-wrap table {
+      min-width: 0;
+    }
+  }
 </style>
 
 <div class="invoice-wrap">
@@ -157,32 +236,34 @@
   </div>
 
   <!-- Line items -->
-  <table aria-label="Invoice items">
-    <thead>
-      <tr>
-        <th>Item</th>
-        <th class="text-right">Qty</th>
-        <th class="text-right">Price</th>
-        <th class="text-right">VAT (included)</th>
-        <th class="text-right">Subtotal</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for it in order_items %}
+  <div class="invoice-table-wrap" tabindex="0" role="region" aria-label="Scrollable invoice items">
+    <table aria-label="Invoice items">
+      <thead>
         <tr>
-          <td>{{ it.product.name }}</td>
-          <td class="text-right">{{ it.quantity }}</td>
-          <td class="text-right">&pound;{{ it.price|floatformat:2 }}</td>
-          <td class="text-right">&pound;{{ it.vat_included|default:0|floatformat:2 }}</td>
-          <td class="text-right">&pound;{{ it.subtotal|floatformat:2 }}</td>
+          <th>Item</th>
+          <th class="text-right">Qty</th>
+          <th class="text-right">Price</th>
+          <th class="text-right">VAT (included)</th>
+          <th class="text-right">Subtotal</th>
         </tr>
-      {% empty %}
-        <tr>
-          <td colspan="5" class="muted">No items found for this invoice.</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        {% for it in order_items %}
+          <tr>
+            <td>{{ it.product.name }}</td>
+            <td class="text-right">{{ it.quantity }}</td>
+            <td class="text-right">&pound;{{ it.price|floatformat:2 }}</td>
+            <td class="text-right">&pound;{{ it.vat_included|default:0|floatformat:2 }}</td>
+            <td class="text-right">&pound;{{ it.subtotal|floatformat:2 }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="5" class="muted">No items found for this invoice.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 
   <!-- Totals -->
   <div class="totals">

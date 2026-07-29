@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block title %}Online Grocery{% endblock %}
+
+{% block content %}
+<section class="sunny-status-page {% block status_class %}{% endblock %}">
+  <div class="sunny-status-inner">
+    <span class="sunny-status-icon" aria-hidden="true">{% block status_icon %}&#10003;{% endblock %}</span>
+    <p class="sunny-status-kicker">{% block status_kicker %}Online Grocery{% endblock %}</p>
+    <h1 class="sunny-status-title">{% block status_heading %}All sorted{% endblock %}</h1>
+    <div class="sunny-status-copy">
+      {% block status_copy %}{% endblock %}
+    </div>
+    <div class="sunny-status-actions">
+      {% block status_actions %}{% endblock %}
+    </div>
+    {% block status_extra %}{% endblock %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="sunny-auth-layout" aria-labelledby="auth-page-title">
+  <div class="sunny-auth-intro">
+    <p class="sunny-auth-kicker">{% block auth_kicker %}Your account{% endblock %}</p>
+    <h1 class="sunny-auth-title" id="auth-page-title">
+      {% block auth_title %}A simpler way to shop.{% endblock %}
+    </h1>
+    <p class="sunny-auth-copy">
+      {% block auth_copy %}Keep your weekly essentials, saved picks, and account details together in one convenient place.{% endblock %}
+    </p>
+    {% block auth_points %}
+      <ul class="sunny-auth-points">
+        <li>Secure account access</li>
+        <li>A smoother weekly shop</li>
+        <li>Help whenever you need it</li>
+      </ul>
+    {% endblock %}
+  </div>
+
+  <div class="sunny-auth-card">
+    {% block auth_card %}{% endblock %}
+  </div>
+</section>
+{% endblock %}

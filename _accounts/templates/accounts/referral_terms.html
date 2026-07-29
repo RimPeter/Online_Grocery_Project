@@ -4,9 +4,6 @@
 {% block title %}Referral Terms & Conditions{% endblock %}
 
 {% block extra_css %}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@600;700&display=swap" rel="stylesheet">
 <style>
   .referral-terms-wrap {
     max-width: 920px;
@@ -14,49 +11,64 @@
   }
   .referral-terms-hero {
     padding: 1.5rem 1.6rem;
-    border-radius: 24px;
+    overflow: hidden;
+    border: 2px solid var(--sunny-ink);
+    border-radius: 32px;
     background:
-      radial-gradient(circle at top right, rgba(255, 224, 138, 0.35), transparent 35%),
-      linear-gradient(135deg, #113325 0%, #1f5c3f 62%, #2e7c54 100%);
-    color: #f6fff7;
-    box-shadow: 0 18px 36px rgba(15, 37, 25, 0.22);
+      radial-gradient(circle at top right, rgba(255, 114, 94, 0.32), transparent 35%),
+      radial-gradient(circle at 5% 110%, rgba(205, 234, 136, 0.62), transparent 38%),
+      var(--sunny-yellow);
+    color: var(--sunny-ink);
+    box-shadow: 0 8px 0 rgba(23, 53, 43, 0.18), 0 22px 40px rgba(23, 53, 43, 0.1);
   }
   .referral-terms-kicker {
     font-size: 0.78rem;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: rgba(246, 255, 247, 0.72);
+    color: var(--sunny-green-dark);
+    font-weight: 900;
   }
   .referral-terms-title {
-    font-family: 'Syne', sans-serif;
+    color: var(--sunny-ink);
+    font-family: "Fraunces", Georgia, serif;
     font-size: clamp(2rem, 4vw, 3rem);
     margin: 0.25rem 0 0.4rem;
   }
   .referral-terms-sub {
     max-width: 54rem;
-    color: rgba(246, 255, 247, 0.84);
+    color: #355448;
+    font-weight: 600;
     margin: 0;
   }
   .referral-terms-card {
     margin-top: 1.25rem;
     padding: 1.4rem 1.5rem;
+    border: 1.5px solid rgba(23, 53, 43, 0.5);
     border-radius: 22px;
-    background: #fffdf7;
-    border: 1px solid rgba(31, 92, 63, 0.12);
-    box-shadow: 0 16px 32px rgba(44, 62, 45, 0.08);
+    background: #fffef9;
+    box-shadow: 0 5px 0 rgba(23, 53, 43, 0.14);
   }
   .referral-terms-card h2 {
     font-size: 1.1rem;
     margin-bottom: 0.75rem;
-    color: #143827;
+    color: var(--sunny-green-dark);
   }
   .referral-terms-card p,
   .referral-terms-card li {
-    color: #33413a;
+    color: #355448;
   }
   .referral-terms-card ul {
     padding-left: 1.25rem;
     margin-bottom: 0;
+  }
+  .referral-terms-card:nth-of-type(3n + 2) {
+    background: #f5fbff;
+  }
+  .referral-terms-card:nth-of-type(3n + 3) {
+    background: #f6fff8;
+  }
+  .referral-terms-card:nth-of-type(3n + 4) {
+    background: #fff7f5;
   }
   .referral-terms-code {
     display: inline-flex;
@@ -64,10 +76,12 @@
     gap: 0.5rem;
     padding: 0.55rem 0.8rem;
     border-radius: 999px;
-    background: #edf8ef;
-    color: #17462f;
+    border: 1.5px solid var(--sunny-ink);
+    background: #fff;
+    color: var(--sunny-green-dark);
     font-weight: 800;
     letter-spacing: 0.04em;
+    box-shadow: 0 4px 0 rgba(23, 53, 43, 0.18);
   }
 </style>
 {% endblock %}

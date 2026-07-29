@@ -53,12 +53,22 @@ class AddressForm(forms.ModelForm):
             "is_default",
         ]
         widgets = {
-            "street_address": forms.TextInput(attrs={"class": "form-control"}),
+            "street_address": forms.TextInput(
+                attrs={"class": "form-control", "autocomplete": "shipping address-line1"}
+            ),
             "house_number": forms.TextInput(attrs={"class": "form-control"}),
-            "apartment": forms.TextInput(attrs={"class": "form-control"}),
-            "city": forms.TextInput(attrs={"class": "form-control"}),
-            "postal_code": forms.TextInput(attrs={"class": "form-control"}),
-            "delivery_instructions": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            "apartment": forms.TextInput(
+                attrs={"class": "form-control", "autocomplete": "shipping address-line2"}
+            ),
+            "city": forms.TextInput(
+                attrs={"class": "form-control", "autocomplete": "shipping address-level2"}
+            ),
+            "postal_code": forms.TextInput(
+                attrs={"class": "form-control", "autocomplete": "shipping postal-code"}
+            ),
+            "delivery_instructions": forms.Textarea(
+                attrs={"class": "form-control", "rows": 3, "autocomplete": "off"}
+            ),
             "is_default": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
 
@@ -73,7 +83,12 @@ class AddressForm(forms.ModelForm):
 
 class ConfirmPasswordForm(forms.Form):
     password = forms.CharField(
-        widget=forms.PasswordInput(attrs={'placeholder': 'Enter your password'}),
+        widget=forms.PasswordInput(
+            attrs={
+                'placeholder': 'Enter your password',
+                'autocomplete': 'current-password',
+            }
+        ),
         label='Confirm Your Password'
     )
 
@@ -118,11 +133,26 @@ class ProfileForm(forms.ModelForm):
         model = User
         fields = ['username', 'email', 'phone', 'first_name', 'last_name']
         widgets = {
-            'username': forms.TextInput(attrs={'class': 'form-control'}),
-            'email': forms.EmailInput(attrs={'class': 'form-control'}),
-            'phone': forms.TextInput(attrs={'class': 'form-control'}),
-            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'username': forms.TextInput(
+                attrs={'class': 'form-control', 'autocomplete': 'username'}
+            ),
+            'email': forms.EmailInput(
+                attrs={'class': 'form-control', 'autocomplete': 'email'}
+            ),
+            'phone': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'type': 'tel',
+                    'autocomplete': 'tel',
+                    'inputmode': 'tel',
+                }
+            ),
+            'first_name': forms.TextInput(
+                attrs={'class': 'form-control', 'autocomplete': 'given-name'}
+            ),
+            'last_name': forms.TextInput(
+                attrs={'class': 'form-control', 'autocomplete': 'family-name'}
+            ),
         }
 
     def __init__(self, user, *args, **kwargs):

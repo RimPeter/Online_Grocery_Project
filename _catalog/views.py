@@ -12,6 +12,7 @@ from django.db.utils import DatabaseError
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse, Http404, HttpResponseForbidden
 from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.csrf import ensure_csrf_cookie
 from _analytics.tracking import record_google_ads_landing_arrival, track_event
 from _accounts.referrals import build_referral_discounts
 from _orders.models import Order, OrderItem
@@ -56,6 +57,30 @@ DEFAULT_HOME_PILLARS = [
         'sort_order': 40,
     },
 ]
+
+
+FEATURED_HOME_DEPARTMENTS = (
+    ('Fruit and Vegetables', 'Fruit & vegetables'),
+    ('Dairy and Eggs', 'Dairy & eggs'),
+    ('Bread and Morning Goods', 'Bakery & breakfast'),
+    ('Meat and Poultry', 'Meat & poultry'),
+    ('Ready Meals', 'Easy meals'),
+    ('Soft Drinks', 'Drinks'),
+    ('Crisps and Snacks', 'Snacks'),
+    ('Retail and Professional Cleaners', 'Home care'),
+)
+
+FEATURED_HOME_AISLES = (
+    ('Fruit and Vegetables', 'Fruit'),
+    ('Dairy and Eggs', 'Fresh Milk'),
+    ('Bread and Morning Goods', 'Bread'),
+    ('Meat and Poultry', 'Meat'),
+    ('Ready Meals', 'Ready Meals'),
+    ('Soft Drinks', 'Bottled Fruit Juice'),
+    ('Crisps and Snacks', 'Popcorn'),
+    ('Retail and Professional Cleaners', 'Dishwash'),
+)
+
 
 def _normalize_category_value(value):
     value = (value or '').strip()
@@ -162,6 +187,72 @@ def _group_home_tiles(subcats):
     return category_groups
 
 
+def _featured_home_category_groups(category_groups, using_manual, limit=8):
+    """Return a short, balanced set of departments for the homepage."""
+    if not category_groups:
+        return []
+
+    if using_manual:
+        return category_groups[:limit]
+
+    groups_by_l1 = {
+        group['l1'].strip().casefold(): group
+        for group in category_groups
+    }
+    featured = []
+    selected_l1 = set()
+
+    for category_name, display_name in FEATURED_HOME_DEPARTMENTS:
+        group = groups_by_l1.get(category_name.casefold())
+        if not group:
+            continue
+        featured.append({**group, 'label': display_name})
+        selected_l1.add(group['l1'].strip().casefold())
+        if len(featured) >= limit:
+            return featured
+
+    for group in category_groups:
+        group_key = group['l1'].strip().casefold()
+        if group_key in selected_l1:
+            continue
+        featured.append(group)
+        if len(featured) >= limit:
+            break
+
+    return featured
+
+
+def _featured_home_tiles(featured_groups, limit=8):
+    """Pick one useful aisle from each featured department."""
+    if not featured_groups:
+        return []
+
+    preferred_l2_by_l1 = {
+        l1.casefold(): l2.casefold()
+        for l1, l2 in FEATURED_HOME_AISLES
+    }
+    featured_tiles = []
+
+    for group in featured_groups[:limit]:
+        preferred_l2 = preferred_l2_by_l1.get(
+            group['l1'].strip().casefold()
+        )
+        tile = next(
+            (
+                item
+                for item in group['items']
+                if preferred_l2
+                and item['l2'].strip().casefold() == preferred_l2
+            ),
+            group['items'][0],
+        )
+        featured_tiles.append(tile)
+        if len(featured_tiles) >= limit:
+            break
+
+    return featured_tiles
+
+
 def _manual_home_groups(auto_tiles):
     try:
         tiles = list(
@@ -225,20 +316,28 @@ def _build_home_context(request):
     embed_favorite_flag(subcats)
 
     favorite_tiles = [sc for sc in subcats if sc.get('is_favourite')]
+    featured_category_groups = _featured_home_category_groups(
+        category_groups,
+        using_manual,
+    )
 
     return {
         'subcats': subcats,
         'category_groups': category_groups,
+        'featured_category_groups': featured_category_groups,
+        'featured_home_tiles': _featured_home_tiles(featured_category_groups),
         'home_tiles_are_manual': using_manual,
         'value_pillars': value_pillars,
         'favorite_tiles': favorite_tiles,
     }
 
 
+@ensure_csrf_cookie
 def home(request):
     return render(request, '_catalog/home_new.html', _build_home_context(request))
 
 
+@ensure_csrf_cookie
 def home_google(request):
     record_google_ads_landing_arrival(request, path=request.path)
     return render(request, '_catalog/home-google.html', _build_home_context(request))

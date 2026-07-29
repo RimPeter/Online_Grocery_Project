@@ -4,9 +4,18 @@
 {% block title %}Set Delivery Slot{% endblock %}
 
 {% block content %}
-<div class="row">
-  <div class="col-12 col-md-8 col-lg-6">
-    <h1 class="mb-4">Set Delivery Slot</h1>
+<section class="pm-hub-page">
+  <header class="pm-hero">
+    <div>
+      <p class="pm-eyebrow">Order operations</p>
+      <h1 class="pm-title">Set Delivery Slot</h1>
+      <p class="pm-subtitle mb-0">Choose the delivery date and time window for order #{{ order.id }}.</p>
+    </div>
+    <span class="pm-chip">{% firstof order.user.get_full_name order.user.username %}</span>
+  </header>
+
+  <div class="row">
+    <div class="col-12 col-lg-8">
 
     <div class="card">
       <div class="card-body">
@@ -58,11 +67,12 @@
 
           <div class="d-flex gap-2">
             <button type="submit" class="btn btn-primary">Save Slot</button>
-<a class="btn btn-outline-secondary" href="{% url '_product_management:paid_orders' %}">Cancel</a>
+            <a class="btn btn-outline-secondary" href="{% url '_product_management:paid_orders' %}">Cancel</a>
           </div>
         </form>
       </div>
     </div>
+    </div>
   </div>
-</div>
+</section>
 {% endblock %}

@@ -1,0 +1,393 @@
+<script>
+let favoriteToastTimer = null;
+let favoriteToastSettle = null;
+let favoriteToastFocusOut = null;
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function updateHeartIcon(button, isFavourite) {
+    const emoji = button.querySelector('.favorite-emoji');
+    if (emoji) {
+        emoji.textContent = isFavourite ? '\u2665' : '\u2661';
+    }
+    button.setAttribute('aria-pressed', isFavourite ? 'true' : 'false');
+}
+
+function matchingFavoriteButtons(l1, l2) {
+    return Array.from(document.querySelectorAll('.favorite-btn')).filter(button => {
+        return button.dataset.l1 === l1 && button.dataset.l2 === l2;
+    });
+}
+
+function syncHeartIcons(l1, l2, isFavourite) {
+    matchingFavoriteButtons(l1, l2).forEach(button => {
+        updateHeartIcon(button, isFavourite);
+    });
+}
+
+function setFavoriteBusy(l1, l2, isBusy) {
+    matchingFavoriteButtons(l1, l2).forEach(button => {
+        button.disabled = isBusy;
+        if (isBusy) {
+            button.setAttribute('aria-busy', 'true');
+        } else {
+            button.removeAttribute('aria-busy');
+        }
+    });
+}
+
+function finishFavoriteToast(runSettle) {
+    const toast = document.getElementById('favorite-toast');
+    if (!toast) {
+        return;
+    }
+
+    if (favoriteToastTimer) {
+        clearTimeout(favoriteToastTimer);
+        favoriteToastTimer = null;
+    }
+    if (favoriteToastFocusOut) {
+        toast.removeEventListener('focusout', favoriteToastFocusOut);
+        favoriteToastFocusOut = null;
+    }
+
+    const settleCallback = favoriteToastSettle;
+    favoriteToastSettle = null;
+    toast.hidden = true;
+
+    if (runSettle && typeof settleCallback === 'function') {
+        settleCallback();
+    }
+}
+
+function showToast(message, undoCallback, settleCallback, focusUndo) {
+    const toast = document.getElementById('favorite-toast');
+    const liveStatus = document.getElementById('favorite-status');
+    const toastMessage = document.getElementById('favorite-toast-message');
+    const undoBtn = document.getElementById('favorite-toast-undo');
+
+    if (!toast || !toastMessage || !undoBtn) {
+        if (typeof settleCallback === 'function') {
+            settleCallback();
+        }
+        return;
+    }
+
+    if (favoriteToastTimer || favoriteToastSettle || !toast.hidden) {
+        finishFavoriteToast(true);
+    }
+
+    const hasUndo = typeof undoCallback === 'function';
+    favoriteToastSettle = settleCallback || null;
+    toastMessage.textContent = message;
+    if (liveStatus) {
+        liveStatus.textContent = '';
+        window.setTimeout(() => {
+            liveStatus.textContent = message;
+        }, 0);
+    }
+    undoBtn.hidden = !hasUndo;
+    toast.hidden = false;
+
+    favoriteToastTimer = setTimeout(() => {
+        if (toast.contains(document.activeElement)) {
+            favoriteToastFocusOut = function() {
+                window.setTimeout(() => {
+                    if (!toast.contains(document.activeElement)) {
+                        finishFavoriteToast(true);
+                    }
+                }, 0);
+            };
+            toast.addEventListener('focusout', favoriteToastFocusOut);
+        } else {
+            finishFavoriteToast(true);
+        }
+    }, 5000);
+
+    undoBtn.onclick = function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        finishFavoriteToast(false);
+        if (hasUndo) {
+            undoCallback();
+        }
+    };
+
+    if (focusUndo && hasUndo) {
+        undoBtn.focus();
+    }
+}
+
+function matchingSavedCards(l1, l2) {
+    const savedSection = document.getElementById('saved-aisles');
+    if (!savedSection) {
+        return [];
+    }
+    return Array.from(savedSection.querySelectorAll('.sunny-category-card')).filter(card => {
+        return card.dataset.l1 === l1 && card.dataset.l2 === l2;
+    });
+}
+
+function updateSavedSectionVisibility() {
+    const savedSection = document.getElementById('saved-aisles');
+    if (!savedSection) {
+        return;
+    }
+    savedSection.hidden = savedSection.querySelectorAll('.sunny-category-card').length === 0;
+}
+
+function buildSavedCard(button, l1, l2) {
+    const savedSection = document.getElementById('saved-aisles');
+    const savedGrid = savedSection
+        ? savedSection.querySelector('.sunny-category-grid')
+        : null;
+    if (!savedSection || !savedGrid || matchingSavedCards(l1, l2).length) {
+        return null;
+    }
+
+    const sourceCard = button.closest('.sunny-category-card');
+    let savedCard;
+
+    if (sourceCard && !sourceCard.closest('#saved-aisles')) {
+        savedCard = sourceCard.cloneNode(true);
+    } else {
+        const aisleName = button.dataset.name || l2 || l1;
+        const shopUrl = button.dataset.shopUrl || '{% url "product_list" %}';
+        const imageUrl = button.dataset.imageUrl || savedSection.dataset.fallbackImage;
+
+        savedCard = document.createElement('article');
+        savedCard.className = 'sunny-category-card';
+
+        const shopLink = document.createElement('a');
+        shopLink.className = 'sunny-category-link';
+        shopLink.href = shopUrl;
+
+        const imageWrap = document.createElement('div');
+        imageWrap.className = 'sunny-category-image';
+
+        const image = document.createElement('img');
+        image.src = imageUrl;
+        image.alt = '';
+        image.width = 360;
+        image.height = 360;
+        image.loading = 'lazy';
+        image.decoding = 'async';
+        image.dataset.fallbackSrc = savedSection.dataset.fallbackImage;
+
+        const parent = document.createElement('span');
+        parent.className = 'sunny-category-parent';
+        parent.textContent = l1;
+
+        const body = document.createElement('span');
+        body.className = 'sunny-category-body';
+
+        const name = document.createElement('strong');
+        name.className = 'sunny-category-name';
+        name.textContent = aisleName;
+
+        const action = document.createElement('span');
+        action.className = 'sunny-category-action';
+        action.textContent = 'Shop aisle \u2192';
+
+        const favoriteButton = document.createElement('button');
+        favoriteButton.type = 'button';
+        favoriteButton.className = 'favorite-btn sunny-favorite-btn';
+        favoriteButton.dataset.l1 = l1;
+        favoriteButton.dataset.l2 = l2;
+        favoriteButton.dataset.name = aisleName;
+        favoriteButton.setAttribute(
+            'aria-label',
+            `Favourite ${aisleName} in ${l1}`
+        );
+        favoriteButton.setAttribute('aria-pressed', 'true');
+
+        const heart = document.createElement('span');
+        heart.className = 'favorite-emoji';
+        heart.setAttribute('aria-hidden', 'true');
+        heart.textContent = '\u2665';
+
+        favoriteButton.appendChild(heart);
+        imageWrap.append(image, parent);
+        body.append(name, action);
+        shopLink.append(imageWrap, body);
+        savedCard.append(shopLink, favoriteButton);
+    }
+
+    savedCard.dataset.l1 = l1;
+    savedCard.dataset.l2 = l2;
+    savedCard.style.setProperty('--seq', String(savedGrid.children.length));
+    savedGrid.appendChild(savedCard);
+    savedSection.hidden = false;
+    return savedCard;
+}
+
+function focusMatchingControlOutsideSaved(l1, l2) {
+    const target = matchingFavoriteButtons(l1, l2).find(button => {
+        return !button.closest('#saved-aisles') && button.getClientRects().length;
+    });
+    if (target) {
+        target.focus();
+        return;
+    }
+
+    const drawerSummary = document.querySelector('.sunny-department-drawer > summary');
+    if (drawerSummary) {
+        drawerSummary.focus();
+    }
+}
+
+async function postFavoriteToggle(l1, l2) {
+    const response = await fetch('{% url "home_tile_favorite_toggle" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+            'X-CSRFToken': getCookie('csrftoken') || '',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: new URLSearchParams({ l1: l1, l2: l2 })
+    });
+
+    let data = {};
+    try {
+        data = await response.json();
+    } catch (error) {
+        data = {};
+    }
+
+    if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Favourite update failed.');
+    }
+    return data;
+}
+
+document.addEventListener('error', function(event) {
+    const image = event.target instanceof HTMLImageElement ? event.target : null;
+    const home = document.querySelector('.sunny-home');
+    const fallbackSrc = image ? image.dataset.fallbackSrc : '';
+
+    if (!image || !home || !home.contains(image) || !fallbackSrc) {
+        return;
+    }
+
+    delete image.dataset.fallbackSrc;
+    image.src = fallbackSrc;
+}, true);
+
+document.addEventListener('click', async function(event) {
+    const clickedElement = event.target instanceof Element ? event.target : null;
+    const button = clickedElement ? clickedElement.closest('.favorite-btn') : null;
+    const home = document.querySelector('.sunny-home');
+
+    if (!button || !home || !home.contains(button) || button.disabled) {
+        return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const l1 = button.dataset.l1 || '';
+    const l2 = button.dataset.l2 || '';
+    const keyboardAction = event.detail === 0;
+
+    if (!l1) {
+        return;
+    }
+
+    if (favoriteToastTimer || favoriteToastSettle) {
+        finishFavoriteToast(true);
+    }
+
+    setFavoriteBusy(l1, l2, true);
+
+    try {
+        const data = await postFavoriteToggle(l1, l2);
+        syncHeartIcons(l1, l2, data.is_favourite);
+
+        if (data.is_favourite) {
+            const addedCard = buildSavedCard(button, l1, l2);
+            syncHeartIcons(l1, l2, true);
+
+            showToast(
+                'Aisle added to favourites.',
+                async () => {
+                    setFavoriteBusy(l1, l2, true);
+                    try {
+                        const result = await postFavoriteToggle(l1, l2);
+                        syncHeartIcons(l1, l2, result.is_favourite);
+                        if (!result.is_favourite && addedCard && addedCard.isConnected) {
+                            addedCard.remove();
+                            updateSavedSectionVisibility();
+                        }
+                    } catch (error) {
+                        showToast('Undo failed. Please try again.', null, null, false);
+                    } finally {
+                        setFavoriteBusy(l1, l2, false);
+                        if (button.isConnected) {
+                            button.focus();
+                        }
+                    }
+                },
+                null,
+                keyboardAction
+            );
+        } else {
+            const savedCards = matchingSavedCards(l1, l2);
+
+            showToast(
+                'Aisle removed from favourites.',
+                async () => {
+                    setFavoriteBusy(l1, l2, true);
+                    try {
+                        const result = await postFavoriteToggle(l1, l2);
+                        syncHeartIcons(l1, l2, result.is_favourite);
+                    } catch (error) {
+                        const activeElement = document.activeElement;
+                        if (savedCards.some(card => card.contains(activeElement))) {
+                            focusMatchingControlOutsideSaved(l1, l2);
+                        }
+                        savedCards.forEach(card => card.remove());
+                        updateSavedSectionVisibility();
+                        showToast('Undo failed. Please try again.', null, null, false);
+                    } finally {
+                        setFavoriteBusy(l1, l2, false);
+                        if (button.isConnected) {
+                            button.focus();
+                        }
+                    }
+                },
+                () => {
+                    const activeElement = document.activeElement;
+                    if (savedCards.some(card => card.contains(activeElement))) {
+                        focusMatchingControlOutsideSaved(l1, l2);
+                    }
+                    savedCards.forEach(card => card.remove());
+                    updateSavedSectionVisibility();
+                },
+                keyboardAction
+            );
+        }
+    } catch (error) {
+        showToast(
+            'We could not update that favourite. Please try again.',
+            null,
+            null,
+            false
+        );
+    } finally {
+        setFavoriteBusy(l1, l2, false);
+    }
+});
+</script>

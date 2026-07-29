@@ -1,41 +1,40 @@
-{% extends 'base.html' %}
-{% load static %}
+{% extends 'accounts/auth_base.html' %}
+{% load static form_accessibility %}
 
 {% block title %}Login{% endblock %}
+{% block auth_kicker %}Welcome back{% endblock %}
+{% block auth_title %}Your weekly shop is waiting.{% endblock %}
+{% block auth_copy %}Sign in to revisit your saved picks, recent orders, and account details.{% endblock %}
 
-{% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-6">
-    <h2>Login</h2>
-    {% if form and form.non_field_errors %}
-      <div class="alert alert-danger">{{ form.non_field_errors|striptags }}</div>
+{% block auth_card %}
+<h2>Login</h2>
+{% if form and form.non_field_errors %}
+  <div class="alert alert-danger" id="id_login_non_field_error" role="alert">{{ form.non_field_errors|striptags }}</div>
+{% endif %}
+<form method="POST" novalidate{% if form.non_field_errors %} aria-describedby="id_login_non_field_error"{% endif %}>
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ next|default:'' }}" />
+  <div class="mb-3">
+    <label for="id_username" class="form-label">Username</label>
+    {{ form.username|with_error_attrs:"id_username_error" }}
+    {% if form.username.errors %}
+      <div class="text-danger small" id="id_username_error">{{ form.username.errors|striptags }}</div>
     {% endif %}
-    <form method="POST" novalidate>
-      {% csrf_token %}
-      <input type="hidden" name="next" value="{{ next|default:'' }}" />
-      <div class="mb-3">
-        <label for="id_username" class="form-label">Username</label>
-        {{ form.username }}
-        {% if form.username.errors %}
-          <div class="text-danger small">{{ form.username.errors|striptags }}</div>
-        {% endif %}
-      </div>
-      <div class="mb-3">
-        <label for="id_password" class="form-label">Password</label>
-        {{ form.password }}
-        {% if form.password.errors %}
-          <div class="text-danger small">{{ form.password.errors|striptags }}</div>
-        {% endif %}
-      </div>
-      <div class="form-check mb-3">
-        <input class="form-check-input" type="checkbox" name="remember_me" id="remember_me">
-        <label class="form-check-label" for="remember_me">Remember me</label>
-      </div>
-      <button type="submit" class="btn btn-primary">Login</button>
-      <div class="mt-2">
-        <a href="{% url 'password_reset' %}">Forgot password</a>
-      </div>
-    </form>
   </div>
-</div>
+  <div class="mb-3">
+    <label for="id_password" class="form-label">Password</label>
+    {{ form.password|with_error_attrs:"id_password_error" }}
+    {% if form.password.errors %}
+      <div class="text-danger small" id="id_password_error">{{ form.password.errors|striptags }}</div>
+    {% endif %}
+  </div>
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" name="remember_me" id="remember_me">
+    <label class="form-check-label" for="remember_me">Remember me</label>
+  </div>
+  <button type="submit" class="btn btn-primary">Login</button>
+  <div class="sunny-auth-links">
+    <a href="{% url 'password_reset' %}">Forgot password</a>
+  </div>
+</form>
 {% endblock %}

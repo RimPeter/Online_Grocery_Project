@@ -1,0 +1,14 @@
+{% extends 'status_base.html' %}
+
+{% block title %}Payment Not Completed{% endblock %}
+{% block status_class %}sunny-status-coral{% endblock %}
+{% block status_icon %}!{% endblock %}
+{% block status_kicker %}Payment paused{% endblock %}
+{% block status_heading %}Your payment was not completed.{% endblock %}
+{% block status_copy %}
+  <p>No new payment has been confirmed. You can return to your orders and try again when you are ready.</p>
+{% endblock %}
+{% block status_actions %}
+  <a href="{% url 'order_history' %}" class="btn btn-primary">View my orders</a>
+  <a href="{% url 'cart_view' %}" class="btn btn-outline-secondary">Return to cart</a>
+{% endblock %}

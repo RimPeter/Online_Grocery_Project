@@ -4,9 +4,6 @@
 {% block title %}Reorder from Last 3 Orders{% endblock %}
 
 {% block extra_css %}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@600;700&display=swap" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
@@ -49,7 +46,7 @@
               <form action="{% url 'order_reorder' group.order.id %}" method="POST">
                 {% csrf_token %}
                 <input type="hidden" name="return_to" value="{{ request.get_full_path }}" />
-                <button type="submit" class="btn order-history-primary-btn">Reorder Entire Order</button>
+                <button type="submit" class="btn order-history-primary-btn" aria-label="Reorder entire order {{ group.order.id }}">Reorder Entire Order</button>
               </form>
             </div>
             <div class="row g-3">
@@ -77,7 +74,7 @@
                         {% csrf_token %}
                         <input type="hidden" name="quantity" value="{{ item.quantity|default:1 }}" />
                         <input type="hidden" name="return_to" value="{{ request.get_full_path }}" />
-                        <button type="submit" class="btn btn-sm order-history-item-reorder-btn">Add</button>
+                        <button type="submit" class="btn btn-sm order-history-item-reorder-btn" aria-label="Add {{ item.name }} to cart">Add</button>
                       </form>
                     </div>
                   </div>

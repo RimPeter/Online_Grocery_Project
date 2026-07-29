@@ -4,9 +4,6 @@
 {% block title %}Manage Addresses{% endblock %}
 
 {% block extra_css %}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@600;700&display=swap" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
@@ -39,38 +36,48 @@
               <div class="col-md-6 mb-3">
                 <label class="form-label" for="id_street_address">Street address</label>
                 {{ form.street_address }}
-                {{ form.street_address.errors }}
+                {% if form.street_address.errors %}
+                  <div id="id_street_address_error" class="text-danger small">{{ form.street_address.errors|striptags }}</div>
+                {% endif %}
               </div>
               <div class="col-md-6 mb-3">
                 <label class="form-label" for="id_house_number">House number</label>
                 {{ form.house_number }}
-                {{ form.house_number.errors }}
+                {% if form.house_number.errors %}
+                  <div id="id_house_number_error" class="text-danger small">{{ form.house_number.errors|striptags }}</div>
+                {% endif %}
               </div>
             </div>
             <div class="mb-3">
               <label class="form-label" for="id_apartment">Apartment / Unit (optional)</label>
               {{ form.apartment }}
-              {{ form.apartment.errors }}
+              {% if form.apartment.errors %}
+                <div id="id_apartment_error" class="text-danger small">{{ form.apartment.errors|striptags }}</div>
+              {% endif %}
             </div>
             <div class="row">
               <div class="col-md-6 mb-3">
                 <label class="form-label" for="id_city">City</label>
                 {{ form.city }}
-                {{ form.city.errors }}
+                {% if form.city.errors %}
+                  <div id="id_city_error" class="text-danger small">{{ form.city.errors|striptags }}</div>
+                {% endif %}
               </div>
               <div class="col-md-6 mb-3">
                 <label class="form-label" for="id_postal_code">Postal code</label>
                 {{ form.postal_code }}
-                <div class="form-text">We currently deliver only to HU districts (e.g. HU1-HU19).</div>
+                <div id="id_postal_code_helptext" class="form-text">We currently deliver only to HU districts (e.g. HU1-HU19).</div>
                 {% if form.postal_code.errors %}
-                  <div class="postal-error-callout mt-1">{{ form.postal_code.errors|striptags }}</div>
+                  <div id="id_postal_code_error" class="postal-error-callout mt-1">{{ form.postal_code.errors|striptags }}</div>
                 {% endif %}
               </div>
             </div>
             <div class="mb-3">
               <label class="form-label" for="id_delivery_instructions">Delivery instructions (optional)</label>
               {{ form.delivery_instructions }}
-              {{ form.delivery_instructions.errors }}
+              {% if form.delivery_instructions.errors %}
+                <div id="id_delivery_instructions_error" class="text-danger small">{{ form.delivery_instructions.errors|striptags }}</div>
+              {% endif %}
             </div>
             {% if form.is_default %}
             {% comment %} <div class="form-check mb-3">
@@ -101,8 +108,8 @@
               </div>
               <div class="col-md-6 mb-3">
                 <label class="form-label" for="postal_code">Postal code</label>
-                <input type="text" class="form-control" id="postal_code" name="postal_code" required>
-                <div class="form-text">We currently deliver only to HU districts (e.g. HU1-HU19).</div>
+                <input type="text" class="form-control" id="postal_code" name="postal_code" required aria-describedby="postal_code_helptext">
+                <div id="postal_code_helptext" class="form-text">We currently deliver only to HU districts (e.g. HU1-HU19).</div>
               </div>
             </div>
             <div class="mb-3">
@@ -149,12 +156,12 @@
                     {% if addr.is_default %}
                       <button type="submit" class="btn btn-sm address-default-btn" disabled>Default</button>
                     {% else %}
-                      <button type="submit" class="btn btn-sm address-make-default-btn">Make default</button>
+                      <button type="submit" class="btn btn-sm address-make-default-btn" aria-label="Make {{ addr.street_address }} {{ addr.house_number }}, {{ addr.city }} the default address">Make default</button>
                     {% endif %}
                   </form>
                   <form method="post" action="{% url 'delete_address' addr.id %}" onsubmit="return confirm('Delete this address?');">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-sm address-delete-btn">Delete</button>
+                    <button type="submit" class="btn btn-sm address-delete-btn" aria-label="Delete address {{ addr.street_address }} {{ addr.house_number }}, {{ addr.city }}">Delete</button>
                   </form>
                 </div>
               </article>
@@ -167,4 +174,37 @@
     </div>
   </div>
 </div>
+{% if form %}
+<script>
+  (function () {
+    var fieldAssociations = [
+      ["id_street_address", "id_street_address_error"],
+      ["id_house_number", "id_house_number_error"],
+      ["id_apartment", "id_apartment_error"],
+      ["id_city", "id_city_error"],
+      ["id_postal_code", "id_postal_code_error", "id_postal_code_helptext"],
+      ["id_delivery_instructions", "id_delivery_instructions_error"]
+    ];
+
+    fieldAssociations.forEach(function (association) {
+      var field = document.getElementById(association[0]);
+      var error = document.getElementById(association[1]);
+      if (!field) return;
+
+      if (association[2]) {
+        field.setAttribute("aria-describedby", association[2]);
+      }
+      if (error) {
+        var describedBy = (field.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean);
+        if (describedBy.indexOf(association[1]) === -1) {
+          describedBy.push(association[1]);
+        }
+        field.setAttribute("aria-invalid", "true");
+        field.setAttribute("aria-describedby", describedBy.join(" "));
+        field.setAttribute("aria-errormessage", association[1]);
+      }
+    });
+  })();
+</script>
+{% endif %}
 {% endblock %}

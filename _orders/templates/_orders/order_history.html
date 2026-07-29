@@ -4,9 +4,6 @@
 {% block title %}My Orders{% endblock %}
 
 {% block extra_css %}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@600;700&display=swap" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
@@ -72,12 +69,12 @@
                   <a href="{% url 'invoice_page' order.id %}" class="btn order-history-outline-btn me-2">Invoice</a>
                 {% endif %}
                 {% if order.status == 'pending' %}
-                  <a href="{% url 'checkout' %}?order_id={{ order.id }}" class="btn order-history-success-btn me-2">Pay</a>
+                  <a href="{% url 'checkout' order.id %}" class="btn order-history-success-btn me-2">Pay</a>
                 {% endif %}
                 <form action="{% url 'order_reorder' order.id %}" method="POST" class="d-inline">
                   {% csrf_token %}
                   <input type="hidden" name="return_to" value="{% url 'order_history' %}" />
-                  <button type="submit" class="btn order-history-primary-btn">Reorder All</button>
+                  <button type="submit" class="btn order-history-primary-btn" aria-label="Reorder all items from order {{ order.id }}">Reorder All</button>
                 </form>
                 <a href="{% url 'contact_us' %}?subject=Regarding%20order%20{{ order.id }}&message=Hi%2C%20I%20have%20a%20question%20about%20order%20{{ order.id }}." class="btn order-history-link-btn">Contact support</a>
               </div>
@@ -97,7 +94,7 @@
                       {% endif %}
                     </a>
                     <div class="flex-grow-1 overflow-hidden order-history-item-main">
-                      <a href="{% url 'product_detail' item.product.id %}" class="stretched-link text-decoration-none text-dark">
+                      <a href="{% url 'product_detail' item.product.id %}" class="text-decoration-none text-dark">
                         <div class="order-history-item-name text-truncate d-block" title="{{ item.product.name }}">{{ item.product.name }}</div>
                       </a>
                       <div class="order-history-item-meta text-truncate">Qty: {{ item.quantity }} | &pound;{{ item.price }}</div>
@@ -107,7 +104,7 @@
                         {% csrf_token %}
                         <input type="hidden" name="quantity" value="{{ item.quantity }}" />
                         <input type="hidden" name="return_to" value="{% url 'order_history' %}" />
-                        <button type="submit" class="btn btn-sm order-history-item-reorder-btn">Reorder</button>
+                        <button type="submit" class="btn btn-sm order-history-item-reorder-btn" aria-label="Reorder {{ item.product.name }} from order {{ order.id }}">Reorder</button>
                       </form>
                     </div>
                   </div>

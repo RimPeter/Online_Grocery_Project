@@ -1,261 +1,359 @@
 {% load static %}
-<div class='market-home'>
-  <section class='hero-shell'>
-    <div class='row g-4 align-items-center'>
-      <div class='col-lg-7'>
-        {% if not user.is_authenticated %}
-        <div class='mini-intro'>New shoppers get faster checkout</div>
-        {% endif %}
+<div class="sunny-home">
+  <section class="sunny-hero" aria-labelledby="sunny-hero-title">
+    <span class="sunny-confetti sunny-confetti-one" aria-hidden="true"></span>
+    <span class="sunny-confetti sunny-confetti-two" aria-hidden="true"></span>
+    <span class="sunny-confetti sunny-confetti-three" aria-hidden="true"></span>
 
-        <p class='hero-kicker'>Produce-market inspired grocery shopping</p>
-        <h1 class='hero-title'>A warmer, fresher home page for the weekly shop.</h1>
-        <p class='hero-copy'>From crisp veg and family staples to freezer fillers and household basics, build a full basket in one place with dependable delivery and an aisle-first browsing flow.</p>
+    <div class="row g-4 g-xl-5 align-items-center">
+      <div class="col-lg-7">
+        <p class="sunny-hero-kicker">
+          <span aria-hidden="true"></span>
+          Fresh food. Friendly delivery.
+        </p>
 
-        <div class='hero-actions'>
-          <a href="{% url 'product_list' %}" class='hero-btn-main'>Shop the catalog</a>
-          {% if not user.is_authenticated %}
-          <a href="{% url 'signup' %}" class='hero-btn-alt'>Create account</a>
+        <h1 id="sunny-hero-title" class="sunny-hero-title">
+          Your weekly shop,
+          <span>made fresh and easy.</span>
+        </h1>
+
+        <p class="sunny-hero-copy">
+          From colourful produce to cupboard favourites, find everything your
+          household loves and have it brought to your door.
+        </p>
+
+        <form
+          class="sunny-search"
+          method="get"
+          action="{% url 'product_list' %}"
+          role="search"
+        >
+          <label class="visually-hidden" for="sunny-home-search">
+            Search groceries
+          </label>
+          <svg class="sunny-search-icon" aria-hidden="true" viewBox="0 0 24 24">
+            <circle cx="10.8" cy="10.8" r="6.6"></circle>
+            <path d="m16 16 4.2 4.2"></path>
+          </svg>
+          <input
+            id="sunny-home-search"
+            type="search"
+            name="q"
+            placeholder="What are you shopping for?"
+            autocomplete="off"
+          >
+          <button type="submit">Search</button>
+        </form>
+
+        <div class="sunny-hero-actions">
+          <a class="sunny-primary-btn" href="{% url 'product_list' %}">
+            Start shopping
+            <svg aria-hidden="true" viewBox="0 0 20 20">
+              <path d="M4 10h11M11 5.5 15.5 10 11 14.5"></path>
+            </svg>
+          </a>
+
+          {% if user.is_authenticated %}
+            <a class="sunny-secondary-btn" href="{% url 'favorite_products' %}">
+              My favourites
+            </a>
+          {% else %}
+            <a class="sunny-secondary-btn" href="{% url 'signup' %}">
+              Create an account
+            </a>
           {% endif %}
         </div>
 
-        <div class='hero-badges'>
-          <span class='hero-badge'>Fresh produce feel</span>
-          <span class='hero-badge'>Pantry to freezer</span>
-          <span class='hero-badge'>Easy repeat baskets</span>
-        </div>
-
-        <ul class='hero-metrics'>
+        <ul class="sunny-promises" aria-label="Shopping benefits">
           <li>
-            <span class='metric-value'>Flexible delivery</span>
-            <span class='metric-label'>Pick a slot that fits around your routine</span>
+            <span class="sunny-promise-icon sunny-promise-green" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M5 13.5 9.1 17 19 7"></path>
+              </svg>
+            </span>
+            Fresh choices
           </li>
           <li>
-            <span class='metric-value'>Favorite your aisles</span>
-            <span class='metric-label'>Keep the sections you shop most close by</span>
+            <span class="sunny-promise-icon sunny-promise-coral" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M4 8h11v9H4zM15 11h2.8l2.2 2.5V17h-5z"></path>
+                <circle cx="8" cy="18" r="1.5"></circle>
+                <circle cx="17.5" cy="18" r="1.5"></circle>
+              </svg>
+            </span>
+            Flexible delivery
           </li>
           <li>
-            <span class='metric-value'>Full-basket range</span>
-            <span class='metric-label'>Produce, pantry, frozen and household essentials</span>
+            <span class="sunny-promise-icon sunny-promise-blue" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M12 20s-7-4.3-7-9.6A3.6 3.6 0 0 1 11.4 8L12 9l.6-1A3.6 3.6 0 0 1 19 10.4C19 15.7 12 20 12 20Z"></path>
+              </svg>
+            </span>
+            Easy favourites
           </li>
         </ul>
       </div>
 
-      <div class='col-lg-5'>
-        <div class='hero-visual-stack'>
-          <figure class='hero-media mb-0'>
-            <img src="{% static 'images/fresh_products.jpg' %}" alt='Colorful grocery produce'>
-            <figcaption class='delivery-chip'>
-              <strong>Today&apos;s drop windows</strong>
-              <span>Reserve your slot during checkout</span>
-            </figcaption>
-          </figure>
-
-          <div class='hero-panel hero-panel-top'>
-            <span class='hero-panel-label'>Basket mood</span>
-            <strong>Bright produce, dependable staples, one smooth checkout.</strong>
+      <div class="col-lg-5">
+        <div class="sunny-hero-visual">
+          <div class="sunny-photo-frame">
+            <img
+              src="{% static 'images/fresh_products.jpg' %}"
+              alt="A colourful selection of fresh fruit and vegetables"
+              width="1536"
+              height="1024"
+              fetchpriority="high"
+              decoding="async"
+            >
           </div>
 
-          <div class='hero-panel hero-panel-bottom'>
-            <span class='hero-panel-label'>Built for regular shops</span>
-            <p>Browse by aisle, save favorites, and come back to the categories your household orders every week.</p>
+          <div class="sunny-photo-sticker sunny-photo-sticker-top">
+            <span class="sunny-sticker-spark" aria-hidden="true">✦</span>
+            <span>
+              <strong>Fresh picks</strong>
+              <small>Colour for every basket</small>
+            </span>
           </div>
+
+          <div class="sunny-photo-sticker sunny-photo-sticker-bottom">
+            <span class="sunny-sticker-basket" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="m7 10 5-6 5 6M4 10h16l-1.6 9H5.6L4 10Z"></path>
+              </svg>
+            </span>
+            <span>
+              <strong>One easy basket</strong>
+              <small>Fresh, frozen and everyday</small>
+            </span>
+          </div>
+
+          <span class="sunny-orbit sunny-orbit-one" aria-hidden="true"></span>
+          <span class="sunny-orbit sunny-orbit-two" aria-hidden="true"></span>
         </div>
       </div>
     </div>
   </section>
 
-  <section class='pillars-grid'>
-    <div class='section-top'>
+  <section class="sunny-aisles" id="shop-aisles" aria-labelledby="sunny-aisles-title">
+    <div class="sunny-section-heading">
       <div>
-        <p class='section-kicker'>Why Customers Return</p>
-        <h2 class='section-title'>A layout shaped around real grocery habits.</h2>
+        <p class="sunny-eyebrow">Shop by aisle</p>
+        <h2 id="sunny-aisles-title">What are you in the mood for?</h2>
+        <p>Jump into a department, or search the full range for a favourite.</p>
       </div>
-      <a class='section-link' href="{% url 'product_list' %}">Explore full catalog</a>
+      <a class="sunny-text-link" href="{% url 'product_list' %}">
+        View all products
+        <svg aria-hidden="true" viewBox="0 0 20 20">
+          <path d="M4 10h11M11 5.5 15.5 10 11 14.5"></path>
+        </svg>
+      </a>
     </div>
 
-    <div class='row g-3'>
-      {% if value_pillars %}
-        {% for pillar in value_pillars %}
-        <div class='col-12 col-md-6 col-lg-4'>
-          <article class='pillar-card' style='--seq: {{ forloop.counter0 }};'>
-            <span class='pillar-index'>{{ forloop.counter|stringformat:'02d' }}</span>
-            <h3 class='pillar-title'>{{ pillar.title }}</h3>
-            <p class='pillar-subtitle'>{{ pillar.subtitle }}</p>
-          </article>
-        </div>
+    {% if featured_home_tiles %}
+      <div class="sunny-category-grid sunny-featured-grid">
+        {% for sc in featured_home_tiles %}
+          {% include '_catalog/partials/home_category_tile.html' with sc=sc seq=forloop.counter0 %}
         {% endfor %}
-      {% else %}
-        <div class='col-12 col-md-6 col-lg-4'>
-          <article class='pillar-card' style='--seq: 0;'>
-            <span class='pillar-index'>01</span>
-            <h3 class='pillar-title'>Dependable local delivery</h3>
-            <p class='pillar-subtitle'>Choose a slot that suits your day and receive your order with clear updates.</p>
-          </article>
-        </div>
-        <div class='col-12 col-md-6 col-lg-4'>
-          <article class='pillar-card' style='--seq: 1;'>
-            <span class='pillar-index'>02</span>
-            <h3 class='pillar-title'>Everything in one basket</h3>
-            <p class='pillar-subtitle'>From produce to frozen meals, fill your shop in one smooth checkout flow.</p>
-          </article>
-        </div>
-        <div class='col-12 col-md-6 col-lg-4'>
-          <article class='pillar-card' style='--seq: 2;'>
-            <span class='pillar-index'>03</span>
-            <h3 class='pillar-title'>Fair pricing every day</h3>
-            <p class='pillar-subtitle'>Consistent value on essential products your household buys every week.</p>
-          </article>
-        </div>
-      {% endif %}
-    </div>
-  </section>
-
-  <section class='browse-shell'>
-    <div class='section-top'>
-      <div>
-        <p class='section-kicker'>Browse By Aisle</p>
-        <h2 class='section-title'>Jump into the parts of the shop that matter most.</h2>
       </div>
-      <a class='section-link' href="{% url 'product_list' %}">All products</a>
-    </div>
-
-    <div class='browse-lead'>
-      <p class='browse-copy'>The homepage now leans into a warmer market-stall feel, with aisle groups front and center so regular shoppers can get from inspiration to basket faster.</p>
-      <div class='browse-tags'>
-        <span class='browse-tag'>Fruit &amp; veg</span>
-        <span class='browse-tag'>Dinner staples</span>
-        <span class='browse-tag'>Snacks &amp; drinks</span>
-        <span class='browse-tag'>Household basics</span>
+    {% elif subcats %}
+      <div class="sunny-category-grid sunny-featured-grid">
+        {% for sc in subcats|slice:":8" %}
+          {% include '_catalog/partials/home_category_tile.html' with sc=sc seq=forloop.counter0 %}
+        {% endfor %}
       </div>
-    </div>
-
-    {% if favorite_tiles %}
-      <div class='favorites-section'>
-        <div class='section-top'>
-          <div>
-            <p class='section-kicker'>My Favorites</p>
-            <h2 class='section-title'>Your saved aisles</h2>
-          </div>
-        </div>
-
-        <div class='row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3'>
-          {% for sc in favorite_tiles %}
-          <div class='col'>
-            <a href="{% url 'product_list' %}?l1={{ sc.l1|urlencode }}&l2={{ sc.l2|urlencode }}" class='category-tile' style='--seq: {{ forloop.counter0 }};'>
-              <div class='tile-image-wrap'>
-                {% if sc.image_url %}
-                  <img src='{{ sc.image_url }}' alt='{{ sc.name }}'>
-                {% else %}
-                  <img src="{% static 'images/default_product.jpg' %}" alt='{{ sc.name }}'>
-                {% endif %}
-                {% if user.is_authenticated %}
-                  <button type='button' class='favorite-btn' data-l1='{{ sc.l1 }}' data-l2='{{ sc.l2 }}' aria-label='Toggle favorite' aria-pressed='{{ sc.is_favourite|yesno:"true,false" }}'>
-                    <span class='favorite-emoji'>{% if sc.is_favourite %}&#9829;{% else %}&#9825;{% endif %}</span>
-                  </button>
-                {% endif %}
-                <span class='tile-chip'>{{ sc.l1 }}</span>
-              </div>
-              <div class='tile-body'>
-                <h4 class='tile-name'>{{ sc.name }}</h4>
-                <p class='tile-sub'>Open category</p>
-              </div>
-            </a>
-          </div>
-          {% endfor %}
+    {% else %}
+      <div class="sunny-empty-state">
+        <span aria-hidden="true">☀</span>
+        <div>
+          <strong>Our aisles are being refreshed.</strong>
+          <p>Use the search above or open the full catalogue to keep shopping.</p>
         </div>
       </div>
     {% endif %}
 
     {% if category_groups %}
-      {% for group in category_groups %}
-      <div class='group-block'>
-        <div class='group-header'>
-          <div>
-            <p class='group-eyebrow'>{{ group.items|length }} aisles ready</p>
-            <h3 class='group-name'>{{ group.label }}</h3>
-          </div>
-          <a class='group-link' href="{% url 'product_list' %}?l1={{ group.l1|urlencode }}">View all</a>
-        </div>
-
-        <div class='row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3'>
-          {% for sc in group.items %}
-          <div class='col'>
-            <a href="{% url 'product_list' %}?l1={{ sc.l1|urlencode }}&l2={{ sc.l2|urlencode }}" class='category-tile' style='--seq: {{ forloop.counter0 }};'>
-              <div class='tile-image-wrap'>
-                {% if sc.image_url %}
-                  <img src='{{ sc.image_url }}' alt='{{ sc.name }}'>
-                {% else %}
-                  <img src="{% static 'images/default_product.jpg' %}" alt='{{ sc.name }}'>
-                {% endif %}
-                {% if user.is_authenticated %}
-                  <button type='button' class='favorite-btn' data-l1='{{ sc.l1 }}' data-l2='{{ sc.l2 }}' aria-label='Toggle favorite' aria-pressed='{{ sc.is_favourite|yesno:"true,false" }}'>
-                    <span class='favorite-emoji'>{% if sc.is_favourite %}&#9829;{% else %}&#9825;{% endif %}</span>
-                  </button>
-                {% endif %}
-                <span class='tile-chip'>{{ sc.l1 }}</span>
+      <details class="sunny-department-drawer">
+        <summary>
+          <span>
+            Browse all {{ category_groups|length }}
+            department{{ category_groups|length|pluralize }}
+          </span>
+          <span class="sunny-drawer-plus" aria-hidden="true"></span>
+        </summary>
+        <div class="sunny-department-groups">
+          {% for group in category_groups %}
+            <details class="sunny-department-group">
+              <summary>
+                <span>{{ group.label }}</span>
+                <small>{{ group.items|length }} aisle{{ group.items|length|pluralize }}</small>
+              </summary>
+              <div class="sunny-drawer-aisles">
+                <a
+                  class="sunny-drawer-view-all"
+                  href="{% url 'product_list' %}?l1={{ group.l1|urlencode }}"
+                >
+                  View all {{ group.label }}
+                </a>
+                {% for sc in group.items %}
+                  <div class="sunny-drawer-aisle">
+                    <a href="{% url 'product_list' %}?l1={{ sc.l1|urlencode }}&amp;l2={{ sc.l2|urlencode }}">
+                      {{ sc.name }}
+                    </a>
+                    {% if user.is_authenticated %}
+                      <button
+                        type="button"
+                        class="favorite-btn sunny-drawer-favorite"
+                        data-l1="{{ sc.l1 }}"
+                        data-l2="{{ sc.l2 }}"
+                        data-name="{{ sc.name }}"
+                        data-image-url="{% if sc.image_url %}{{ sc.image_url }}{% else %}{% static 'images/fresh_products.jpg' %}{% endif %}"
+                        data-shop-url="{% url 'product_list' %}?l1={{ sc.l1|urlencode }}&amp;l2={{ sc.l2|urlencode }}"
+                        aria-label="Favourite {{ sc.name }} in {{ sc.l1 }}"
+                        aria-pressed="{{ sc.is_favourite|yesno:'true,false' }}"
+                      >
+                        <span class="favorite-emoji" aria-hidden="true">{% if sc.is_favourite %}&#9829;{% else %}&#9825;{% endif %}</span>
+                      </button>
+                    {% endif %}
+                  </div>
+                {% endfor %}
               </div>
-              <div class='tile-body'>
-                <h4 class='tile-name'>{{ sc.name }}</h4>
-                <p class='tile-sub'>Open category</p>
-              </div>
-            </a>
-          </div>
+            </details>
           {% endfor %}
         </div>
-      </div>
-      {% endfor %}
-    {% elif subcats %}
-      <div class='group-block'>
-        <div class='group-header'>
-          <div>
-            <p class='group-eyebrow'>All aisles</p>
-            <h3 class='group-name'>Shop every category</h3>
-          </div>
-        </div>
-
-        <div class='row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3'>
-          {% for sc in subcats %}
-          <div class='col'>
-            <a href="{% url 'product_list' %}?l1={{ sc.l1|urlencode }}&l2={{ sc.l2|urlencode }}" class='category-tile' style='--seq: {{ forloop.counter0 }};'>
-              <div class='tile-image-wrap'>
-                {% if sc.image_url %}
-                  <img src='{{ sc.image_url }}' alt='{{ sc.name }}'>
-                {% else %}
-                  <img src="{% static 'images/default_product.jpg' %}" alt='{{ sc.name }}'>
-                {% endif %}
-                {% if user.is_authenticated %}
-                  <button type='button' class='favorite-btn' data-l1='{{ sc.l1 }}' data-l2='{{ sc.l2 }}' aria-label='Toggle favorite' aria-pressed='{{ sc.is_favourite|yesno:"true,false" }}'>
-                    <span class='favorite-emoji'>{% if sc.is_favourite %}&#9829;{% else %}&#9825;{% endif %}</span>
-                  </button>
-                {% endif %}
-                <span class='tile-chip'>{{ sc.l1 }}</span>
-              </div>
-              <div class='tile-body'>
-                <h4 class='tile-name'>{{ sc.name }}</h4>
-                <p class='tile-sub'>Open category</p>
-              </div>
-            </a>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-    {% else %}
-      <div class='empty-state'>Categories are being refreshed. Use the search bar or open the full catalog to continue shopping.</div>
+      </details>
     {% endif %}
   </section>
 
-  {% if not user.is_authenticated %}
-  <section class='signup-band'>
-    <div>
-      <p class='signup-band-kicker'>Create your account</p>
-      <p class='signup-band-copy'>Save favorite aisles, check out faster, and keep your regular weekly basket easy to rebuild.</p>
-    </div>
-    <a href="{% url 'signup' %}" class='signup-band-btn'>Sign up</a>
-  </section>
+  {% if user.is_authenticated %}
+    <section
+      class="sunny-saved"
+      id="saved-aisles"
+      aria-labelledby="sunny-saved-title"
+      data-fallback-image="{% static 'images/fresh_products.jpg' %}"
+      {% if not favorite_tiles %}hidden{% endif %}
+    >
+      <div class="sunny-section-heading">
+        <div>
+          <p class="sunny-eyebrow">Saved for you</p>
+          <h2 id="sunny-saved-title">Your favourite aisles</h2>
+          <p>Your regular picks, ready whenever the next shop starts.</p>
+        </div>
+      </div>
+
+      <div class="sunny-category-grid">
+        {% for sc in favorite_tiles %}
+          {% include '_catalog/partials/home_category_tile.html' with sc=sc seq=forloop.counter0 %}
+        {% endfor %}
+      </div>
+    </section>
   {% endif %}
 
-  <div id='favorite-toast' class='favorite-toast' aria-live='polite' aria-atomic='true' hidden>
-    <span id='favorite-toast-message'>Favorited.</span>
-    <button id='favorite-toast-undo' class='favorite-toast-undo' type='button'>Undo</button>
+  <section class="sunny-values" aria-labelledby="sunny-values-title">
+    <div class="sunny-section-heading sunny-values-heading">
+      <div>
+        <p class="sunny-eyebrow">Why shop with us?</p>
+        <h2 id="sunny-values-title">A little more joy in every shop.</h2>
+      </div>
+    </div>
+
+    <div class="sunny-value-grid">
+      {% for pillar in value_pillars %}
+        {% cycle 'yellow' 'blue' 'green' 'coral' as value_tone silent %}
+        <article class="sunny-value-card sunny-value-{{ value_tone }}">
+          <div class="sunny-value-top">
+            <span class="sunny-value-icon" aria-hidden="true">
+              {% if forloop.counter == 1 %}
+                <svg viewBox="0 0 24 24">
+                  <path d="M4 8h11v9H4zM15 11h2.8l2.2 2.5V17h-5z"></path>
+                  <circle cx="8" cy="18" r="1.5"></circle>
+                  <circle cx="17.5" cy="18" r="1.5"></circle>
+                </svg>
+              {% elif forloop.counter == 2 %}
+                <svg viewBox="0 0 24 24">
+                  <path d="m7 10 5-6 5 6M4 10h16l-1.6 9H5.6L4 10Z"></path>
+                </svg>
+              {% elif forloop.counter == 3 %}
+                <svg viewBox="0 0 24 24">
+                  <path d="M4 7.5 11.5 3H20v8.5L12.5 19 4 10.5v-3Z"></path>
+                  <circle cx="15.5" cy="7.5" r="1.2"></circle>
+                </svg>
+              {% else %}
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 3c.6 4.8 3.2 7.4 8 8-4.8.6-7.4 3.2-8 8-.6-4.8-3.2-7.4-8-8 4.8-.6 7.4-3.2 8-8Z"></path>
+                </svg>
+              {% endif %}
+            </span>
+            <span class="sunny-value-number">{{ forloop.counter|stringformat:"02d" }}</span>
+          </div>
+          <h3>{{ pillar.title }}</h3>
+          <p>{{ pillar.subtitle }}</p>
+        </article>
+      {% empty %}
+        <article class="sunny-value-card sunny-value-yellow">
+          <div class="sunny-value-top">
+            <span class="sunny-value-icon" aria-hidden="true">✓</span>
+            <span class="sunny-value-number">01</span>
+          </div>
+          <h3>Easy from start to finish</h3>
+          <p>Fill your basket, choose your slot and let us take care of the rest.</p>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if user.is_authenticated %}
+    <section class="sunny-closing sunny-closing-returning" aria-labelledby="sunny-closing-title">
+      <div class="sunny-closing-copy">
+        <p class="sunny-closing-kicker">Make the regular shop lighter</p>
+        <h2 id="sunny-closing-title">Your usuals are only a few clicks away.</h2>
+        <p>Rebuild a previous basket, make a few swaps, and you are ready to go.</p>
+      </div>
+      <a class="sunny-closing-btn" href="{% url 'reorder_page' %}">
+        Rebuild a basket
+        <svg aria-hidden="true" viewBox="0 0 20 20">
+          <path d="M4 10h11M11 5.5 15.5 10 11 14.5"></path>
+        </svg>
+      </a>
+      <span class="sunny-closing-shape sunny-closing-shape-one" aria-hidden="true"></span>
+      <span class="sunny-closing-shape sunny-closing-shape-two" aria-hidden="true"></span>
+    </section>
+  {% else %}
+    <section class="sunny-closing" aria-labelledby="sunny-closing-title">
+      <div class="sunny-closing-copy">
+        <p class="sunny-closing-kicker">Make next week even easier</p>
+        <h2 id="sunny-closing-title">Save your favourites. Fly through checkout.</h2>
+        <p>Create a free account and keep the things you love close at hand.</p>
+      </div>
+      <a class="sunny-closing-btn" href="{% url 'signup' %}">
+        Create my account
+        <svg aria-hidden="true" viewBox="0 0 20 20">
+          <path d="M4 10h11M11 5.5 15.5 10 11 14.5"></path>
+        </svg>
+      </a>
+      <span class="sunny-closing-shape sunny-closing-shape-one" aria-hidden="true"></span>
+      <span class="sunny-closing-shape sunny-closing-shape-two" aria-hidden="true"></span>
+    </section>
+  {% endif %}
+
+  <div
+    id="favorite-status"
+    class="visually-hidden"
+    role="status"
+    aria-live="polite"
+    aria-atomic="true"
+  ></div>
+
+  <div
+    id="favorite-toast"
+    class="favorite-toast sunny-favorite-toast"
+    role="group"
+    aria-label="Favourite update"
+    hidden
+  >
+    <span class="sunny-toast-heart" aria-hidden="true">♥</span>
+    <span id="favorite-toast-message">Favourite updated.</span>
+    <button id="favorite-toast-undo" class="favorite-toast-undo" type="button">
+      Undo
+    </button>
   </div>
 </div>

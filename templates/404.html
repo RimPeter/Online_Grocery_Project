@@ -1,16 +1,14 @@
-{% extends 'base.html' %}
-{% load static %}
+{% extends 'status_base.html' %}
 
 {% block title %}Page Not Found{% endblock %}
-
-{% block content %}
-<div class="container my-5">
-  <div class="text-center">
-    <h1 class="display-4">404: Page Not Found</h1>
-    <p class="lead">
-      Oops! The page you're looking for doesn't exist.
-    </p>
-    <a href="{% url 'home' %}" class="btn btn-primary">Go to Home</a>
-  </div>
-</div>
+{% block status_class %}sunny-status-coral{% endblock %}
+{% block status_icon %}404{% endblock %}
+{% block status_kicker %}Wrong aisle{% endblock %}
+{% block status_heading %}We could not find that page.{% endblock %}
+{% block status_copy %}
+  <p>The link may have moved, or the page may no longer be available.</p>
+{% endblock %}
+{% block status_actions %}
+  <a href="{% url 'home' %}" class="btn btn-primary">Go to home</a>
+  <a href="{% url 'product_list' %}" class="btn btn-outline-secondary">Browse products</a>
 {% endblock %}

@@ -1,8 +1,13 @@
-{% extends 'base.html' %}
-{% block title %}Payment Success{% endblock %}
-{% block content %}
-<div class="container">
-  <h1>Your payment was successful!</h1>
-  <p>Thank you for your order.</p>
-</div>
+{% extends 'status_base.html' %}
+
+{% block title %}Payment Successful{% endblock %}
+{% block status_icon %}&#10003;{% endblock %}
+{% block status_kicker %}Order confirmed{% endblock %}
+{% block status_heading %}Your shop is officially on its way.{% endblock %}
+{% block status_copy %}
+  <p>Payment was successful. Thank you for shopping with Online Grocery.</p>
+{% endblock %}
+{% block status_actions %}
+  <a href="{% url 'order_history' %}" class="btn btn-primary">View my orders</a>
+  <a href="{% url 'product_list' %}" class="btn btn-outline-secondary">Keep shopping</a>
 {% endblock %}
