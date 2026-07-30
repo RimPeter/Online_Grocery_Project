@@ -33,6 +33,8 @@ import requests
 from bs4 import BeautifulSoup
 from django.core.management.base import BaseCommand
 
+from .scraper_for_sub_subcategory import Command as ProductScraperCommand
+
 
 BASE_URL = "https://www.bestwaywholesale.co.uk"
 
@@ -105,6 +107,7 @@ class Command(BaseCommand):
 
         result: dict = {}
         total_sub_subcats = 0
+        pagination_cache = {}
 
         for main_cat, subcat_map in categories.items():
             if not isinstance(subcat_map, dict):
@@ -199,24 +202,39 @@ class Command(BaseCommand):
                         # Build absolute URL for the sub-subcategory
                         full_url = f"{base_url}{href}"
 
-                        # Always record the base URL for this sub-subcategory
-                        self._add_url(sub_bucket, name, full_url)
-                        found_any = True
-
-                        # Also look for pagination on this sub-subcategory, e.g.:
-                        #   /grocery/171/501911
-                        #   /grocery/171/501911?s=100
-                        #   /grocery/171/501911?s=200
-                        # up to ?s=700, or stop early if a page fails.
-                        for offset in range(100, 701, 100):
-                            paged_url = f"{full_url}?s={offset}"
+                        # Inspect the live product count instead of assuming
+                        # the old 100-product offsets through ?s=700. Bestway
+                        # currently paginates in 20-product offsets, and the
+                        # total varies by listing.
+                        if full_url not in pagination_cache:
                             try:
-                                r_page = session.get(paged_url, timeout=10)
-                            except Exception:
-                                break
-                            if r_page.status_code != 200:
-                                break
-                            self._add_url(sub_bucket, name, paged_url)
+                                listing_response = session.get(
+                                    full_url, timeout=20
+                                )
+                                listing_response.raise_for_status()
+                            except Exception as exc:
+                                self.stderr.write(
+                                    self.style.WARNING(
+                                        "  Could not inspect pagination for "
+                                        f"{full_url} ({exc}); recording its "
+                                        "first page only."
+                                    )
+                                )
+                                page_urls = [full_url]
+                            else:
+                                listing_soup = BeautifulSoup(
+                                    listing_response.text, "html.parser"
+                                )
+                                page_urls = (
+                                    ProductScraperCommand._listing_page_urls(
+                                        full_url, listing_soup
+                                    )
+                                )
+                            pagination_cache[full_url] = page_urls
+
+                        for listing_url in pagination_cache[full_url]:
+                            self._add_url(sub_bucket, name, listing_url)
+                        found_any = True
 
                     if not found_any:
                         self.stderr.write(

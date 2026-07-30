@@ -1,25 +1,23 @@
 """
-Scrape product listing pages from Bestway using URLs listed in
-_product_management/management/commands/sub_subcategories.json and
-export the results to a JSON file.
+Scrape product listing pages from Bestway using parent category URLs in
+_product_management/management/commands/subcategories.json and export the
+results to a JSON file.
 
 Usage:
     python manage.py scraper_for_sub_subcategory
 
 This command:
-  - Reads a nested structure from sub_subcategories.json:
+  - Reads the current parent-category structure from subcategories.json:
         {
           "Main Category": {
-            "Subcategory": {
-              "Sub-subcategory": [
-                "https://.../page1",
-                "https://.../page1?s=100",
-                ...
-              ]
-            }
+            "Subcategory": "https://.../category/401"
           }
         }
-  - Fetches each listing URL
+  - Reads each live listing's product count and generates its pagination URLs
+    using the site's current page size (normally ?s=20, ?s=40, ...)
+  - Also accepts the older sub_subcategories.json structure when passed with
+    --input
+  - Fetches every discovered listing URL
   - Extracts product data from <li data-ga-product-id="..."> elements
   - Follows each product detail page to scrape description / ingredients / other info
   - Writes a flat list of product objects to a JSON file suitable for
@@ -31,7 +29,7 @@ import json
 import re
 from pathlib import Path
 from typing import Dict, Iterable, List, Tuple
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, urlencode, urlparse, urlsplit, urlunsplit
 
 import requests
 from bs4 import BeautifulSoup
@@ -55,8 +53,8 @@ HEADERS = {
 
 class Command(BaseCommand):
     help = (
-        "Scrape all listing URLs from sub_subcategories.json and export "
-        "product data to a JSON file."
+        "Discover and scrape all paginated Bestway category listings, then "
+        "export product data to a JSON file."
     )
 
     def add_arguments(self, parser):
@@ -65,10 +63,10 @@ class Command(BaseCommand):
         parser.add_argument(
             "--input",
             type=str,
-            default=str(script_dir / "sub_subcategories.json"),
+            default=str(script_dir / "subcategories.json"),
             help=(
-                "Path to sub_subcategories.json "
-                "(default: commands/sub_subcategories.json)."
+                "Path to subcategories.json or the legacy "
+                "sub_subcategories.json (default: commands/subcategories.json)."
             ),
         )
         parser.add_argument(
@@ -95,7 +93,7 @@ class Command(BaseCommand):
         if not input_path.exists():
             raise SystemExit(
                 f"Input file not found: {input_path}. "
-                "Ensure sub_subcategories.json exists (run scrape_sub_subcategories first)."
+                "Ensure subcategories.json exists (run scrape_subcategories first)."
             )
 
         with input_path.open(encoding="utf-8") as fh:
@@ -109,11 +107,17 @@ class Command(BaseCommand):
                 f"Expected a JSON object in {input_path}, got {type(data).__name__}"
             )
 
-        sources = list(self._expand_urls(data))
-        self.stdout.write(f"Found {len(sources):,} listing URLs to scrape.")
-
         session = requests.Session()
         session.headers.update(HEADERS)
+
+        seeds = list(self._expand_urls(data))
+        self.stdout.write(
+            f"Found {len(seeds):,} category listing roots in {input_path.name}."
+        )
+        sources = self._discover_listing_urls(session, seeds, base_url)
+        self.stdout.write(
+            f"Discovered {len(sources):,} paginated listing URLs to scrape."
+        )
 
         collected: List[Dict] = []
         seen_ids = set()
@@ -345,23 +349,140 @@ class Command(BaseCommand):
     @staticmethod
     def _expand_urls(data: Dict) -> Iterable[Tuple[str, str, str, str]]:
         """
-        Flatten the nested sub_subcategories.json structure into
+        Flatten either supported input structure into
         (main_category, sub_category, sub_subcategory, url) tuples.
+
+        The current subcategories.json format stores a URL directly under each
+        subcategory. The legacy sub_subcategories.json format has one further
+        mapping level and may contain a list of pre-generated pagination URLs.
         """
         for main_cat, subcats in data.items():
             if not isinstance(subcats, dict):
                 continue
-            for sub_cat, subsub_map in subcats.items():
-                if not isinstance(subsub_map, dict):
-                    continue
-                for sub_subcat, value in subsub_map.items():
-                    if isinstance(value, list):
-                        for u in value:
-                            if isinstance(u, str) and u.strip():
-                                yield main_cat, sub_cat, sub_subcat, u
-                    elif isinstance(value, str):
-                        if value.strip():
-                            yield main_cat, sub_cat, sub_subcat, value
+            for sub_cat, value in subcats.items():
+                if isinstance(value, dict):
+                    for sub_subcat, nested_value in value.items():
+                        yield from Command._yield_url_values(
+                            main_cat, sub_cat, sub_subcat, nested_value
+                        )
+                else:
+                    yield from Command._yield_url_values(
+                        main_cat, sub_cat, "", value
+                    )
+
+    @staticmethod
+    def _yield_url_values(main_cat, sub_cat, sub_subcat, value):
+        if isinstance(value, list):
+            for url in value:
+                if isinstance(url, str) and url.strip():
+                    yield main_cat, sub_cat, sub_subcat, url
+        elif isinstance(value, str) and value.strip():
+            yield main_cat, sub_cat, sub_subcat, value
+
+    def _discover_listing_urls(self, session, seeds, base_url):
+        """
+        Replace stale, pre-generated pagination with URLs calculated from each
+        live category page's "1 to N of Total Products" summary.
+        """
+        discovered = []
+        seen_roots = set()
+
+        for main_cat, sub_cat, sub_subcat, raw_url in seeds:
+            root_url = self._listing_root_url(raw_url, base_url)
+            if not root_url or root_url in seen_roots:
+                continue
+            seen_roots.add(root_url)
+
+            self.stdout.write(
+                self.style.NOTICE(
+                    f"Inspecting pagination: {root_url} "
+                    f"({main_cat} -> {sub_cat})"
+                )
+            )
+
+            try:
+                response = session.get(root_url, timeout=20)
+                response.raise_for_status()
+            except Exception as exc:
+                self.stderr.write(
+                    self.style.WARNING(
+                        f"  Could not inspect pagination ({exc}); "
+                        "the first page will still be attempted."
+                    )
+                )
+                page_urls = [root_url]
+            else:
+                soup = BeautifulSoup(response.text, "html.parser")
+                page_urls = self._listing_page_urls(root_url, soup)
+
+            self.stdout.write(f"  discovered {len(page_urls)} page(s)")
+            discovered.extend(
+                (main_cat, sub_cat, sub_subcat, page_url)
+                for page_url in page_urls
+            )
+
+        return discovered
+
+    @staticmethod
+    def _listing_root_url(raw_url, base_url):
+        """Return an absolute listing URL with any stale ``s`` offset removed."""
+        url = (raw_url or "").strip()
+        if not url:
+            return ""
+        if not url.startswith(("http://", "https://")):
+            if not url.startswith("/"):
+                url = "/" + url
+            url = f"{base_url}{url}"
+
+        parsed = urlsplit(url)
+        query = [
+            (key, value)
+            for key, value in parse_qsl(parsed.query, keep_blank_values=True)
+            if key.lower() != "s"
+        ]
+        return urlunsplit(
+            (parsed.scheme, parsed.netloc, parsed.path, urlencode(query), "")
+        )
+
+    @staticmethod
+    def _listing_page_urls(root_url, soup):
+        """
+        Calculate every page URL from Bestway's live result summary.
+
+        For example, "1 to 20 of 112 Products" produces the root page followed
+        by ?s=20, ?s=40, ?s=60, ?s=80 and ?s=100.
+        """
+        summary = re.search(
+            r"(\d[\d,]*)\s+to\s+(\d[\d,]*)\s+of\s+"
+            r"(\d[\d,]*)\s+Products",
+            soup.get_text(" ", strip=True),
+            flags=re.IGNORECASE,
+        )
+        if not summary:
+            return [root_url]
+
+        first = int(summary.group(1).replace(",", ""))
+        last = int(summary.group(2).replace(",", ""))
+        total = int(summary.group(3).replace(",", ""))
+        page_size = last - first + 1
+        if page_size <= 0 or total <= page_size:
+            return [root_url]
+
+        parsed = urlsplit(root_url)
+        base_query = [
+            (key, value)
+            for key, value in parse_qsl(parsed.query, keep_blank_values=True)
+            if key.lower() != "s"
+        ]
+        urls = [root_url]
+        for offset in range(page_size, total, page_size):
+            query = urlencode([*base_query, ("s", str(offset))])
+            urls.append(
+                urlunsplit(
+                    (parsed.scheme, parsed.netloc, parsed.path, query, "")
+                )
+            )
+        return urls
 
     @staticmethod
     def _clean_text(el) -> str:

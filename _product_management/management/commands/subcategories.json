@@ -10,6 +10,7 @@
     "Cooked Meats & Pâtés": "https://www.bestwaywholesale.co.uk/chilled-fresh/511",
     "Dairy & Eggs": "https://www.bestwaywholesale.co.uk/chilled-fresh/411",
     "Fruit & Vegetables": "https://www.bestwaywholesale.co.uk/chilled-fresh/581",
+    "Meat & Poultry": "https://www.bestwaywholesale.co.uk/chilled-fresh/591",
     "Pies & Sausages": "https://www.bestwaywholesale.co.uk/chilled-fresh/541",
     "Salads & Sandwich Fillers": "https://www.bestwaywholesale.co.uk/chilled-fresh/491"
   },
@@ -67,7 +68,6 @@
     "Flavoured Milks": "https://www.bestwaywholesale.co.uk/soft-drinks/501971",
     "Flavoured Water": "https://www.bestwaywholesale.co.uk/soft-drinks/501895",
     "Fruit Juice Cartons": "https://www.bestwaywholesale.co.uk/soft-drinks/501941",
-    "Ice Pops": "https://www.bestwaywholesale.co.uk/soft-drinks/501901",
     "Individual Cans": "https://www.bestwaywholesale.co.uk/soft-drinks/501801",
     "Kiddies Drinks": "https://www.bestwaywholesale.co.uk/soft-drinks/501965",
     "Mixers": "https://www.bestwaywholesale.co.uk/soft-drinks/501861",
@@ -97,5 +97,17 @@
     "Non Foods": "https://www.bestwaywholesale.co.uk/non-food/951",
     "Non-Disposables": "https://www.bestwaywholesale.co.uk/non-food/981",
     "Paper Wrap Foil & Bags": "https://www.bestwaywholesale.co.uk/non-food/961"
+  },
+  "Beers, Wines & Spirits": {
+    "Beer": "https://www.bestwaywholesale.co.uk/beers-wines-spirits/791",
+    "Beer/Lager/Ale Low/No Alcohol": "https://www.bestwaywholesale.co.uk/beers-wines-spirits/825",
+    "Cider": "https://www.bestwaywholesale.co.uk/beers-wines-spirits/801",
+    "Lager": "https://www.bestwaywholesale.co.uk/beers-wines-spirits/781",
+    "Perrys": "https://www.bestwaywholesale.co.uk/beers-wines-spirits/821",
+    "Red Wine": "https://www.bestwaywholesale.co.uk/beers-wines-spirits/751",
+    "Rose Wine": "https://www.bestwaywholesale.co.uk/beers-wines-spirits/755",
+    "RTD Alcohols": "https://www.bestwaywholesale.co.uk/beers-wines-spirits/811",
+    "Spirits & Fortified Wine": "https://www.bestwaywholesale.co.uk/beers-wines-spirits/741",
+    "White Wine": "https://www.bestwaywholesale.co.uk/beers-wines-spirits/761"
   }
 }

@@ -6348,7 +6348,8 @@ body.sunny-home-page.pagecolor {
   transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
 }
 
-.sunny-primary-btn {
+.sunny-site-page .sunny-primary-btn,
+.sunny-site-page .sunny-primary-btn:visited {
   background: var(--sunny-green);
   color: #ffffff;
   box-shadow: 0 5px 0 var(--sunny-ink);
@@ -6368,7 +6369,8 @@ body.sunny-home-page.pagecolor {
   stroke-width: 1.8;
 }
 
-.sunny-primary-btn:hover {
+.sunny-site-page .sunny-primary-btn:hover,
+.sunny-site-page .sunny-primary-btn:focus-visible {
   background: var(--sunny-green-dark);
   color: #ffffff;
   box-shadow: 0 7px 0 var(--sunny-ink);
