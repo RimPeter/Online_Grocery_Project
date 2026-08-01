@@ -33,7 +33,7 @@ from urllib.parse import parse_qsl, urlencode, urlparse, urlsplit, urlunsplit
 
 import requests
 from bs4 import BeautifulSoup
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 
 BASE_URL = "https://www.bestwaywholesale.co.uk"
@@ -52,6 +52,9 @@ HEADERS = {
 
 
 class Command(BaseCommand):
+    MAX_REQUEST_FAILURE_RATIO = 0.20
+    MIN_OUTPUT_RETENTION_RATIO = 0.75
+
     help = (
         "Discover and scrape all paginated Bestway category listings, then "
         "export product data to a JSON file."
@@ -109,6 +112,8 @@ class Command(BaseCommand):
 
         session = requests.Session()
         session.headers.update(HEADERS)
+        self.request_attempts = 0
+        self.request_failures = 0
 
         seeds = list(self._expand_urls(data))
         self.stdout.write(
@@ -141,9 +146,11 @@ class Command(BaseCommand):
             )
 
             try:
+                self.request_attempts += 1
                 response = session.get(page_url, timeout=20)
                 response.raise_for_status()
             except Exception as exc:
+                self.request_failures += 1
                 self.stderr.write(self.style.WARNING(f"  skipped ({exc})"))
                 continue
 
@@ -334,6 +341,8 @@ class Command(BaseCommand):
 
                 collected.append(row)
 
+        self._validate_scrape_result(data, collected, json_out_path)
+
         json_out_path.parent.mkdir(parents=True, exist_ok=True)
         tmp_path = json_out_path.with_suffix(json_out_path.suffix + ".tmp")
         with tmp_path.open("w", encoding="utf-8") as jf:
@@ -379,6 +388,66 @@ class Command(BaseCommand):
         elif isinstance(value, str) and value.strip():
             yield main_cat, sub_cat, sub_subcat, value
 
+    @staticmethod
+    def _category_key(value):
+        text = (value or "").replace("&", " and ").casefold()
+        return " ".join(re.findall(r"[a-z0-9]+", text))
+
+    def _validate_scrape_result(self, input_data, collected, output_path):
+        """Refuse to replace the last product file with partial scrape data."""
+        if not collected:
+            raise CommandError(
+                "Scrape produced no products; existing product JSON was preserved."
+            )
+
+        expected_categories = {
+            self._category_key(name): name
+            for name, value in input_data.items()
+            if isinstance(value, dict) and self._category_key(name)
+        }
+        collected_category_keys = {
+            self._category_key(row.get("main_category"))
+            for row in collected
+            if isinstance(row, dict)
+        }
+        missing = [
+            label
+            for key, label in expected_categories.items()
+            if key not in collected_category_keys
+        ]
+        if missing:
+            raise CommandError(
+                "Scrape is incomplete; missing main categories: "
+                f"{', '.join(sorted(missing, key=str.casefold))}. "
+                "Existing product JSON was preserved."
+            )
+
+        if self.request_attempts:
+            failure_ratio = self.request_failures / self.request_attempts
+            if failure_ratio > self.MAX_REQUEST_FAILURE_RATIO:
+                raise CommandError(
+                    "Scrape request failure rate was "
+                    f"{failure_ratio:.1%}, above the allowed "
+                    f"{self.MAX_REQUEST_FAILURE_RATIO:.0%}; existing product "
+                    "JSON was preserved."
+                )
+
+        if output_path.exists():
+            try:
+                previous = json.loads(output_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                previous = None
+            if isinstance(previous, list) and previous:
+                minimum_count = int(
+                    len(previous) * self.MIN_OUTPUT_RETENTION_RATIO
+                )
+                if len(collected) < minimum_count:
+                    raise CommandError(
+                        f"Scrape produced {len(collected):,} products versus "
+                        f"{len(previous):,} previously; existing product JSON "
+                        "was preserved."
+                    )
+
     def _discover_listing_urls(self, session, seeds, base_url):
         """
         Replace stale, pre-generated pagination with URLs calculated from each
@@ -401,9 +470,11 @@ class Command(BaseCommand):
             )
 
             try:
+                self.request_attempts += 1
                 response = session.get(root_url, timeout=20)
                 response.raise_for_status()
             except Exception as exc:
+                self.request_failures += 1
                 self.stderr.write(
                     self.style.WARNING(
                         f"  Could not inspect pagination ({exc}); "
@@ -507,9 +578,11 @@ class Command(BaseCommand):
         if not url:
             return None, None, None, None
         try:
+            self.request_attempts += 1
             r = requests.get(url, headers=HEADERS, timeout=20)
             r.raise_for_status()
         except Exception:
+            self.request_failures += 1
             return None, None, None, None
 
         soup = BeautifulSoup(r.text, "html.parser")

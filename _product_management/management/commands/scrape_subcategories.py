@@ -30,7 +30,9 @@ from pathlib import Path
 import requests
 from bs4 import BeautifulSoup
 from django.conf import settings
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
+
+from .scraper_for_sub_subcategory import Command as ProductScraperCommand
 
 
 BASE_URL = "https://www.bestwaywholesale.co.uk"
@@ -104,6 +106,8 @@ class Command(BaseCommand):
 
         all_data = {}
         total_subcats = 0
+        attempted_categories = 0
+        failed_categories = 0
 
         for raw_path in main_paths:
             if not isinstance(raw_path, str):
@@ -118,11 +122,13 @@ class Command(BaseCommand):
 
             url = f"{base_url}/{path}"
             self.stdout.write(self.style.NOTICE(f"Fetching: {url}"))
+            attempted_categories += 1
 
             try:
                 resp = session.get(url, timeout=20)
                 resp.raise_for_status()
             except Exception as exc:
+                failed_categories += 1
                 self.stderr.write(self.style.WARNING(f"  Skipped ({exc})"))
                 continue
 
@@ -174,6 +180,14 @@ class Command(BaseCommand):
             total_subcats += max(0, added)
             self.stdout.write(f"  Found {added} new subcategories for {main_label!r}")
 
+        self._validate_result(
+            main_paths,
+            all_data,
+            output_path,
+            attempted_categories,
+            failed_categories,
+        )
+
         # Write the collected data to JSON
         output_path.parent.mkdir(parents=True, exist_ok=True)
         tmp_path = output_path.with_suffix(output_path.suffix + ".tmp")
@@ -187,6 +201,66 @@ class Command(BaseCommand):
                 f"{len(all_data)} main categories to {output_path}"
             )
         )
+
+    @staticmethod
+    def _subcategory_count(data):
+        if not isinstance(data, dict):
+            return 0
+        return sum(
+            len(subcats)
+            for subcats in data.values()
+            if isinstance(subcats, dict)
+        )
+
+    @classmethod
+    def _validate_result(
+        cls,
+        main_paths,
+        result,
+        output_path,
+        attempted_categories,
+        failed_categories,
+    ):
+        """Preserve the previous category seed file after a partial run."""
+        expected_count = len(
+            [path for path in main_paths if isinstance(path, str) and path.strip()]
+        )
+        populated_count = len(
+            [subcats for subcats in result.values() if isinstance(subcats, dict) and subcats]
+        )
+        if not result or populated_count < expected_count:
+            raise CommandError(
+                f"Discovered {populated_count} populated main categories; "
+                f"expected {expected_count}. Existing subcategories JSON was "
+                "preserved."
+            )
+
+        if attempted_categories:
+            failure_ratio = failed_categories / attempted_categories
+            if failure_ratio > ProductScraperCommand.MAX_REQUEST_FAILURE_RATIO:
+                raise CommandError(
+                    "Main-category request failure rate was "
+                    f"{failure_ratio:.1%}; existing subcategories JSON was "
+                    "preserved."
+                )
+
+        if output_path.exists():
+            try:
+                previous = json.loads(output_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                previous = None
+            previous_count = cls._subcategory_count(previous)
+            current_count = cls._subcategory_count(result)
+            minimum_count = int(
+                previous_count
+                * ProductScraperCommand.MIN_OUTPUT_RETENTION_RATIO
+            )
+            if previous_count and current_count < minimum_count:
+                raise CommandError(
+                    f"Discovered {current_count:,} subcategories versus "
+                    f"{previous_count:,} previously; existing subcategories "
+                    "JSON was preserved."
+                )
 
     @staticmethod
     def _extract_main_label(soup):
@@ -205,4 +279,3 @@ class Command(BaseCommand):
             text = crumb_link.get_text(" ", strip=True)
             return " ".join(text.split())
         return None
-

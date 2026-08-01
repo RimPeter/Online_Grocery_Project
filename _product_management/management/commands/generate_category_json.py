@@ -5,12 +5,58 @@
 from django.core.management.base import BaseCommand
 from django.conf import settings
 import json
+import re
 from collections import defaultdict
 from pathlib import Path
 
 
 class Command(BaseCommand):
     help = 'Generate a JSON file from sub_subcategory_products.json into category_structure.json'
+
+    @staticmethod
+    def _category_key(value):
+        """Return a punctuation-insensitive key for matching taxonomy labels."""
+        text = (value or "").replace("&", " and ").casefold()
+        return " ".join(re.findall(r"[a-z0-9]+", text))
+
+    @classmethod
+    def _matching_name(cls, names, candidate):
+        candidate_key = cls._category_key(candidate)
+        for name in names:
+            if cls._category_key(name) == candidate_key:
+                return name
+        return candidate
+
+    @classmethod
+    def _merge_taxonomy(cls, hierarchy, taxonomy):
+        """
+        Keep known navigation nodes even when a product feed is incomplete.
+
+        Product-backed labels win when punctuation differs, so a future feed
+        using "Beers Wines and Spirits" will not create a duplicate group for
+        the taxonomy label "Beers, Wines & Spirits".
+        """
+        if not isinstance(taxonomy, dict):
+            return
+
+        for taxonomy_main, taxonomy_subcats in taxonomy.items():
+            if not isinstance(taxonomy_subcats, dict):
+                continue
+            main_name = cls._matching_name(hierarchy.keys(), taxonomy_main)
+            main_bucket = hierarchy[main_name]
+
+            for taxonomy_subcat, taxonomy_leaves in taxonomy_subcats.items():
+                subcat_name = cls._matching_name(
+                    main_bucket.keys(), taxonomy_subcat
+                )
+                leaf_bucket = main_bucket[subcat_name]
+                if not isinstance(taxonomy_leaves, dict):
+                    continue
+                for taxonomy_leaf in taxonomy_leaves.keys():
+                    leaf_name = cls._matching_name(
+                        leaf_bucket.keys(), taxonomy_leaf
+                    )
+                    leaf_bucket[leaf_name]
 
     def handle(self, *args, **kwargs):
         base_dir = Path(settings.BASE_DIR)
@@ -62,6 +108,23 @@ class Command(BaseCommand):
                 continue
 
             category_hierarchy[level1][level2][level3].append(ga_id)
+
+        # Navigation taxonomy is independent from the latest product import.
+        # Merging it prevents a temporarily incomplete feed from removing an
+        # entire category from the storefront while keeping product ID lists
+        # empty until authorised product data is available.
+        taxonomy_path = source_path.with_name("sub_subcategories.json")
+        if taxonomy_path.exists():
+            try:
+                taxonomy = json.loads(taxonomy_path.read_text(encoding="utf-8"))
+                self._merge_taxonomy(category_hierarchy, taxonomy)
+            except Exception as exc:
+                self.stderr.write(
+                    self.style.WARNING(
+                        f"Could not merge navigation taxonomy from "
+                        f"{taxonomy_path}: {exc}"
+                    )
+                )
 
         # Convert to the existing category_structure.json shape:
         # {

@@ -31,7 +31,7 @@ from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 from .scraper_for_sub_subcategory import Command as ProductScraperCommand
 
@@ -104,6 +104,8 @@ class Command(BaseCommand):
 
         session = requests.Session()
         session.headers.update(HEADERS)
+        request_attempts = 0
+        request_failures = 0
 
         result: dict = {}
         total_sub_subcats = 0
@@ -156,9 +158,11 @@ class Command(BaseCommand):
                     )
 
                     try:
+                        request_attempts += 1
                         resp = session.get(page_url, timeout=20)
                         resp.raise_for_status()
                     except Exception as exc:
+                        request_failures += 1
                         self.stderr.write(
                             self.style.WARNING(f"  Skipped ({exc})")
                         )
@@ -208,11 +212,13 @@ class Command(BaseCommand):
                         # total varies by listing.
                         if full_url not in pagination_cache:
                             try:
+                                request_attempts += 1
                                 listing_response = session.get(
                                     full_url, timeout=20
                                 )
                                 listing_response.raise_for_status()
                             except Exception as exc:
+                                request_failures += 1
                                 self.stderr.write(
                                     self.style.WARNING(
                                         "  Could not inspect pagination for "
@@ -251,6 +257,14 @@ class Command(BaseCommand):
                     f"{main_cat!r} -> {subcat_name!r}"
                 )
 
+        self._validate_result(
+            categories,
+            result,
+            output_path,
+            request_attempts,
+            request_failures,
+        )
+
         # Write the collected data to JSON
         output_path.parent.mkdir(parents=True, exist_ok=True)
         tmp_path = output_path.with_suffix(output_path.suffix + ".tmp")
@@ -264,6 +278,73 @@ class Command(BaseCommand):
                 f"{len(result)} main categories to {output_path}"
             )
         )
+
+    @staticmethod
+    def _leaf_count(data):
+        total = 0
+        if not isinstance(data, dict):
+            return total
+        for subcats in data.values():
+            if not isinstance(subcats, dict):
+                continue
+            for leaves in subcats.values():
+                if isinstance(leaves, dict):
+                    total += len(leaves)
+        return total
+
+    @classmethod
+    def _validate_result(
+        cls,
+        expected,
+        result,
+        output_path,
+        request_attempts,
+        request_failures,
+    ):
+        """Preserve the prior taxonomy when discovery is incomplete."""
+        empty_nodes = []
+        for main_cat, subcats in expected.items():
+            if not isinstance(subcats, dict):
+                continue
+            result_subcats = result.get(main_cat, {})
+            for subcat_name in subcats.keys():
+                leaves = result_subcats.get(subcat_name)
+                if not isinstance(leaves, dict) or not leaves:
+                    empty_nodes.append(f"{main_cat} -> {subcat_name}")
+
+        if empty_nodes:
+            preview = ", ".join(empty_nodes[:5])
+            suffix = " ..." if len(empty_nodes) > 5 else ""
+            raise CommandError(
+                "Subcategory discovery was incomplete for "
+                f"{preview}{suffix}; existing taxonomy JSON was preserved."
+            )
+
+        if request_attempts:
+            failure_ratio = request_failures / request_attempts
+            if failure_ratio > ProductScraperCommand.MAX_REQUEST_FAILURE_RATIO:
+                raise CommandError(
+                    "Subcategory request failure rate was "
+                    f"{failure_ratio:.1%}; existing taxonomy JSON was preserved."
+                )
+
+        if output_path.exists():
+            try:
+                previous = json.loads(output_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                previous = None
+            previous_count = cls._leaf_count(previous)
+            current_count = cls._leaf_count(result)
+            minimum_count = int(
+                previous_count
+                * ProductScraperCommand.MIN_OUTPUT_RETENTION_RATIO
+            )
+            if previous_count and current_count < minimum_count:
+                raise CommandError(
+                    f"Discovered {current_count:,} taxonomy leaves versus "
+                    f"{previous_count:,} previously; existing taxonomy JSON "
+                    "was preserved."
+                )
 
     @staticmethod
     def _add_url(bucket, name, url):
