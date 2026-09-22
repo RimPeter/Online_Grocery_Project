@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from django.conf import settings
 from django.core.mail import send_mail
 
-from .pricing import calculate_checkout_totals
+from .snapshots import order_pricing
 
 
 logger = logging.getLogger(__name__)
@@ -32,12 +32,7 @@ def send_paid_order_notification(order):
         subtotal = sum((item.price * item.quantity) for item in items)
         if not items:
             subtotal = Decimal(str(getattr(order, 'total', 0) or 0))
-        pricing = calculate_checkout_totals(
-            subtotal,
-            has_items=bool(items or subtotal > 0),
-            newcomer_referral_discount=getattr(order, 'newcomer_referral_discount', Decimal('0.00')),
-            referral_credit_discount=getattr(order, 'referral_credit_discount', Decimal('0.00')),
-        )
+        pricing = order_pricing(order)
 
         user = getattr(order, 'user', None) or SimpleNamespace(
             get_full_name=lambda: '',
@@ -71,7 +66,7 @@ def send_paid_order_notification(order):
 
         if items:
             for item in items:
-                product_name = getattr(getattr(item, 'product', None), 'name', 'Unknown product')
+                product_name = getattr(item, 'display_name', None) or getattr(getattr(item, 'product', None), 'name', 'Unknown product')
                 lines.append(f"- {product_name} x {item.quantity} @ GBP {item.price:.2f}")
         else:
             lines.append('- No order items found.')

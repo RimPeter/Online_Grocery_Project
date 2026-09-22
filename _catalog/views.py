@@ -1045,139 +1045,44 @@ def reorder_page(request):
 
 
 @login_required
+@require_GET
 def cart_view(request):
-    """
-    Displays the shopping cart and associates it with a pending Order.
-    Also, synchronizes the pending order items with the session cart.
-    """
-    # Get the cart from session (or use an empty dict if not found)
-    cart = request.session.get('cart', {}) or {}
+    """Preview the session basket without creating or changing an order."""
+    order = Order.objects.filter(user=request.user, status='pending').order_by('-created_at').first()
+    cart = request.session.get('cart')
+    if cart is None and order and not request.session.get('cart_skip_restore_from_pending'):
+        cart = {str(item.product_id): item.quantity for item in order.items.all()}
+        request.session['cart'] = cart
     if not isinstance(cart, dict):
         cart = {}
-
-    # If the user just emptied the cart via update_cart, don't auto-restore it.
-    skip_restore_from_pending = bool(
-        request.session.pop('cart_skip_restore_from_pending', False)
-    )
-
-    # Fetch all pending orders for the user, ordered by newest first.
-    pending_orders = Order.objects.filter(user=request.user, status='pending').order_by('-created_at')
-    if pending_orders.exists():
-        order = pending_orders.first()  # Use the latest pending order.
-        created_new = False
-        # Delete any older pending orders.
-        if pending_orders.count() > 1:
-            pending_orders.exclude(pk=order.pk).delete()
-    else:
-        # If no pending order exists, create a new one.
-        order = Order.objects.create(user=request.user, status='pending')
-        created_new = True
-
-    restored_from_order = False
-
-    # If the session cart is empty but the user already has a pending order,
-    # restore the session cart from the pending order so items show up after login.
-    if (not cart) and (not created_new) and (not skip_restore_from_pending):
-        existing_items = list(order.items.select_related('product').all())
-        if existing_items:
-            cart = {str(it.product_id): int(it.quantity) for it in existing_items}
-            request.session['cart'] = cart
-            restored_from_order = True
-
-    # Build cart items and calculate the total price.
+    product_ids = [int(pid) for pid in cart if str(pid).isdigit()]
+    favorites = set(ProductFavorite.objects.filter(user=request.user).values_list('product_id', flat=True))
     cart_items = []
-    total_price = Decimal('0.00')
-    products_by_id = {}
-    favorite_product_ids = set(
-        ProductFavorite.objects.filter(user=request.user).values_list('product_id', flat=True)
-    )
-    if restored_from_order:
-        for item in order.items.select_related('product').all():
-            try:
-                qty = int(item.quantity)
-            except (TypeError, ValueError):
-                qty = 0
-            if qty <= 0:
-                continue
-            unit_price = Decimal(str(item.price))
-            item_total = unit_price * qty
-            total_price += item_total
-            item.product.is_favourite = item.product_id in favorite_product_ids
-            cart_items.append({
-                'product': item.product,
-                'quantity': qty,
-                'unit_price': unit_price,
-                'item_total': item_total,
-            })
-    elif cart:
-        product_ids = list(cart.keys())
-        products = All_Products.objects.filter(pk__in=product_ids)
-        products_by_id = {str(p.pk): p for p in products}
-        for pid, quantity in cart.items():
-            product = products_by_id.get(str(pid))
-            if product:
-                # Customer pricing uses the configured global RSP formula.
-                price_dec = resolve_customer_unit_price(product)
-                qty = int(quantity)
-                item_total = price_dec * qty
-                total_price += item_total
-                product.is_favourite = product.id in favorite_product_ids
-                cart_items.append({
-                    'product': product,
-                    'quantity': qty,
-                    'unit_price': price_dec,
-                    'item_total': item_total,
-                })
+    subtotal = Decimal('0.00')
+    for product in All_Products.objects.filter(pk__in=product_ids):
+        try:
+            quantity = int(cart.get(str(product.pk), 0))
+        except (TypeError, ValueError):
+            continue
+        if not 1 <= quantity <= 999:
+            continue
+        price = resolve_customer_unit_price(product)
+        product.is_favourite = product.pk in favorites
+        subtotal += price * quantity
+        cart_items.append({'product': product, 'quantity': quantity, 'unit_price': price, 'item_total': price * quantity})
+    base = calculate_checkout_totals(subtotal, has_items=bool(cart_items))
+    discounts = build_referral_discounts(request.user, order=order, pre_credit_total=base['pre_referral_total'])
+    pricing = calculate_checkout_totals(subtotal, has_items=bool(cart_items),
+        newcomer_referral_discount=discounts['newcomer_referral_discount'],
+        referral_credit_discount=discounts['referral_credit_discount'])
+    return render(request, '_catalog/cart.html', {
+        'cart_items': cart_items, 'total_price': subtotal, 'order': order,
+        'active_payment_order': Order.objects.filter(user=request.user, status='awaiting_payment').first(),
+        'available_referral_credit': discounts['available_referral_credit'], **pricing,
+    })
 
-    # Synchronize the pending order with the session cart.
-    # Only do this when the session cart is the source of truth (i.e. we didn't just restore it),
-    # or when the user explicitly emptied the cart.
-    if (not restored_from_order) and (cart or created_new or skip_restore_from_pending):
-        # Remove any existing order items...
-        order.items.all().delete()
-        # ...and recreate them from the current cart.
-        for pid, quantity in cart.items():
-            product = products_by_id.get(str(pid))
-            if not product:
-                continue
-            price_dec = resolve_customer_unit_price(product)
-            OrderItem.objects.create(
-                order=order,
-                product=product,
-                quantity=quantity,
-                price=price_dec
-            )
 
-    base_pricing = calculate_checkout_totals(total_price, has_items=bool(cart_items))
-    referral_discounts = build_referral_discounts(
-        request.user,
-        order=order,
-        pre_credit_total=base_pricing['pre_referral_total'],
-    )
-    pricing = calculate_checkout_totals(
-        total_price,
-        has_items=bool(cart_items),
-        newcomer_referral_discount=referral_discounts['newcomer_referral_discount'],
-        referral_credit_discount=referral_discounts['referral_credit_discount'],
-    )
-    if (
-        order.newcomer_referral_discount != pricing['newcomer_referral_discount']
-        or order.referral_credit_discount != pricing['referral_credit_discount']
-    ):
-        order.newcomer_referral_discount = pricing['newcomer_referral_discount']
-        order.referral_credit_discount = pricing['referral_credit_discount']
-        order.save(update_fields=['newcomer_referral_discount', 'referral_credit_discount'])
-
-    context = {
-        'cart_items': cart_items,
-        'total_price': total_price.quantize(Decimal('0.01')),
-        'order': order,  # This order now has updated OrderItems.
-        'created_new': created_new,
-        'available_referral_credit': referral_discounts['available_referral_credit'],
-        **pricing,
-    }
-    return render(request, '_catalog/cart.html', context)
-
+@require_POST
 def add_to_cart(request, product_id):
     cart = request.session.get('cart', {})
 
@@ -1237,6 +1142,7 @@ def add_to_cart(request, product_id):
         return_to = reverse('product_list')
     return redirect(return_to)
 
+@require_POST
 def update_cart(request):
     """
     Updates the cart: remove an item or change its quantity.
@@ -1256,7 +1162,13 @@ def update_cart(request):
             # Change the quantity (only if it's valid and > 0)
             new_quantity = request.POST.get('quantity')
             if new_quantity is not None:
-                new_quantity = int(new_quantity)
+                try:
+                    new_quantity = int(new_quantity)
+                    if new_quantity > 999:
+                        raise ValueError
+                except (TypeError, ValueError):
+                    messages.error(request, 'Enter a quantity between 0 and 999.')
+                    return redirect('cart_view')
                 if new_quantity > 0:
                     cart[product_id] = new_quantity
                     messages.success(request, "Item quantity updated.")

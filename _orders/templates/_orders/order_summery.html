@@ -28,13 +28,13 @@
             <div class="d-flex align-items-center gap-3">
               <a href="{% url 'product_detail' item.product.pk %}" class="flex-shrink-0 order-item-image-wrap">
                 {% if item.product.image_url %}
-                  <img src="{{ item.product.image_url }}" alt="{{ item.product.name }}" class="order-item-image">
+                  <img src="{{ item.product.image_url }}" alt="{{ item.display_name }}" class="order-item-image">
                 {% else %}
-                  <img src="{% static 'images/default_product.jpg' %}" alt="{{ item.product.name }}" class="order-item-image">
+                  <img src="{% static 'images/default_product.jpg' %}" alt="{{ item.display_name }}" class="order-item-image">
                 {% endif %}
               </a>
               <div class="flex-grow-1">
-                <div class="order-item-name">{{ item.product.name }}</div>
+                <div class="order-item-name">{{ item.display_name }}</div>
                 {% if item.product.variant %}
                   <div class="order-item-variant">{{ item.product.variant }}</div>
                 {% endif %}

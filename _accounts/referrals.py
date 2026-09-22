@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.db.models import Sum
+from django.db import transaction
 
 from .models import ReferralCreditLedger, User
 
@@ -31,7 +32,7 @@ def user_has_successful_orders(user, *, exclude_order_id=None):
 def can_attach_referral_code(user):
     if not user or not getattr(user, 'pk', None):
         return False
-    if user.referred_by_id:
+    if user.referred_by_id or user.order_set.filter(status='awaiting_payment').exists():
         return False
     return not user_has_successful_orders(user)
 
@@ -43,11 +44,13 @@ def resolve_referrer(code):
     return User.objects.filter(referral_code__iexact=normalized).first()
 
 
+@transaction.atomic
 def attach_referral_code(user, code):
+    locked_user = User.objects.select_for_update(no_key=True).get(pk=user.pk)
     normalized = normalize_referral_code(code)
     if not normalized:
         raise ReferralError('Enter a valid referral code.')
-    if not can_attach_referral_code(user):
+    if not can_attach_referral_code(locked_user):
         raise ReferralError('Referral code can only be attached before your first paid order.')
 
     referrer = resolve_referrer(normalized)
@@ -56,8 +59,9 @@ def attach_referral_code(user, code):
     if referrer.pk == user.pk:
         raise ReferralError('You cannot use your own referral code.')
 
+    locked_user.referred_by = referrer
+    locked_user.save(update_fields=['referred_by'])
     user.referred_by = referrer
-    user.save(update_fields=['referred_by'])
     return referrer
 
 
@@ -66,7 +70,7 @@ def has_used_newcomer_discount(user, *, exclude_order_id=None):
         return False
 
     qs = user.order_set.filter(
-        status__in=SUCCESSFUL_ORDER_STATUSES,
+        status__in=(*SUCCESSFUL_ORDER_STATUSES, 'awaiting_payment'),
         newcomer_referral_discount__gt=Decimal('0.00'),
     )
     if exclude_order_id is not None:
@@ -94,7 +98,8 @@ def get_available_referral_credit(user):
         .aggregate(total=Sum('amount'))
         .get('total')
     ) or Decimal('0.00')
-    return Decimal(total).quantize(Decimal('0.01'))
+    reserved = user.order_set.filter(status='awaiting_payment').aggregate(total=Sum('referral_credit_discount'))['total'] or Decimal('0.00')
+    return max(Decimal('0.00'), Decimal(total) - reserved).quantize(Decimal('0.01'))
 
 
 def build_referral_discounts(user, *, order=None, pre_credit_total=Decimal('0.00')):
@@ -134,11 +139,11 @@ def finalize_referral_rewards(order):
             entry_type='credit_spent',
         ).exists()
     ):
-        ReferralCreditLedger.objects.create(
+        ReferralCreditLedger.objects.get_or_create(
             user=user,
             order=order,
             entry_type='credit_spent',
-            amount=-Decimal(order.referral_credit_discount).quantize(Decimal('0.01')),
+            defaults={'amount': -Decimal(order.referral_credit_discount).quantize(Decimal('0.01'))},
         )
 
     if (
@@ -149,9 +154,9 @@ def finalize_referral_rewards(order):
             entry_type='referrer_reward',
         ).exists()
     ):
-        ReferralCreditLedger.objects.create(
+        ReferralCreditLedger.objects.get_or_create(
             user=user.referred_by,
             order=order,
             entry_type='referrer_reward',
-            amount=REFERRER_REWARD_AMOUNT,
+            defaults={'amount': REFERRER_REWARD_AMOUNT},
         )

@@ -8,11 +8,11 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         amount_expr = ExpressionWrapper(
-            F('items__price') * F('items__quantity'),
+            F('price') * F('quantity'),
             output_field=DecimalField(max_digits=12, decimal_places=2),
         )
         updated = 0
-        for order in Order.objects.all().iterator():
+        for order in Order.objects.filter(status='pending').iterator():
             total = order.items.aggregate(t=Sum(amount_expr)).get('t') or 0
             if order.total != total:
                 order.total = total

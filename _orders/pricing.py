@@ -97,14 +97,14 @@ def calculate_checkout_totals(
     discount_amount = _to_money(pricing_settings.get('discount_amount'))
 
     qualifies_for_basket_reward = has_items and subtotal >= discount_threshold
-    basket_reward_discount = discount_amount if qualifies_for_basket_reward else Decimal('0.00')
+    basket_reward_discount = min(max(Decimal('0.00'), discount_amount), max(Decimal('0.00'), subtotal)) if qualifies_for_basket_reward else Decimal('0.00')
     basket_reward_shortfall = max(Decimal('0.00'), discount_threshold - subtotal)
     minimum_order_shortfall = max(Decimal('0.00'), minimum_order_total - subtotal)
     pre_referral_total = (subtotal - basket_reward_discount + delivery_charge).quantize(Decimal('0.01'))
 
-    newcomer_referral_discount = min(_to_money(newcomer_referral_discount), pre_referral_total)
+    newcomer_referral_discount = min(max(Decimal('0.00'), _to_money(newcomer_referral_discount)), pre_referral_total)
     after_newcomer_total = pre_referral_total - newcomer_referral_discount
-    referral_credit_discount = min(_to_money(referral_credit_discount), after_newcomer_total)
+    referral_credit_discount = min(max(Decimal('0.00'), _to_money(referral_credit_discount)), after_newcomer_total)
     grand_total = (after_newcomer_total - referral_credit_discount).quantize(Decimal('0.01'))
     if grand_total < Decimal('0.00'):
         grand_total = Decimal('0.00')

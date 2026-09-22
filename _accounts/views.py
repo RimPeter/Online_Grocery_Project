@@ -31,6 +31,9 @@ from django.utils import timezone
 from datetime import timedelta
 from _analytics.tracking import track_event
 from .models import PendingSignup
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.http import require_POST
+from .throttling import allow_login_attempt, clear_user_login_attempts
 
 logger = logging.getLogger(__name__)
 MULTI_USE_TEST_EMAIL = "primaszecsi@gmail.com"
@@ -121,11 +124,13 @@ def login_view(request):
     block_until = request.session.get('login_block_until') or 0
 
     next_url = request.GET.get('next') or request.POST.get('next') or None
+    if next_url and not url_has_allowed_host_and_scheme(next_url, {request.get_host()}, require_https=request.is_secure()):
+        next_url = None
 
     if request.method == 'POST':
         # rate limit check
-        if now_ts < block_until:
-            remaining = block_until - now_ts
+        if not allow_login_attempt(request.POST.get('username', ''), request.META.get('REMOTE_ADDR', '')):
+            remaining = BLOCK_SECONDS
             minutes = max(1, remaining // 60)
             form = AuthenticationForm(request, data=request.POST)
             form.add_error(None, f'Too many attempts. Try again in about {minutes} minute(s).')
@@ -135,6 +140,7 @@ def login_view(request):
         remember = bool(request.POST.get('remember_me'))
         if form.is_valid():
             user = form.get_user()
+            clear_user_login_attempts(user.username)
             # successful login; clear counters
             for k in ('login_attempt_count', 'login_block_until'):
                 request.session.pop(k, None)
@@ -203,6 +209,7 @@ def login_view(request):
     return render(request, 'accounts/login.html', {'form': form, 'next': next_url})
 
 @login_required
+@require_POST
 def logout_view(request):
     """
     Logs out the user and redirects them to the home page.
@@ -435,6 +442,7 @@ def verify_account(request):
     return render(request, 'accounts/verify_account.html')
 
 @login_required
+@transaction.atomic
 def delete_account(request):
     """
     Deletes the currently logged-in user's account, but requires password confirmation.
@@ -461,6 +469,11 @@ def delete_account(request):
 
         form = DeleteAccountForm(user=request.user, data=request.POST)
         if form.is_valid():
+            from _orders.models import Order
+            get_user_model().objects.select_for_update().get(pk=request.user.pk)
+            if Order.objects.filter(user=request.user, status='awaiting_payment').exists():
+                messages.error(request, 'Complete or cancel your pending payment before deleting your account.')
+                return redirect('cart_view')
             # success: clear counters and log the event
             for k in ('delete_attempt_count', 'delete_block_until'):
                 request.session.pop(k, None)

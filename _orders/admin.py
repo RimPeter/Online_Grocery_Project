@@ -8,16 +8,33 @@ class OrderItemInline(admin.TabularInline):
     model = OrderItem
     extra = 0
 
+    def get_readonly_fields(self, request, obj=None):
+        return ('product', 'quantity', 'price', 'product_name', 'product_sku', 'vat_rate_snapshot') if obj and obj.status != 'pending' else ()
+
+    def has_add_permission(self, request, obj=None):
+        return bool(obj and obj.status == 'pending')
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj and obj.status != 'pending':
+            return tuple(field.name for field in Order._meta.fields)
+        return self.readonly_fields
+
+    def has_delete_permission(self, request, obj=None):
+        return bool(obj and obj.status == 'pending')
+
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'status', 'total', 'created_at')
-    list_editable = ('status',)
+    readonly_fields = ('status', 'total', 'checkout_snapshot', 'snapshot_needs_review', 'newcomer_referral_discount', 'referral_credit_discount')
     list_filter = ('status', 'created_at')
     search_fields = ('id', 'user__username', 'user__email')
     date_hierarchy = 'created_at'
     ordering = ('-created_at',)
     actions = ['mark_as_delivered']       
     inlines = [OrderItemInline]           # <-- show items inline
+
+    def has_delete_permission(self, request, obj=None):
+        return bool(obj and obj.status == 'pending' and not obj.payment_set.exists())
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -50,7 +67,7 @@ class OrderAdmin(admin.ModelAdmin):
         return TemplateResponse(request, 'admin/_orders/all_orders.html', context)
 
     def mark_as_delivered(self, request, queryset):
-        updated = queryset.update(status='delivered')
+        updated = queryset.filter(status='processed').update(status='delivered')
         self.message_user(request, f"{updated} orders marked as delivered.")
     mark_as_delivered.short_description = "Mark selected orders as delivered"
 
@@ -61,6 +78,15 @@ class OrderItemAdmin(admin.ModelAdmin):
     list_filter = ('supplier_completed', 'order__status',)
     actions = ['mark_as_completed']
     search_fields = ('order__id', 'product__name')   # <-- ensure correct field
+
+    def get_readonly_fields(self, request, obj=None):
+        return ('order', 'product', 'quantity', 'price', 'product_name', 'product_sku', 'vat_rate_snapshot') if obj and obj.order.status != 'pending' else ()
+
+    def has_delete_permission(self, request, obj=None):
+        return bool(obj and obj.order.status == 'pending')
+
+    def has_add_permission(self, request):
+        return False
 
     def mark_as_completed(self, request, queryset):
         queryset.update(supplier_completed=True)

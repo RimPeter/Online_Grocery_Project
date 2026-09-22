@@ -14,6 +14,16 @@ from _product_management.templatetags.sum_tags import add_delivery_if_paid, chec
 
 
 class BasketPricingTests(SimpleTestCase):
+    def test_oversized_reward_never_creates_negative_discounts(self):
+        pricing = calculate_checkout_totals(Decimal('10.00'), pricing_settings={
+            'minimum_order_total': Decimal('0.00'), 'delivery_charge': Decimal('1.50'),
+            'discount_threshold': Decimal('5.00'), 'discount_amount': Decimal('100.00'),
+        }, newcomer_referral_discount=Decimal('-5.00'), referral_credit_discount=Decimal('-3.00'))
+        self.assertEqual(pricing['basket_reward_discount'], Decimal('10.00'))
+        self.assertEqual(pricing['newcomer_referral_discount'], Decimal('0.00'))
+        self.assertEqual(pricing['referral_credit_discount'], Decimal('0.00'))
+        self.assertEqual(pricing['grand_total'], Decimal('1.50'))
+
     def test_basket_reward_not_applied_below_threshold(self):
         pricing = calculate_checkout_totals(
             Decimal('94.99'),
@@ -77,7 +87,8 @@ class BasketPricingTests(SimpleTestCase):
 
     def test_paid_order_grand_total_filter_uses_order_referral_discounts(self):
         order = SimpleNamespace(
-            computed_total=Decimal('20.00'),
+            total=Decimal('20.00'),
+            checkout_snapshot={'pricing': {'grand_total': '13.50'}},
             newcomer_referral_discount=Decimal('5.00'),
             referral_credit_discount=Decimal('3.00'),
         )
@@ -97,6 +108,7 @@ class PaidOrderNotificationTests(SimpleTestCase):
             id=7,
             status='paid',
             total=Decimal('95.00'),
+            checkout_snapshot={'pricing': {'grand_total': '81.50', 'delivery_charge': '1.50', 'basket_reward_discount': '15.00', 'newcomer_referral_discount': '0.00', 'referral_credit_discount': '0.00'}},
             delivery_date=None,
             delivery_time=None,
             user=SimpleNamespace(
@@ -147,6 +159,10 @@ class DeliverySlotsPricingTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, '_orders/delivery_slots.html')
 
+        self.assertFalse(Order.objects.filter(user=self.user).exists())
+        from django.utils import timezone
+        from datetime import timedelta
+        self.client.post(reverse('delivery_slots'), {'delivery_date': (timezone.localdate() + timedelta(days=2)).isoformat(), 'delivery_time': '09:00'})
         order = Order.objects.get(user=self.user, status='pending')
         self.assertEqual(order.total, Decimal('40.24'))
         self.assertEqual(order.items.count(), 1)

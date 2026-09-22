@@ -719,7 +719,7 @@ def pending_orders(request):
     amount_expr = F('items__price') * Cast('items__quantity', output_field=dec)
     orders = (
         Order.objects
-        .filter(status='pending')
+        .filter(status__in=('pending', 'awaiting_payment'))
         .select_related('user')
         .prefetch_related('items__product', 'user__addresses')
         .annotate(
@@ -850,145 +850,49 @@ def delivered_orders(request):
 
 
 @staff_or_superuser_required
+@require_POST
 def mark_order_completed(request, order_id: int):
-    if request.method != 'POST':
-        return HttpResponseBadRequest('Invalid method')
-
-    order = get_object_or_404(Order, id=order_id)
-    if order.status in ('pending', 'paid', 'processed'):
-        order.status = 'delivered'
-        order.save(update_fields=['status'])
-        messages.success(request, f'Order #{order.id} marked as completed.')
+    from _orders.services import advance_fulfilment
+    get_object_or_404(Order, pk=order_id)
+    if advance_fulfilment(order_id, 'delivered'):
+        messages.success(request, f'Order #{order_id} marked delivered.')
     else:
-        messages.info(request, f'Order #{order.id} is already {order.get_status_display().lower()}.')
-
-    # Redirect back to referring page if local; otherwise to delivered list
-    ref = request.META.get('HTTP_REFERER') or ''
-    try:
-        from urllib.parse import urlparse
-        parsed = urlparse(ref)
-        # Redirect only if same host or relative
-        if not parsed.netloc or parsed.netloc == request.get_host():
-            return redirect(ref)
-    except Exception:
-        pass
+        messages.error(request, 'Only processed orders can be marked delivered.')
     return redirect('_product_management:delivered_orders')
 
 
 @staff_or_superuser_required
+@require_POST
 def mark_all_orders_completed(request):
-    if request.method != 'POST':
-        return HttpResponseBadRequest('Invalid method')
-
-    # Safer bulk: only deliver orders currently in 'paid' state
-    qs = Order.objects.filter(status='paid')
-    updated = qs.update(status='delivered')
-    if updated:
-        messages.success(request, f'Marked {updated} order(s) as completed.')
-    else:
-        messages.info(request, 'No active orders to complete.')
-    return redirect('_product_management:paid_orders')
+    from _orders.services import advance_fulfilment
+    count = sum(advance_fulfilment(pk, 'delivered') for pk in Order.objects.filter(status='processed').values_list('pk', flat=True))
+    messages.success(request, f'Marked {count} orders delivered.')
+    return redirect('_product_management:delivered_orders')
 
 
 @staff_or_superuser_required
+@require_POST
 def mark_order_active(request, order_id: int):
-    if request.method != 'POST':
-        return HttpResponseBadRequest('Invalid method')
-
-    order = get_object_or_404(Order, id=order_id)
-    if order.status == 'delivered':
-        order.status = 'processed'
-        order.save(update_fields=['status'])
-        messages.success(request, f'Order #{order.id} moved back to Active.')
-    else:
-        messages.info(request, f'Order #{order.id} is {order.get_status_display().lower()}, not completed.')
-
-    # Prefer returning to the referring page when possible
-    ref = request.META.get('HTTP_REFERER') or ''
-    try:
-        from urllib.parse import urlparse
-        parsed = urlparse(ref)
-        if not parsed.netloc or parsed.netloc == request.get_host():
-            return redirect(ref)
-    except Exception:
-        pass
-    return redirect('_product_management:processed_orders')
+    messages.error(request, 'Completed orders cannot be reopened. Contact support for a correction.')
+    return redirect('_product_management:delivered_orders')
 
 
 @staff_or_superuser_required
+@require_POST
 def mark_order_paid(request, order_id: int):
-    if request.method != 'POST':
-        return HttpResponseBadRequest('Invalid method')
-
-    order = get_object_or_404(Order, id=order_id)
-    if order.status in ('pending', 'processed'):
-        order.status = 'paid'
-        order.save(update_fields=['status'])
-        track_event(
-            request,
-            'paid_order',
-            value=order.total,
-            properties={
-                'order_id': order.id,
-                'source': 'staff_mark_paid',
-            },
-            path=request.path,
-        )
-        for item in order.items.select_related('product'):
-            track_event(
-                request,
-                'order_item_paid',
-                label=item.product.name,
-                value=item.quantity,
-                properties={
-                    'order_id': order.id,
-                    'product_id': item.product_id,
-                    'quantity': item.quantity,
-                    'line_total': str(item.price * item.quantity),
-                    'main_category': item.product.main_category,
-                    'sub_category': item.product.sub_category,
-                    'sub_subcategory': item.product.sub_subcategory,
-                    'source': 'staff_mark_paid',
-                },
-                path=request.path,
-            )
-        send_paid_order_notification(order)
-        messages.success(request, f'Order #{order.id} moved back to Paid.')
-    else:
-        messages.info(request, f'Order #{order.id} is already {order.get_status_display().lower()}.')
-
-    ref = request.META.get('HTTP_REFERER') or ''
-    try:
-        from urllib.parse import urlparse
-        parsed = urlparse(ref)
-        if not parsed.netloc or parsed.netloc == request.get_host():
-            return redirect(ref)
-    except Exception:
-        pass
+    messages.error(request, 'Payment status is controlled by verified payment confirmation.')
     return redirect('_product_management:paid_orders')
 
 
 @staff_or_superuser_required
+@require_POST
 def mark_order_processed(request, order_id: int):
-    if request.method != 'POST':
-        return HttpResponseBadRequest('Invalid method')
-
-    order = get_object_or_404(Order, id=order_id)
-    if order.status in ('pending', 'paid'):
-        order.status = 'processed'
-        order.save(update_fields=['status'])
-        messages.success(request, f'Order #{order.id} marked as processed.')
+    from _orders.services import advance_fulfilment
+    get_object_or_404(Order, pk=order_id)
+    if advance_fulfilment(order_id, 'processed'):
+        messages.success(request, f'Order #{order_id} marked processed.')
     else:
-        messages.info(request, f'Order #{order.id} is already {order.get_status_display().lower()}.')
-
-    ref = request.META.get('HTTP_REFERER') or ''
-    try:
-        from urllib.parse import urlparse
-        parsed = urlparse(ref)
-        if not parsed.netloc or parsed.netloc == request.get_host():
-            return redirect(ref)
-    except Exception:
-        pass
+        messages.error(request, 'Only paid orders can be marked processed.')
     return redirect('_product_management:processed_orders')
 
 
@@ -1254,6 +1158,8 @@ def items_to_order_pdf(request):
 @staff_or_superuser_required
 def set_delivery_slot(request, order_id: int):
     order = get_object_or_404(Order.objects.select_related('user'), id=order_id)
+    if order.status != 'pending':
+        return HttpResponseBadRequest('Delivery details are fixed after checkout starts.')
     slot_settings = DeliverySlotSettings.get_solo()
 
     today = date.today()
@@ -2061,6 +1967,7 @@ def missing_rsp(request):
     return render(request, '_product_management/missing_rsp.html', context)
 
 
+@staff_or_superuser_required
 def missing_retail_ean(request):
     """List products that do not have a Retail EAN set.
 

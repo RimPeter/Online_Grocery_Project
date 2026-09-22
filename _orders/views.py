@@ -17,12 +17,15 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.db import transaction
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+from .snapshots import invoice_context, order_pricing
 from django.db.models import Sum, F, DecimalField, ExpressionWrapper
 from .pricing import (
-    calculate_checkout_totals,
     calculate_session_cart_subtotal,
     get_basket_pricing_settings,
-    resolve_customer_unit_price,
 )
 
 # Statuses that permit invoice access/download/email
@@ -50,19 +53,19 @@ def order_summery_view(request, order_id):
     for item in order_items:
         item.subtotal = item.price * item.quantity
     total = sum(item.subtotal for item in order_items)
-    pricing = calculate_checkout_totals(
-        total,
-        has_items=bool(order_items),
-        newcomer_referral_discount=order.newcomer_referral_discount,
-        referral_credit_discount=order.referral_credit_discount,
-    )
-
-    # Get the user's default address (fallback to first if none marked default)
-    addresses = Address.objects.filter(user=request.user)
-    if not addresses.exists():
-        messages.error(request, "Please add a delivery address before checking out.")
-        return redirect('manage_addresses')
-    default_address = addresses.filter(is_default=True).first() or addresses.first()
+    pricing = order_pricing(order)
+    if order.status != 'pending':
+        try:
+            frozen = invoice_context(order)
+        except ValueError as exc:
+            return HttpResponse(str(exc), status=409)
+        default_address = frozen['default_address']
+    else:
+        addresses = Address.objects.filter(user=request.user)
+        if not addresses.exists():
+            messages.error(request, "Please add a delivery address before checking out.")
+            return redirect('manage_addresses')
+        default_address = addresses.filter(is_default=True).first() or addresses.first()
 
     context = {
         'order': order,
@@ -74,7 +77,9 @@ def order_summery_view(request, order_id):
     return render(request, '_orders/order_summery.html', context)
 
 @login_required
+@transaction.atomic
 def delivery_slots_view(request):
+    get_user_model().objects.select_for_update().get(pk=request.user.pk)
     order_id = request.GET.get('order_id')
 
     pricing_settings = get_basket_pricing_settings()
@@ -95,7 +100,7 @@ def delivery_slots_view(request):
     # Try to get an order by ID, or get the latest pending order
     if order_id:
         try:
-            order = Order.objects.get(id=order_id, user=request.user)
+            order = Order.objects.get(id=order_id, user=request.user, status='pending')
         except Order.DoesNotExist:
             messages.error(request, "That order does not exist or is not yours.")
             return redirect('cart_view')
@@ -105,48 +110,9 @@ def delivery_slots_view(request):
         except Order.DoesNotExist:
             order = None
 
-    # If order is missing or has no order items, create one from the session cart
-    if not order or order.items.count() == 0:
-        cart = request.session.get('cart', {})
-        if not cart:
-            messages.error(request, "Your cart is empty. Please add items before checking out.")
-            return redirect('cart_view')
-
-        product_ids = list(cart.keys())
-        products = All_Products.objects.filter(pk__in=product_ids)
-        line_items = []
-        for product in products:
-            try:
-                quantity = int(cart.get(str(product.pk), 0) or 0)
-            except (TypeError, ValueError):
-                quantity = 0
-            if quantity <= 0:
-                continue
-            price_dec = resolve_customer_unit_price(product)
-            line_items.append((product, quantity, price_dec))
-
-        total_price = sum(
-            (price * quantity for _, quantity, price in line_items),
-            Decimal('0.00'),
-        )
-
-        order = Order.objects.create(
-            user=request.user,
-            total=total_price,
-            status='pending'
-        )
-
-        for product, quantity, price_dec in line_items:
-            OrderItem.objects.create(
-                order=order,
-                product=product,
-                quantity=quantity,
-                price=price_dec
-            )
-
     # Now proceed with delivery slot selection using configurable settings
     slot_settings = DeliverySlotSettings.get_solo()
-    today = date.today()
+    today = timezone.localdate()
     min_date = today + timedelta(days=slot_settings.effective_min_days_ahead())
     max_date = today + timedelta(days=slot_settings.effective_max_days_ahead())
     min_date_str = min_date.strftime('%Y-%m-%d')
@@ -174,6 +140,12 @@ def delivery_slots_view(request):
             elif delivery_time not in valid_slot_values:
                 messages.error(request, "Invalid delivery time window selected.")
             else:
+                from .cart import save_draft_cart
+                try:
+                    order = save_draft_cart(request.user, cart, order_id=order.pk if order else None)
+                except ValueError as exc:
+                    messages.error(request, str(exc))
+                    return redirect('cart_view')
                 # Save using validated values
                 order.delivery_date = dd
                 order.delivery_time = delivery_time
@@ -188,7 +160,7 @@ def delivery_slots_view(request):
             request,
             '_orders/delivery_slots.html',
             {
-                'order': order,
+                'order': order or Order(user=request.user),
                 'min_date': min_date_str,
                 'max_date': max_date_str,
                 'slot_options': slot_options,
@@ -201,7 +173,7 @@ def delivery_slots_view(request):
         request,
         '_orders/delivery_slots.html',
         {
-            'order': order,
+            'order': order or Order(user=request.user),
             'min_date': min_date_str,
             'max_date': max_date_str,
             'slot_options': slot_options,
@@ -211,10 +183,14 @@ def delivery_slots_view(request):
     )
 
 @login_required
+@transaction.atomic
 def delete_order_view(request, order_id):
+    get_user_model().objects.select_for_update().get(pk=request.user.pk)
     order = get_object_or_404(Order, id=order_id, user=request.user)
     if request.method == 'POST':
-        # Make sure only the owner can delete
+        if order.status != 'pending' or order.payment_set.exists():
+            messages.error(request, 'Only unpaid drafts without payment attempts can be deleted.')
+            return redirect('order_history')
         order.delete()
         messages.success(request, f"Order #{order_id} has been deleted.")
         return redirect('order_history')
@@ -271,7 +247,7 @@ def invoice_page_view(request, order_id):
     for item in order_items:
         item.subtotal = item.price * item.quantity
         try:
-            r = rate_map.get(getattr(item.product, 'vat_rate', 'standard'), Decimal('0.00'))
+            r = rate_map.get(item.vat_rate_snapshot, Decimal('0.00'))
             if r > 0:
                 item.vat_included = (item.subtotal * r) / (Decimal('1.00') + r)
                 vat_included += item.vat_included
@@ -282,24 +258,10 @@ def invoice_page_view(request, order_id):
 
     total = sum(i.subtotal for i in order_items)
     vat_included = vat_included.quantize(Decimal('0.01'))
-    pricing = calculate_checkout_totals(
-        total,
-        has_items=bool(order_items),
-        newcomer_referral_discount=order.newcomer_referral_discount,
-        referral_credit_discount=order.referral_credit_discount,
-    )
-
-    # If you show addresses on the invoice, pick default/fallback:
-    default_address = Address.objects.filter(user=request.user).order_by('-is_default').first()
-    company = getattr(Company, "get_default", None)
-    company = company() if callable(company) else Company.objects.filter(is_default=True).first() or Company.objects.first()
-
-    
     try:
-        company = Company.get_default()
-    except Exception:
-        company = Company.objects.filter(is_default=True).first() or Company.objects.first()
-
+        frozen = invoice_context(order)
+    except ValueError as exc:
+        return HttpResponse(str(exc), status=409)
 
     return render(
         request,
@@ -309,9 +271,7 @@ def invoice_page_view(request, order_id):
             'order_items': order_items,
             'total': total,
             'vat_included': vat_included,
-            'default_address': default_address,
-            'company': company,
-            **pricing,
+            **frozen,
         }
     )
 
@@ -323,7 +283,10 @@ def invoice_pdf_view(request, order_id):
         messages.error(request, "Invoice is available after payment.")
         return redirect('order_summery', order_id=order.id)
 
-    pdf_bytes = _build_invoice_pdf_bytes(request, order)
+    try:
+        pdf_bytes = _build_invoice_pdf_bytes(request, order)
+    except ValueError as exc:
+        return HttpResponse(str(exc), status=409)
     response = HttpResponse(pdf_bytes, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="invoice-{order.id}.pdf"'
     return response
@@ -369,12 +332,10 @@ def _build_invoice_pdf_bytes(request, order):
         item.subtotal = item.price * item.quantity
     total = sum(i.subtotal for i in order_items)
 
-    default_address = Address.objects.filter(user=request.user).order_by('-is_default').first()
-
-    try:
-        company = Company.get_default()
-    except Exception:
-        company = Company.objects.filter(is_default=True).first() or Company.objects.first()
+    frozen = invoice_context(order)
+    default_address = frozen['default_address']
+    company = frozen['company']
+    customer = frozen['customer']
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(
@@ -423,8 +384,8 @@ def _build_invoice_pdf_bytes(request, order):
     elements.append(Spacer(1, 12))
 
     # Customer / Address
-    elements.append(Paragraph(f"<b>Customer:</b> {request.user.get_full_name() or request.user.username}", styles['Normal']))
-    elements.append(Paragraph(f"<b>Email:</b> {request.user.email}", styles['Normal']))
+    elements.append(Paragraph(f"<b>Customer:</b> {customer.name}", styles['Normal']))
+    elements.append(Paragraph(f"<b>Email:</b> {customer.email}", styles['Normal']))
     if default_address:
         addr_lines = f"{default_address.street_address} {default_address.house_number}".strip()
         if default_address.apartment:
@@ -436,7 +397,7 @@ def _build_invoice_pdf_bytes(request, order):
     # Items table
     data = [["Item", "Qty", "Price", "Subtotal"]]
     for it in order_items:
-        data.append([it.product.name, str(it.quantity), f"\u00A3{it.price:.2f}", f"\u00A3{it.subtotal:.2f}"])
+        data.append([it.display_name, str(it.quantity), f"\u00A3{it.price:.2f}", f"\u00A3{it.subtotal:.2f}"])
 
     table = Table(data, colWidths=[260, 60, 80, 80])
     table.setStyle(TableStyle([
@@ -464,7 +425,7 @@ def _build_invoice_pdf_bytes(request, order):
     vat_included = Decimal('0.00')
     try:
         for it in order_items:
-            r = rate_map.get(getattr(it.product, 'vat_rate', 'standard'), Decimal('0.00'))
+            r = rate_map.get(it.vat_rate_snapshot, Decimal('0.00'))
             if r > 0:
                 line_vat = (it.subtotal * r) / (Decimal('1.00') + r)
                 vat_included += line_vat
@@ -476,12 +437,7 @@ def _build_invoice_pdf_bytes(request, order):
     except Exception:
         vat_included = Decimal('0.00')
 
-    pricing = calculate_checkout_totals(
-        total_val,
-        has_items=bool(order_items),
-        newcomer_referral_discount=order.newcomer_referral_discount,
-        referral_credit_discount=order.referral_credit_discount,
-    )
+    pricing = frozen
 
     # Summary block
     elements.append(Paragraph(f"Subtotal: \u00A3{total_val:.2f}", styles['Normal']))
@@ -504,11 +460,7 @@ def _build_invoice_pdf_bytes(request, order):
         elements.append(Spacer(1, 6))
         elements.append(Paragraph(f"<b>Delivery:</b> {' '.join(slot)}", styles['Normal']))
 
-    # Footer
-    try:
-        company = Company.get_default()
-    except Exception:
-        company = Company.objects.filter(is_default=True).first() or Company.objects.first()
+    # Seller details are also frozen at checkout.
     if company and company.invoice_footer:
         elements.append(Spacer(1, 18))
         elements.append(Paragraph(company.invoice_footer.replace("\n", "<br/>"), styles['Normal']))
@@ -549,6 +501,8 @@ def reorder_order_view(request, order_id):
 
     # redirect back to history by default
     return_to = request.POST.get('return_to') or reverse('order_history')
+    if not url_has_allowed_host_and_scheme(return_to, {request.get_host()}, require_https=request.is_secure()):
+        return_to = reverse('order_history')
     return redirect(return_to)
 
 

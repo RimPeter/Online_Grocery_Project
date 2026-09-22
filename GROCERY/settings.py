@@ -7,7 +7,7 @@ from django.contrib.messages import constants as message_constants
 #from env import *
 ON_HEROKU = 'DYNO' in os.environ
 
-if not ON_HEROKU:
+if not ON_HEROKU and not os.getenv('GROCERY_TESTING'):
     # Only import env.py when running locally
     try:
         from env import *
@@ -176,8 +176,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
     # Load .env
 try:
     from dotenv import load_dotenv  # pip install python-dotenv
-    # Ensure .env values win over local env.py defaults (e.g., Stripe keys).
-    load_dotenv(BASE_DIR / ".env", override=True)
+    # Deployment environment takes precedence; tests never load local credentials.
+    if not os.getenv("GROCERY_TESTING"):
+        load_dotenv(BASE_DIR / ".env", override=False)
 except Exception:
     pass  # optional: ignore if not installed
 
@@ -191,6 +192,7 @@ def _env_bool(name: str, default: bool = False) -> bool:
 EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 465
+EMAIL_TIMEOUT = 10
 EMAIL_USE_SSL = True
 EMAIL_USE_TLS = False
 

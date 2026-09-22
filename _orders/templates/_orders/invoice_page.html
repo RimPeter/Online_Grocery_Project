@@ -211,8 +211,8 @@
   <div class="grid">
     <div class="card addr">
       <h3>Bill To</h3>
-      <p><strong>{{ request.user.get_full_name|default:request.user.username }}</strong></p>
-      <p class="muted">{{ request.user.email }}</p>
+      <p><strong>{{ customer.name }}</strong></p>
+      <p class="muted">{{ customer.email }}</p>
       {% if default_address %}
         <p>{{ default_address.street_address }} {{ default_address.house_number }}{% if default_address.apartment %}, {{ default_address.apartment }}{% endif %}</p>
         <p>{{ default_address.city }}, {{ default_address.postal_code }}</p>
@@ -250,7 +250,7 @@
       <tbody>
         {% for it in order_items %}
           <tr>
-            <td>{{ it.product.name }}</td>
+            <td>{{ it.display_name }}</td>
             <td class="text-right">{{ it.quantity }}</td>
             <td class="text-right">&pound;{{ it.price|floatformat:2 }}</td>
             <td class="text-right">&pound;{{ it.vat_included|default:0|floatformat:2 }}</td>

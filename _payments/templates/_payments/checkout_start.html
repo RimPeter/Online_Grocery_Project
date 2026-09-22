@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Confirm checkout{% endblock %}
+{% block content %}
+<section class="container my-4">
+  <h1>Confirm your checkout</h1>
+  <p>Your basket, delivery address, and total will be fixed when you continue to payment.</p>
+  {% if can_add_referral_code %}
+  <form method="post" class="mb-3">{% csrf_token %}
+    <label for="referral_code">Referral code</label>
+    <input id="referral_code" name="referral_code" maxlength="10">
+    <button name="apply_referral_code" value="1" class="btn btn-secondary">Apply code</button>
+  </form>
+  {% endif %}
+  <form method="post">{% csrf_token %}
+    <button class="btn btn-primary">{% if retry %}Retry payment{% else %}Continue to payment{% endif %}</button>
+  </form>
+  {% if payment %}
+  <form method="post" action="{% url 'payment_cancel' %}">{% csrf_token %}
+    <input type="hidden" name="payment_id" value="{{ payment.pk }}">
+    <button class="btn btn-outline-secondary">Cancel payment</button>
+  </form>
+  {% endif %}
+  <a href="{% url 'cart_view' %}" class="btn btn-link">Back to basket</a>
+</section>
+{% endblock %}

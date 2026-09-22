@@ -70,6 +70,10 @@
   </section>
 
   <section class="checkout-note-card mt-4">
+    <form method="post" action="{% url 'payment_cancel' %}">{% csrf_token %}
+      <input type="hidden" name="payment_id" value="{{ payment.pk }}">
+      <button class="btn btn-outline-secondary">Cancel payment and edit basket</button>
+    </form>
     <p class="mb-2"><strong>Heads up:</strong> once payment is confirmed, your order moves to processing.</p>
     <ul class="mb-0">
       <li>Keep this page open until redirection completes.</li>

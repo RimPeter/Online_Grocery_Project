@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.py[cod]
+.env
+env.py
+*.sqlite3
+.coverage
+htmlcov/
+media/
+test-results.log

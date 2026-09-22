@@ -38,7 +38,7 @@
               </div>
               <div class="text-end">
                 <span class="order-status-chip {% if order.status == 'paid' %}status-paid{% elif order.status == 'processed' %}status-processed{% elif order.status == 'delivered' %}status-delivered{% else %}status-pending{% endif %} me-2">{{ order.get_status_display }}</span>
-                <span class="order-history-order-total">&pound;{{ order|paid_order_grand_total|floatformat:2 }}</span>
+                <span class="order-history-order-total">{% if order.snapshot_needs_review %}Historical order: invoice needs review{% else %}&pound;{{ order|paid_order_grand_total|floatformat:2 }}{% endif %}</span>
               </div>
             </div>
           </button>
@@ -88,14 +88,14 @@
                   <div class="card-body d-flex align-items-center">
                     <a href="{% url 'product_detail' item.product.id %}" class="me-3 text-decoration-none flex-shrink-0 order-history-item-thumb-wrap">
                       {% if item.product.image_url and item.product.image_url != '/img/products/no-image.png' %}
-                        <img src="{{ item.product.image_url }}" alt="{{ item.product.name }}" class="rounded order-history-item-thumb" onerror="this.onerror=null;this.src='{% static 'images/fresh_products.jpg' %}';" />
+                        <img src="{{ item.product.image_url }}" alt="{{ item.display_name }}" class="rounded order-history-item-thumb" onerror="this.onerror=null;this.src='{% static 'images/fresh_products.jpg' %}';" />
                       {% else %}
-                        <img src="{% static 'images/fresh_products.jpg' %}" alt="{{ item.product.name }}" class="rounded order-history-item-thumb" />
+                        <img src="{% static 'images/fresh_products.jpg' %}" alt="{{ item.display_name }}" class="rounded order-history-item-thumb" />
                       {% endif %}
                     </a>
                     <div class="flex-grow-1 overflow-hidden order-history-item-main">
                       <a href="{% url 'product_detail' item.product.id %}" class="text-decoration-none text-dark">
-                        <div class="order-history-item-name text-truncate d-block" title="{{ item.product.name }}">{{ item.product.name }}</div>
+                        <div class="order-history-item-name text-truncate d-block" title="{{ item.display_name }}">{{ item.display_name }}</div>
                       </a>
                       <div class="order-history-item-meta text-truncate">Qty: {{ item.quantity }} | &pound;{{ item.price }}</div>
                     </div>
@@ -104,7 +104,7 @@
                         {% csrf_token %}
                         <input type="hidden" name="quantity" value="{{ item.quantity }}" />
                         <input type="hidden" name="return_to" value="{% url 'order_history' %}" />
-                        <button type="submit" class="btn btn-sm order-history-item-reorder-btn" aria-label="Reorder {{ item.product.name }} from order {{ order.id }}">Reorder</button>
+                        <button type="submit" class="btn btn-sm order-history-item-reorder-btn" aria-label="Reorder {{ item.display_name }} from order {{ order.id }}">Reorder</button>
                       </form>
                     </div>
                   </div>

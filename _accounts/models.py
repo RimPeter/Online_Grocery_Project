@@ -250,3 +250,9 @@ class ReferralCreditLedger(models.Model):
 
     def __str__(self):
         return f"{self.user} {self.entry_type} {self.amount}"
+
+
+class LoginThrottle(models.Model):
+    key = models.CharField(max_length=64, unique=True)
+    attempts = models.PositiveIntegerField(default=0)
+    window_started = models.DateTimeField(default=timezone.now)

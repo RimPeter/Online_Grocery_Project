@@ -44,6 +44,10 @@
 {% endblock %}
 
 {% block content %}
+{% if active_payment_order %}
+<div class="container alert alert-info">You have a payment in progress.
+<a href="{% url 'checkout' active_payment_order.pk %}">Resume or cancel payment</a></div>
+{% endif %}
 <div class="container my-4 cart-page cart-lab">
   <section class="cart-hero">
     <div>
