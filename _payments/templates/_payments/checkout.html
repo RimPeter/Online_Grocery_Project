@@ -38,9 +38,10 @@
 
     <div class="checkout-shell-head">
       <h2 class="h5 mb-1">Payment details</h2>
-      <p class="mb-0">Use card or wallet options shown below. Amount due: <strong>&pound;{{ payment.amount|floatformat:2 }}</strong></p>
+      <p class="mb-0">Amount due: <strong>&pound;{{ payment.amount|floatformat:2 }}</strong></p>
     </div>
 
+    {% if checkout_payments_enabled %}
     <form id="payment-form" class="checkout-payment-form">
       <div id="payment-element" class="checkout-payment-element"><!--Stripe.js injects the Payment Element here--></div>
       <button id="submit" class="btn checkout-pay-btn mt-3">
@@ -48,6 +49,9 @@
       </button>
       <div id="error-message" class="checkout-error mt-2" role="alert" aria-live="assertive"></div>
     </form>
+    {% else %}
+    <div class="alert alert-warning m-3" role="status">Payments are temporarily unavailable. Please try again later.</div>
+    {% endif %}
   </section>
 
   <section class="checkout-note-card mt-4">
@@ -84,6 +88,7 @@
 {% endblock %}
 
 {% block extra_js %}
+{% if checkout_payments_enabled %}
 <script src="https://js.stripe.com/v3/"></script>
 <script>
   const stripe = Stripe("{{ STRIPE_PUBLIC_KEY }}");
@@ -119,4 +124,5 @@
     }
   });
 </script>
+{% endif %}
 {% endblock %}

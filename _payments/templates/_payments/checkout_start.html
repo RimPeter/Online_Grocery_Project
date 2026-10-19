@@ -11,8 +11,11 @@
     <button name="apply_referral_code" value="1" class="btn btn-secondary">Apply code</button>
   </form>
   {% endif %}
+  {% if not checkout_payments_enabled %}
+  <div class="alert alert-warning" role="status">Payments are temporarily unavailable. Please try again later.</div>
+  {% endif %}
   <form method="post">{% csrf_token %}
-    <button class="btn btn-primary">{% if retry %}Retry payment{% else %}Continue to payment{% endif %}</button>
+    <button class="btn btn-primary" {% if not checkout_payments_enabled %}disabled{% endif %}>{% if retry %}Retry payment{% else %}Continue to payment{% endif %}</button>
   </form>
   {% if payment %}
   <form method="post" action="{% url 'payment_cancel' %}">{% csrf_token %}

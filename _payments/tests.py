@@ -20,7 +20,7 @@ from _catalog.models import All_Products
 from _orders.models import Order, OrderItem
 from _orders.snapshots import invoice_context
 from _product_management.models import BasketPricingSettings
-from .models import Payment, WebhookEvent
+from .models import Payment, PaymentSettings, WebhookEvent
 from .services import prepare_checkout, get_payment_intent, process_webhook, cancel_checkout, CheckoutError
 
 
@@ -76,6 +76,53 @@ class PaymentSafetyTests(TestCase):
     def test_get_checkout_does_not_create_payment(self):
         self.assertEqual(self.client.get(reverse('checkout', args=[self.order.pk])).status_code, 200)
         self.assertFalse(Payment.objects.exists())
+
+    def test_disabled_checkout_controls_and_default_enabled(self):
+        url = reverse('checkout', args=[self.order.pk])
+        response = self.client.get(url)
+        self.assertTrue(response.context['checkout_payments_enabled'])
+        PaymentSettings.objects.create(pk=1, checkout_payments_enabled=False)
+        response = self.client.get(url)
+        self.assertContains(response, 'Payments are temporarily unavailable.')
+        self.assertContains(response, 'disabled>Continue to payment')
+        self.assertFalse(Payment.objects.exists())
+
+    def test_payment_widget_toggle_is_presentation_only(self):
+        PaymentSettings.objects.create(pk=1, checkout_payments_enabled=False)
+        url = reverse('checkout', args=[self.order.pk])
+        response = self.client.post(url)
+        self.assertContains(response, 'Payments are temporarily unavailable.')
+        self.assertNotContains(response, 'id="payment-form"')
+        self.assertNotContains(response, 'https://js.stripe.com/v3/')
+        self.assertContains(response, 'Cancel payment and edit basket')
+        self.assertTrue(Payment.objects.exists())
+        PaymentSettings.objects.filter(pk=1).update(checkout_payments_enabled=True)
+        response = self.client.get(url)
+        self.assertContains(response, 'id="payment-form"')
+        self.assertContains(response, 'https://js.stripe.com/v3/')
+
+    def test_payment_settings_requires_superuser_and_persists_toggle(self):
+        url = reverse('payment_settings')
+        self.client.logout()
+        self.assertEqual(self.client.get(url).status_code, 302)
+        self.client.force_login(self.user)
+        for staff in (False, True):
+            self.user.is_staff = staff
+            self.user.save(update_fields=['is_staff'])
+            self.assertEqual(self.client.get(url).status_code, 403)
+            self.assertEqual(self.client.post(url, {}).status_code, 403)
+        self.assertFalse(PaymentSettings.objects.exists())
+        self.user.is_superuser = True
+        self.user.save(update_fields=['is_superuser'])
+        self.assertContains(self.client.get(url), 'Enable checkout payments')
+        self.assertTrue(PaymentSettings.get_solo().checkout_payments_enabled)
+        self.assertRedirects(self.client.post(url, {}), url)
+        self.assertFalse(PaymentSettings.get_solo().checkout_payments_enabled)
+        self.assertRedirects(self.client.post(url, {'checkout_payments_enabled': 'on'}), url)
+        self.assertTrue(PaymentSettings.get_solo().checkout_payments_enabled)
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.user)
+        self.assertEqual(csrf_client.post(url, {}).status_code, 403)
 
     def test_browsing_cart_does_not_rewrite_order(self):
         item_id = self.order.items.get().pk

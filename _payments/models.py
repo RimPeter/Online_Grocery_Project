@@ -3,6 +3,16 @@ from django.conf import settings
 from _orders.models import Order
 import uuid
 
+
+class PaymentSettings(models.Model):
+    checkout_payments_enabled = models.BooleanField(default=True)
+
+    @classmethod
+    def get_solo(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+
 class Payment(models.Model):
     STATUS_CHOICES = (
         ('created', 'Created'),

@@ -5,7 +5,7 @@ import stripe
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
@@ -14,7 +14,7 @@ from django.views.decorators.http import require_GET, require_POST, require_http
 from _accounts.referrals import ReferralError, attach_referral_code, can_attach_referral_code
 from _orders.models import Order
 from _analytics.tracking import track_event
-from .models import Payment
+from .models import Payment, PaymentSettings
 from .services import (CheckoutError, prepare_checkout, get_payment_intent, process_webhook,
                        cancel_checkout, complete_zero_payment)
 
@@ -23,8 +23,27 @@ logger = logging.getLogger(__name__)
 
 @login_required
 @require_http_methods(['GET', 'POST'])
+def payment_settings_view(request):
+    if not request.user.is_superuser:
+        return HttpResponseForbidden('Superuser access required.')
+    payment_settings = PaymentSettings.get_solo()
+    if request.method == 'POST':
+        payment_settings.checkout_payments_enabled = request.POST.get('checkout_payments_enabled') == 'on'
+        payment_settings.save(update_fields=['checkout_payments_enabled'])
+        messages.success(request, 'Payment settings saved.')
+        return redirect('payment_settings')
+    return render(request, '_payments/payment_settings.html', {'payment_settings': payment_settings})
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
 def checkout_view(request, order_id):
     order = get_object_or_404(Order, pk=order_id, user=request.user)
+    # Presentation setting only; payment processing keeps its existing behavior.
+    checkout_payments_enabled = PaymentSettings.objects.filter(pk=1).values_list(
+        'checkout_payments_enabled', flat=True).first()
+    if checkout_payments_enabled is None:
+        checkout_payments_enabled = True
     if request.method == 'POST' and request.POST.get('apply_referral_code') is not None:
         if order.status != 'pending':
             messages.error(request, 'Cancel your current payment before changing referral discounts.')
@@ -38,6 +57,7 @@ def checkout_view(request, order_id):
     if request.method == 'GET' and order.status == 'pending':
         # Viewing a page must not create payment attempts or freeze a basket.
         return render(request, '_payments/checkout_start.html', {'order': order,
+            'checkout_payments_enabled': checkout_payments_enabled,
             'can_add_referral_code': can_attach_referral_code(request.user)})
     if not settings.STRIPE_SECRET_KEY or not settings.STRIPE_PUBLIC_KEY:
         messages.error(request, 'Payments are temporarily unavailable. Please try again later.')
@@ -59,7 +79,8 @@ def checkout_view(request, order_id):
     except stripe.error.StripeError:
         logger.exception('Stripe checkout failed for order %s', order_id)
         messages.error(request, 'Payment service unavailable. Your order is saved; retry or cancel below.')
-        return render(request, '_payments/checkout_start.html', {'order': order, 'retry': True, 'payment': payment}, status=503)
+        return render(request, '_payments/checkout_start.html', {'order': order, 'retry': True, 'payment': payment,
+            'checkout_payments_enabled': checkout_payments_enabled}, status=503)
     pricing = {key: Decimal(value) if isinstance(value, str) else value
                for key, value in order.checkout_snapshot['pricing'].items()}
     return render(request, '_payments/checkout.html', {
@@ -67,6 +88,7 @@ def checkout_view(request, order_id):
         'clientSecret': intent['client_secret'], 'STRIPE_PUBLIC_KEY': settings.STRIPE_PUBLIC_KEY,
         'success_url': request.build_absolute_uri(reverse('payment_success')) + f'?payment_id={payment.pk}',
         'can_add_referral_code': False,
+        'checkout_payments_enabled': checkout_payments_enabled,
     })
 
 
